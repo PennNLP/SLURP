@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE VNCLASS SYSTEM "vn_class-3.dtd">
+<VNCLASS ID="escape-51.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="vn_schema-3.xsd">
+    <!--each verb specifies the Prep_Dirthat is it's default-->
+        <MEMBERS>
+             <MEMBER name="ascend" wn="ascend%2:38:02 ascend%2:38:04 ascend%2:38:01 ascend%2:38:03" grouping="ascend.01 ascend.04 ascend.05"/>
+              <MEMBER name="climb" wn="climb%2:38:00" grouping="climb.01"/>
+              <MEMBER name="depart" wn="depart%2:38:04 depart%2:38:01" grouping="depart.01"/>
+              <MEMBER name="descend" wn="descend%2:38:00" grouping="descend.01"/>
+              <MEMBER name="disembark" wn="" grouping=""/>
+              <MEMBER name="enter" wn="enter%2:38:00 enter%2:36:00" grouping="enter.01"/>
+              <MEMBER name="escape" wn="escape%2:38:00" grouping="escape.01"/>
+              <MEMBER name="exit" wn="exit%2:38:00" grouping="exit.01"/>
+              <MEMBER name="flee" wn="flee%2:38:00" grouping="flee.01"/>
+              <MEMBER name="leave" wn="leave%2:38:01 leave%2:38:00" grouping="leave.01"/>
+              <MEMBER name="vacate" wn="vacate%2:38:00" grouping="vacate.01"/>
+        </MEMBERS>
+        <THEMROLES>
+            <THEMROLE type="Agent">
+                <SELRESTRS>
+                    <SELRESTR Value="+" type="concrete"/>
+                </SELRESTRS>
+            </THEMROLE>
+            <THEMROLE type="Location">
+                <SELRESTRS>
+                    <SELRESTR Value="+" type="concrete"/>
+                </SELRESTRS>
+            </THEMROLE>
+        </THEMROLES>
+        <FRAMES>
+            <FRAME>
+                <DESCRIPTION descriptionNumber="0.1" primary="NP V" secondary="Basic Intransitive" xtag="0.1"/>
+                <!-- each verb specifies the Prep_Dir (and sometimes
+                the Oblique) that is it's default-->
+                <EXAMPLES>
+                    <EXAMPLE>The prisoners advanced.</EXAMPLE>
+                </EXAMPLES>
+                <SYNTAX>
+                    <NP value="Agent">
+                        <SYNRESTRS/>
+                    </NP>
+                    <VERB/>
+                </SYNTAX>
+                <SEMANTICS>
+                    <PRED value="motion">
+                        <ARGS>
+                            <ARG type="Event" value="during(E)"/>
+                            <ARG type="ThemRole" value="Agent"/>
+                        </ARGS>
+                    </PRED>
+                    <PRED value="direction">
+                        <ARGS>
+                            <ARG type="Event" value="during(E)"/>
+                            <ARG type="VerbSpecific" value="Prep_Dir"/>
+                            <ARG type="ThemRole" value="Agent"/>
+                            <ARG type="ThemRole" value="?Oblique"/>
+                        </ARGS>
+                    </PRED>
+                </SEMANTICS>
+            </FRAME>
+        </FRAMES>
+        <SUBCLASSES>
+            <VNSUBCLASS ID ="escape-51.1-1">
+            <MEMBERS>
+                <MEMBER name="cross" wn="cross%2:38:00" grouping="cross.01"/>
+            </MEMBERS>
+            <THEMROLES/>
+            <FRAMES>
+            <FRAME>
+                <DESCRIPTION descriptionNumber="0.1" primary="NP V PP.oblique" secondary="PPpath-PP" xtag=""/>
+                <EXAMPLES>
+                    <EXAMPLE>The prisoners  advanced across the
+                    field.</EXAMPLE>
+                </EXAMPLES>
+                <SYNTAX>
+                    <NP value="Agent">
+                        <SYNRESTRS/>
+                    </NP>
+                    <VERB/>
+                    <PREP>
+                        <SELRESTRS>
+                            <SELRESTR Value="+" type="path"/>
+                        </SELRESTRS>
+                    </PREP>
+                    <NP value="Oblique">
+                        <SELRESTRS/>
+                    </NP>
+                </SYNTAX>
+                <SEMANTICS>
+                    <PRED value="motion">
+                        <ARGS>
+                            <ARG type="Event" value="during(E)"/>
+                            <ARG type="ThemRole" value="Agent"/>
+                        </ARGS>
+                    </PRED>
+                    <PRED value="direction">
+                        <ARGS>
+                            <ARG type="Event" value="during(E)"/>
+                            <ARG type="VerbSpecific" value="Prep_Dir"/>
+                            <ARG type="ThemRole" value="Agent"/>
+                            <ARG type="ThemRole" value="Oblique"/>
+                        </ARGS>
+                    </PRED>
+                </SEMANTICS>
+            </FRAME>
+                <FRAME>
+                    <DESCRIPTION descriptionNumber="0.1" primary="NP V NP" secondary="Locative Preposition Drop" xtag=""/>
+                        <EXAMPLES>
+                            <EXAMPLE>The convict escaped the
+                            prison.</EXAMPLE>
+                        </EXAMPLES>
+                        <SYNTAX>
+                        <NP value="Agent">
+                            <SYNRESTRS/>
+                        </NP>
+                        <VERB/>
+                        <NP value="Location">
+                            <SYNRESTRS/>
+                        </NP>
+                    </SYNTAX>
+                    <SEMANTICS>
+                        <PRED value="motion">
+                            <ARGS>
+                                <ARG type="Event" value="during(E)"/>
+                                <ARG type="ThemRole" value="Agent"/>
+                            </ARGS>
+                        </PRED>
+                        <PRED value="direction">
+                            <ARGS>
+                                <ARG type="Event" value="during(E)"/>
+                                <ARG type="VerbSpecific" value="Prep_Dir"/>
+                                <ARG type="ThemRole" value="Agent"/>
+                                <ARG type="ThemRole" value="Location"/>
+                            </ARGS>
+                        </PRED>
+                    </SEMANTICS>
+                </FRAME>
+            </FRAMES>
+            <SUBCLASSES>
+                <VNSUBCLASS ID="escape-51.1-2">
+                    <MEMBERS>
+                       <MEMBER name="advance" wn="advance%2:38:00" grouping="advance.01"/>
+                       <MEMBER name="approach" wn="approach%2:38:00" grouping="approach.01"/>
+                       <MEMBER name="come" wn="come%2:38:00 come%2:38:04" grouping="come.01"/>
+                       <MEMBER name="fall" wn="fall%2:38:03 fall%2:38:15 fall%2:38:14" grouping="fall.01"/>
+                       <MEMBER name="go" wn="go%2:38:00 go%2:38:01" grouping="go.01 go.02"/>
+                       <MEMBER name="plunge" wn="plunge%2:38:05 plunge%2:38:00" grouping="plunge.01 plunge.02"/>
+                       <MEMBER name="recede" wn="recede%2:38:01 recede%2:33:00 recede%2:30:00" grouping=""/>
+                       <MEMBER name="return" wn="return%2:38:00" grouping="return.01"/>
+                       <MEMBER name="rise" wn="rise%2:38:00 rise%2:38:05 rise%2:38:04 rise%2:29:08 rise%2:38:08" grouping="rise.01 rise.03"/>
+                        <MEMBER name="tumble" wn="tumble%2:38:00 tumble%2:38:04" grouping="tumble.01 tumble.02"/>
+                        <MEMBER name="arrive" wn="arrive%2:38:00" grouping="arrive.01"/>
+                        <MEMBER name="set_off" wn="" grouping=""/>
+                        <MEMBER name="set_out" wn="" grouping=""/>
+                        <MEMBER name="bolt" wn="" grouping=""/>
+                        <MEMBER name="emerge" wn="" grouping=""/>
+                        <MEMBER name="emigrate" wn="" grouping=""/>
+                        <MEMBER name="make_it" wn="" grouping=""/>
+                        <MEMBER name="retreat" wn="" grouping=""/>
+                        <MEMBER name="skedaddle" wn="" grouping=""/>
+                        <MEMBER name="vamoose" wn="" grouping=""/>
+                        <MEMBER name="withdraw" wn="" grouping=""/>
+                    </MEMBERS>
+                    <THEMROLES/>
+                    <FRAMES>
+                        <FRAME>
+                            <DESCRIPTION descriptionNumber="" primary="NP V PP.oblique" secondary="PPin-PP" xtag=""/>
+                            <EXAMPLES>
+                                <EXAMPLE>He arrived in the U.S.</EXAMPLE>
+                            </EXAMPLES>
+                            <SYNTAX>
+                                <NP value="Agent">
+                                    <SYNRESTRS/>
+                                </NP>
+                                <VERB/>
+                                <PREP value="in">
+                                    <SELRESTRS/>
+                                </PREP>
+                                <NP value="Oblique">
+                                    <SELRESTRS/>
+                                </NP>
+                            </SYNTAX>
+                            <SEMANTICS>
+                                <PRED value="motion">
+                                    <ARGS>
+                                        <ARG type="Event" value="during(E)"/>
+                                        <ARG type="ThemRole" value="Agent"/>
+                                    </ARGS>
+                                </PRED>
+                                <PRED value="location">
+                                    <ARGS>
+                                        <ARG type="Event" value="end(E)"/>
+                                        <ARG type="ThemRole" value="Agent"/>
+                                        <ARG type="ThemRole" value="Oblique"/>
+                                    </ARGS>
+                                </PRED>
+                            </SEMANTICS>
+                        </FRAME>
+                    </FRAMES>
+                    <SUBCLASSES/>
+                </VNSUBCLASS>
+            </SUBCLASSES>
+        </VNSUBCLASS>
+    </SUBCLASSES>
+</VNCLASS>

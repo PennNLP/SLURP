@@ -1,0 +1,214 @@
+(main.e.bomb=0 and (main.e.hostage=0 and (main.s.a_r1=1 and (main.s.a_r2=0 and (main.s.a_r3=0 and (main.s.s1=0 and (main.s.s2=0 and (main.s.s3=0 and (main.s.work=0 and (main.s.a_defuse=0 and (main.s.a_call=0 and (main.s.p1=0 and (main.s.p2=0 and main.s.done=0)))))))))))))
+0,0,5
+0,0,4
+0,0,4
+0,0,4
+0,0,4
+0,0,4
+0,0,4
+0,0,4
+0,0,4
+0,0,4
+0,0,4
+0,0,3
+0,0,3
+0,0,3
+0,0,3
+0,0,3
+0,0,3
+0,0,3
+0,0,3
+0,0,3
+0,0,3
+0,0,1
+0,0,0
+0,0,0
+0,0,0
+0,0,0
+0,0,0
+0,0,0
+0,0,0
+0,0,0
+0,0,0
+0,0,0
+0,0,0
+0,0,0
+0,0,0
+0,0,0
+0,0,0
+0,0,0
+0,0,0
+0,0,0
+0,0,0
+0,0,1
+0,0,1
+0,0,0
+0,0,0
+0,0,0
+0,0,1
+0,0,1
+0,0,0
+0,0,0
+0,0,0
+0,0,1
+0,0,2
+0,0,0
+0,0,0
+0,0,0
+0,0,1
+0,0,3
+0,0,3
+0,0,3
+0,0,3
+0,0,3
+0,0,3
+0,0,4
+0,0,4
+0,0,4
+0,0,4
+0,0,4
+0,0,4
+Removed 0 stutter states.
+
+
+State 0 with rank 0 -> <bomb:0, hostage:0, a_r1:1, a_r2:0, a_r3:0, s1:0, s2:0, s3:0, work:0, a_defuse:0, a_call:0, p1:0, p2:0, done:0>
+	With successors : 1, 2, 3, 4
+State 1 with rank 0 -> <bomb:0, hostage:0, a_r1:0, a_r2:0, a_r3:1, s1:1, s2:0, s3:0, work:0, a_defuse:0, a_call:0, p1:0, p2:0, done:0>
+	With successors : 17, 18, 19, 20
+State 2 with rank 0 -> <bomb:0, hostage:1, a_r1:0, a_r2:0, a_r3:1, s1:1, s2:0, s3:0, work:0, a_defuse:0, a_call:0, p1:0, p2:0, done:0>
+	With successors : 13, 14, 15, 16
+State 3 with rank 0 -> <bomb:1, hostage:0, a_r1:0, a_r2:0, a_r3:1, s1:1, s2:0, s3:0, work:0, a_defuse:0, a_call:0, p1:0, p2:0, done:0>
+	With successors : 9, 10, 11, 12
+State 4 with rank 0 -> <bomb:1, hostage:1, a_r1:0, a_r2:0, a_r3:1, s1:1, s2:0, s3:0, work:0, a_defuse:0, a_call:0, p1:0, p2:0, done:0>
+	With successors : 5, 6, 7, 8
+State 5 with rank 0 -> <bomb:0, hostage:0, a_r1:0, a_r2:0, a_r3:1, s1:1, s2:0, s3:1, work:1, a_defuse:1, a_call:0, p1:1, p2:1, done:0>
+	With successors : 17, 18, 19, 20
+State 6 with rank 0 -> <bomb:0, hostage:1, a_r1:0, a_r2:0, a_r3:1, s1:1, s2:0, s3:1, work:1, a_defuse:1, a_call:0, p1:1, p2:1, done:0>
+	With successors : 13, 14, 15, 16
+State 7 with rank 0 -> <bomb:1, hostage:0, a_r1:0, a_r2:0, a_r3:1, s1:1, s2:0, s3:1, work:1, a_defuse:1, a_call:0, p1:1, p2:1, done:0>
+	With successors : 9, 10, 11, 12
+State 8 with rank 0 -> <bomb:1, hostage:1, a_r1:0, a_r2:0, a_r3:1, s1:1, s2:0, s3:1, work:1, a_defuse:1, a_call:0, p1:1, p2:1, done:0>
+	With successors : 5, 6, 7, 8
+State 9 with rank 0 -> <bomb:0, hostage:0, a_r1:0, a_r2:0, a_r3:1, s1:1, s2:0, s3:1, work:1, a_defuse:1, a_call:0, p1:1, p2:0, done:0>
+	With successors : 17, 18, 19, 20
+State 10 with rank 0 -> <bomb:0, hostage:1, a_r1:0, a_r2:0, a_r3:1, s1:1, s2:0, s3:1, work:1, a_defuse:1, a_call:0, p1:1, p2:0, done:0>
+	With successors : 13, 14, 15, 16
+State 11 with rank 0 -> <bomb:1, hostage:0, a_r1:0, a_r2:0, a_r3:1, s1:1, s2:0, s3:1, work:1, a_defuse:1, a_call:0, p1:1, p2:0, done:0>
+	With successors : 9, 10, 11, 12
+State 12 with rank 0 -> <bomb:1, hostage:1, a_r1:0, a_r2:0, a_r3:1, s1:1, s2:0, s3:1, work:1, a_defuse:1, a_call:0, p1:1, p2:0, done:0>
+	With successors : 5, 6, 7, 8
+State 13 with rank 0 -> <bomb:0, hostage:0, a_r1:0, a_r2:0, a_r3:1, s1:1, s2:0, s3:1, work:1, a_defuse:0, a_call:1, p1:0, p2:1, done:0>
+	With successors : 17, 18, 19, 20
+State 14 with rank 0 -> <bomb:0, hostage:1, a_r1:0, a_r2:0, a_r3:1, s1:1, s2:0, s3:1, work:1, a_defuse:0, a_call:1, p1:0, p2:1, done:0>
+	With successors : 13, 14, 15, 16
+State 15 with rank 0 -> <bomb:1, hostage:0, a_r1:0, a_r2:0, a_r3:1, s1:1, s2:0, s3:1, work:1, a_defuse:0, a_call:1, p1:0, p2:1, done:0>
+	With successors : 9, 10, 11, 12
+State 16 with rank 0 -> <bomb:1, hostage:1, a_r1:0, a_r2:0, a_r3:1, s1:1, s2:0, s3:1, work:1, a_defuse:0, a_call:1, p1:0, p2:1, done:0>
+	With successors : 5, 6, 7, 8
+State 17 with rank 0 -> <bomb:0, hostage:0, a_r1:1, a_r2:0, a_r3:0, s1:1, s2:0, s3:1, work:0, a_defuse:0, a_call:0, p1:0, p2:0, done:0>
+	With successors : 33, 34, 35, 36
+State 18 with rank 0 -> <bomb:0, hostage:1, a_r1:1, a_r2:0, a_r3:0, s1:1, s2:0, s3:1, work:0, a_defuse:0, a_call:0, p1:0, p2:0, done:0>
+	With successors : 29, 30, 31, 32
+State 19 with rank 0 -> <bomb:1, hostage:0, a_r1:1, a_r2:0, a_r3:0, s1:1, s2:0, s3:1, work:0, a_defuse:0, a_call:0, p1:0, p2:0, done:0>
+	With successors : 25, 26, 27, 28
+State 20 with rank 0 -> <bomb:1, hostage:1, a_r1:1, a_r2:0, a_r3:0, s1:1, s2:0, s3:1, work:0, a_defuse:0, a_call:0, p1:0, p2:0, done:0>
+	With successors : 21, 22, 23, 24
+State 21 with rank 0 -> <bomb:0, hostage:0, a_r1:1, a_r2:0, a_r3:0, s1:1, s2:0, s3:1, work:1, a_defuse:1, a_call:0, p1:1, p2:1, done:0>
+	With successors : 33, 34, 35, 36
+State 22 with rank 0 -> <bomb:0, hostage:1, a_r1:1, a_r2:0, a_r3:0, s1:1, s2:0, s3:1, work:1, a_defuse:1, a_call:0, p1:1, p2:1, done:0>
+	With successors : 29, 30, 31, 32
+State 23 with rank 0 -> <bomb:1, hostage:0, a_r1:1, a_r2:0, a_r3:0, s1:1, s2:0, s3:1, work:1, a_defuse:1, a_call:0, p1:1, p2:1, done:0>
+	With successors : 25, 26, 27, 28
+State 24 with rank 0 -> <bomb:1, hostage:1, a_r1:1, a_r2:0, a_r3:0, s1:1, s2:0, s3:1, work:1, a_defuse:1, a_call:0, p1:1, p2:1, done:0>
+	With successors : 21, 22, 23, 24
+State 25 with rank 0 -> <bomb:0, hostage:0, a_r1:1, a_r2:0, a_r3:0, s1:1, s2:0, s3:1, work:1, a_defuse:1, a_call:0, p1:1, p2:0, done:0>
+	With successors : 33, 34, 35, 36
+State 26 with rank 0 -> <bomb:0, hostage:1, a_r1:1, a_r2:0, a_r3:0, s1:1, s2:0, s3:1, work:1, a_defuse:1, a_call:0, p1:1, p2:0, done:0>
+	With successors : 29, 30, 31, 32
+State 27 with rank 0 -> <bomb:1, hostage:0, a_r1:1, a_r2:0, a_r3:0, s1:1, s2:0, s3:1, work:1, a_defuse:1, a_call:0, p1:1, p2:0, done:0>
+	With successors : 25, 26, 27, 28
+State 28 with rank 0 -> <bomb:1, hostage:1, a_r1:1, a_r2:0, a_r3:0, s1:1, s2:0, s3:1, work:1, a_defuse:1, a_call:0, p1:1, p2:0, done:0>
+	With successors : 21, 22, 23, 24
+State 29 with rank 0 -> <bomb:0, hostage:0, a_r1:1, a_r2:0, a_r3:0, s1:1, s2:0, s3:1, work:1, a_defuse:0, a_call:1, p1:0, p2:1, done:0>
+	With successors : 33, 34, 35, 36
+State 30 with rank 0 -> <bomb:0, hostage:1, a_r1:1, a_r2:0, a_r3:0, s1:1, s2:0, s3:1, work:1, a_defuse:0, a_call:1, p1:0, p2:1, done:0>
+	With successors : 29, 30, 31, 32
+State 31 with rank 0 -> <bomb:1, hostage:0, a_r1:1, a_r2:0, a_r3:0, s1:1, s2:0, s3:1, work:1, a_defuse:0, a_call:1, p1:0, p2:1, done:0>
+	With successors : 25, 26, 27, 28
+State 32 with rank 0 -> <bomb:1, hostage:1, a_r1:1, a_r2:0, a_r3:0, s1:1, s2:0, s3:1, work:1, a_defuse:0, a_call:1, p1:0, p2:1, done:0>
+	With successors : 21, 22, 23, 24
+State 33 with rank 0 -> <bomb:0, hostage:0, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:0, s3:1, work:0, a_defuse:0, a_call:0, p1:0, p2:0, done:0>
+	With successors : 65, 66, 67, 68
+State 34 with rank 0 -> <bomb:0, hostage:1, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:0, s3:1, work:0, a_defuse:0, a_call:0, p1:0, p2:0, done:0>
+	With successors : 61, 62, 63, 64
+State 35 with rank 0 -> <bomb:1, hostage:0, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:0, s3:1, work:0, a_defuse:0, a_call:0, p1:0, p2:0, done:0>
+	With successors : 57, 58, 59, 60
+State 36 with rank 0 -> <bomb:1, hostage:1, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:0, s3:1, work:0, a_defuse:0, a_call:0, p1:0, p2:0, done:0>
+	With successors : 37, 38, 39, 40
+State 37 with rank 0 -> <bomb:0, hostage:0, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:1, s3:1, work:1, a_defuse:1, a_call:0, p1:1, p2:1, done:0>
+	With successors : 53, 54, 55, 56
+State 38 with rank 0 -> <bomb:0, hostage:1, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:1, s3:1, work:1, a_defuse:1, a_call:0, p1:1, p2:1, done:0>
+	With successors : 49, 50, 51, 52
+State 39 with rank 0 -> <bomb:1, hostage:0, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:1, s3:1, work:1, a_defuse:1, a_call:0, p1:1, p2:1, done:0>
+	With successors : 45, 46, 47, 48
+State 40 with rank 0 -> <bomb:1, hostage:1, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:1, s3:1, work:1, a_defuse:1, a_call:0, p1:1, p2:1, done:0>
+	With successors : 41, 42, 43, 44
+State 41 with rank 0 -> <bomb:0, hostage:0, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:1, s3:1, work:1, a_defuse:1, a_call:0, p1:1, p2:1, done:1>
+	With successors : 53, 54, 55, 56
+State 42 with rank 0 -> <bomb:0, hostage:1, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:1, s3:1, work:1, a_defuse:1, a_call:0, p1:1, p2:1, done:1>
+	With successors : 49, 50, 51, 52
+State 43 with rank 0 -> <bomb:1, hostage:0, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:1, s3:1, work:1, a_defuse:1, a_call:0, p1:1, p2:1, done:1>
+	With successors : 45, 46, 47, 48
+State 44 with rank 0 -> <bomb:1, hostage:1, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:1, s3:1, work:1, a_defuse:1, a_call:0, p1:1, p2:1, done:1>
+	With successors : 41, 42, 43, 44
+State 45 with rank 0 -> <bomb:0, hostage:0, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:1, s3:1, work:1, a_defuse:1, a_call:0, p1:1, p2:0, done:1>
+	With successors : 53, 54, 55, 56
+State 46 with rank 0 -> <bomb:0, hostage:1, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:1, s3:1, work:1, a_defuse:1, a_call:0, p1:1, p2:0, done:1>
+	With successors : 49, 50, 51, 52
+State 47 with rank 0 -> <bomb:1, hostage:0, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:1, s3:1, work:1, a_defuse:1, a_call:0, p1:1, p2:0, done:1>
+	With successors : 45, 46, 47, 48
+State 48 with rank 0 -> <bomb:1, hostage:1, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:1, s3:1, work:1, a_defuse:1, a_call:0, p1:1, p2:0, done:1>
+	With successors : 41, 42, 43, 44
+State 49 with rank 0 -> <bomb:0, hostage:0, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:1, s3:1, work:1, a_defuse:0, a_call:1, p1:0, p2:1, done:1>
+	With successors : 53, 54, 55, 56
+State 50 with rank 0 -> <bomb:0, hostage:1, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:1, s3:1, work:1, a_defuse:0, a_call:1, p1:0, p2:1, done:1>
+	With successors : 49, 50, 51, 52
+State 51 with rank 0 -> <bomb:1, hostage:0, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:1, s3:1, work:1, a_defuse:0, a_call:1, p1:0, p2:1, done:1>
+	With successors : 45, 46, 47, 48
+State 52 with rank 0 -> <bomb:1, hostage:1, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:1, s3:1, work:1, a_defuse:0, a_call:1, p1:0, p2:1, done:1>
+	With successors : 41, 42, 43, 44
+State 53 with rank 0 -> <bomb:0, hostage:0, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:1, s3:1, work:0, a_defuse:0, a_call:0, p1:0, p2:0, done:1>
+	With successors : 53, 54, 55, 56
+State 54 with rank 0 -> <bomb:0, hostage:1, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:1, s3:1, work:0, a_defuse:0, a_call:0, p1:0, p2:0, done:1>
+	With successors : 49, 50, 51, 52
+State 55 with rank 0 -> <bomb:1, hostage:0, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:1, s3:1, work:0, a_defuse:0, a_call:0, p1:0, p2:0, done:1>
+	With successors : 45, 46, 47, 48
+State 56 with rank 0 -> <bomb:1, hostage:1, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:1, s3:1, work:0, a_defuse:0, a_call:0, p1:0, p2:0, done:1>
+	With successors : 41, 42, 43, 44
+State 57 with rank 0 -> <bomb:0, hostage:0, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:1, s3:1, work:1, a_defuse:1, a_call:0, p1:1, p2:0, done:0>
+	With successors : 53, 54, 55, 56
+State 58 with rank 0 -> <bomb:0, hostage:1, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:1, s3:1, work:1, a_defuse:1, a_call:0, p1:1, p2:0, done:0>
+	With successors : 49, 50, 51, 52
+State 59 with rank 0 -> <bomb:1, hostage:0, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:1, s3:1, work:1, a_defuse:1, a_call:0, p1:1, p2:0, done:0>
+	With successors : 45, 46, 47, 48
+State 60 with rank 0 -> <bomb:1, hostage:1, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:1, s3:1, work:1, a_defuse:1, a_call:0, p1:1, p2:0, done:0>
+	With successors : 41, 42, 43, 44
+State 61 with rank 0 -> <bomb:0, hostage:0, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:1, s3:1, work:1, a_defuse:0, a_call:1, p1:0, p2:1, done:0>
+	With successors : 53, 54, 55, 56
+State 62 with rank 0 -> <bomb:0, hostage:1, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:1, s3:1, work:1, a_defuse:0, a_call:1, p1:0, p2:1, done:0>
+	With successors : 49, 50, 51, 52
+State 63 with rank 0 -> <bomb:1, hostage:0, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:1, s3:1, work:1, a_defuse:0, a_call:1, p1:0, p2:1, done:0>
+	With successors : 45, 46, 47, 48
+State 64 with rank 0 -> <bomb:1, hostage:1, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:1, s3:1, work:1, a_defuse:0, a_call:1, p1:0, p2:1, done:0>
+	With successors : 41, 42, 43, 44
+State 65 with rank 0 -> <bomb:0, hostage:0, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:1, s3:1, work:0, a_defuse:0, a_call:0, p1:0, p2:0, done:0>
+	With successors : 53, 54, 55, 56
+State 66 with rank 0 -> <bomb:0, hostage:1, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:1, s3:1, work:0, a_defuse:0, a_call:0, p1:0, p2:0, done:0>
+	With successors : 49, 50, 51, 52
+State 67 with rank 0 -> <bomb:1, hostage:0, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:1, s3:1, work:0, a_defuse:0, a_call:0, p1:0, p2:0, done:0>
+	With successors : 45, 46, 47, 48
+State 68 with rank 0 -> <bomb:1, hostage:1, a_r1:0, a_r2:1, a_r3:0, s1:1, s2:1, s3:1, work:0, a_defuse:0, a_call:0, p1:0, p2:0, done:0>
+	With successors : 41, 42, 43, 44
+-----------------------------------------
+Strategy time: 241
+===== Done ==============================

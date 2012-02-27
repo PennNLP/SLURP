@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE VNCLASS SYSTEM "vn_class-3.dtd">
+<VNCLASS ID="acquiesce-95" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="vn_schema-3.xsd">
+    <MEMBERS>
+        <MEMBER name="acquiesce" wn="acquiesce%2:32:00" grouping=""/>
+        <MEMBER name="submit" wn="submit%2:33:00" grouping="submit.01"/>
+        <MEMBER name="give_in" wn="give_in%2:32:02 give_in%2:32:01" grouping=""/>
+        <MEMBER name="bow" wn="bow%2:32:01" grouping="bow.03"/>
+        <MEMBER name="defer" wn="defer%2:32:00" grouping="defer.02"/>
+        <MEMBER name="accede" wn="accede%2:32:00 accede%2:32:01" grouping=""/>
+        <MEMBER name="succumb" wn="succumb%2:32:00 " grouping=""/>
+        <MEMBER name="yield" wn="yield%2:30:00 yield%2:40:01 yield%2:33:00 yield%2:32:00" grouping="yield.02"/>
+        <MEMBER name="capitulate" wn="capitulate%2:33:00" grouping=""/>
+    </MEMBERS>
+    <THEMROLES>
+        <THEMROLE type="Actor1">
+            <SELRESTRS logic="or">
+                <SELRESTR Value="+" type="animate"/>
+                <SELRESTR Value="+" type="organization"/>
+            </SELRESTRS>
+        </THEMROLE>
+        <THEMROLE type="Actor2">
+            <SELRESTRS logic="or">
+                <SELRESTR Value="+" type="animate"/>
+                <SELRESTR Value="+" type="organization"/>
+            </SELRESTRS>
+        </THEMROLE>
+    </THEMROLES>
+    <FRAMES>
+        <FRAME>
+            <DESCRIPTION descriptionNumber="8.1" primary="NP V PP.actor2" secondary="NP-PPto-PP" xtag="0.2"/>
+            <EXAMPLES>
+                <EXAMPLE>The enemy soldiers submitted to us.</EXAMPLE>
+            </EXAMPLES>
+            <SYNTAX>
+                <NP value="Actor1">
+                    <SYNRESTRS/>
+                </NP>
+                <VERB/>
+		<PREP value="to">
+		    <SELRESTRS/>
+		</PREP>
+                <NP value="Actor2">
+                    <SYNRESTRS/>
+                </NP>
+            </SYNTAX>
+            <SEMANTICS>
+                <PRED value="yield">
+                    <ARGS>
+                        <ARG type="Event" value="during(E)"/>
+                        <ARG type="ThemRole" value="Actor1"/>
+                        <ARG type="ThemRole" value="Actor2"/>
+                    </ARGS>
+                </PRED>
+            </SEMANTICS>
+        </FRAME>
+    </FRAMES>
+    <SUBCLASSES/>
+</VNCLASS>
+
+
+

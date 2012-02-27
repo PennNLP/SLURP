@@ -1,0 +1,43 @@
+"While I kill the bad guys in the hallway, you search the rooms for bombs."
+
+Conjunction: 
+search
+{'Theme': 'bombs', 'VERB': 'search', 'Location': 'rooms', 'Agent': 'you', 'for': 'for'}
+Conjunction: ['While']
+kill
+{'VERB': 'kill', 'Patient': 'the bad guys in the hallway', 'Agent': 'I'}
+
+________________________________________________________________
+
+"Destroy the bombs and look for hostages."
+
+Conjunction: 'and'
+destroy
+{'VERB': 'Destroy', 'Patient': 'the bombs', 'Agent': '*'}
+look
+{'Stimulus': 'hostages', 'VERB': 'look', 'Experiencer': '*', 'PREP': 'for'}
+
+________________________________________________________________
+
+"If I call you, come to me."
+
+Conjunction: 
+come
+{'Theme': '*', 'VERB': 'come', 'Location': 'me'}
+Conjunction: ['If']
+call
+{'Theme': 'you', 'VERB': 'call', 'Agent': 'I'}
+
+________________________________________________________________
+
+"If someone flips you, tell me."
+
+Conjunction: 
+tell
+{'Topic': 'me', 'VERB': 'tell', 'Agent': '*'}
+Conjunction: ['If']
+flip
+{'Destination': 'you', 'Theme': 'you', 'VERB': 'flips', 'Agent': 'someone'}
+
+"Look for bombs under that table."
+Note: This result could be seen as an error.
