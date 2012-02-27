@@ -2,9 +2,21 @@
 
 
 def generate(text, sensors, regions, props):
-    """Generate a logical specification from natural language and propositions.""" 
+    """Generate a logical specification from natural language and propositions."""
+    print "NL->LTL Generation called on:"
+    print "Sensors:", sensors
+    print "Props:", props
+    print "Regions:", regions
+
     responses = []
     for line in text.split('\n'):
+        if not line:
+            continue
+
+        # Clean unicode first if needed
+        if isinstance(line, unicode):
+            line = line.encode('ascii', 'ignore')
+        
         print "Parsing:", repr(line)
         responses.append("Ok!")
         #parse = parse_text(text)
