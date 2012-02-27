@@ -1,16 +1,17 @@
 #!/usr/bin/env python
 """Functions for accessing the Penn NLP Pipeline."""
 
+import sys
 import os
 import re
 from subprocess import Popen, PIPE
 
 ## Global constants for system configuration
 # Paths
-root_dir = os.path.expanduser("~/nlpipeline")
+root_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'nlpipeline')
 if not os.path.exists(root_dir):
-    raise ImportError("The nlpipeline must be placed in the home directory "
-                      "to use the Penn NLP pipeline.")
+    raise ImportError("The nlpipeline must be placed in the module directory %s "
+                      "to use the Penn NLP pipeline." % root_dir)
 tool_dir = root_dir + "/tools"
 parse_props = root_dir + "/models/eatb3.properties"
 parse_model = root_dir + "/models/wsjall.obj"
@@ -28,7 +29,8 @@ parser_classpath = parser_dir + "/dbparser.jar:" + parser_dir + "/dbparser-ext.j
 ecrestore_classpath = "%s:%s/mallet-0.4/class" % (ecrestore_dir, tool_dir)
 
 # Pipeline commands
-tokenizer = "sed -u -f %s/tokenizer.sed" % tool_dir
+SED = "sed -l" if sys.platform == "darwin" else "sed -u"
+tokenizer = "%s -f %s/tokenizer.sed" % (SED, tool_dir)
 tagger = "java -Xmx128m -classpath %s/mxpost/mxpost.jar tagger.TestTagger %s/mxpost/tagger.project/ 2> /dev/null" % (root_dir, root_dir)
 tagger_post = "%s/adwait2bikel.pl" % tool_dir
 parser = "%s -Xms%sm -Xmx%sm -cp %s %s %s -is %s  -sa - -out - 2> /dev/null" % \

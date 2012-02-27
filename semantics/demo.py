@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-import Parsing
-from Knowledge import Knowledge
-from Structures import Entity, Predicate
+import parsing
+from knowledge import Knowledge
+from structures import Entity, Predicate
 
 if __name__ == '__main__':
     ## = Parses correctly
@@ -55,11 +55,11 @@ if __name__ == '__main__':
     ##parse_tree_string = """((SBARQ (WHADVP-0 (WRB Where)) (SQ (VP (VBP are) (NP-PRD-A (DT the) (NNS hostages)) (ADVP-0 (-NONE- *T*)))) (. ?)))  """
     #parse_tree_string = """((S (NP-SBJ-A (-NONE- *)) (VP (VB Go) (PP-CLR (TO to) (NP-A (NP (DT the) (NN room)) (PP (IN with) (NP-A (DT the) (NNS hostages)))))) (. .))) """
     ##parse_tree_string = """((SINV (VP (VBP Are) (ADVP-LOC-PRD (RB there))) (NP-SBJ (NP (DT any) (NNS hostages)) (PP-LOC (IN in) (NP-A (NN room) (CD 3)))) (. ?)))"""
-    #result = Parsing.get_semantics_from_parse_tree(parse_tree_string)
+    #result = parsing.get_semantics_from_parse_tree(parse_tree_string)
 
     #print result
     
-    #semantic_structures = (Parsing.create_semantic_structures(result))
+    #semantic_structures = (parsing.create_semantic_structures(result))
 
     #print semantic_structures
     

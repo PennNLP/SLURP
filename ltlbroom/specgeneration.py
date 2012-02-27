@@ -11,8 +11,7 @@ def generate(text, sensors, regions, props):
         #result = WORLD_KNOWLEDGE.process_parse_tree(parse, text)
     
     environment_lines = []
-    system_lines = ["[]<>(s.r1)",
-                    "[]<>(s.r2)"]
+    system_lines = ["[]<>(s.%s)" % region for region in regions]
     custom_props = []
 
     print "Spec generation complete."    

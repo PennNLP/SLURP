@@ -9,3 +9,6 @@ ltlgen.ltl
 ltlgen.aut
 ltlgen.debug
 .DS_Store
+.settings
+nlpipeline
+nlpipeline.zip

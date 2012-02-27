@@ -9,8 +9,7 @@ frames, and then returns the matching frames and their corresponding trees.
 import re
 import pickle
 import os
-from Tree import Tree
-from wntools import morphy
+from tree import Tree
 from xml.etree.ElementTree import parse
 from copy import deepcopy
 from collections import defaultdict

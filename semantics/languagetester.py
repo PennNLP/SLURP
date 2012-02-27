@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 
-import Parsing
-from Knowledge import Knowledge
-from Structures import Entity, Predicate
+from knowledge import Knowledge
+from structures import Entity, Predicate
 
 """To use this tester:
 1. Add the parse tree to the phrase dict .

@@ -6,8 +6,8 @@ import _curses
 import curses.textpad
 import signal
 
-from PennPipeline import parse_text, init_pipes, close_pipes
-from Semantics import Knowledge, Tree
+from pennpipeline import parse_text, init_pipes, close_pipes
+from semantics import knowledge, tree
 
 MIN_HEIGHT = 35
 
@@ -81,7 +81,7 @@ def interactive_mode(window):
     input_frame, input_win, parse_win, semantic_win = setup_windows(window)
 
     # Set up semantics module
-    knowledge = Knowledge.Knowledge()
+    world_knowledge = knowledge.Knowledge()
     
     # Send some data through the pipeline
     result = parse_text("This is a test.")
@@ -132,12 +132,12 @@ def interactive_mode(window):
         
         semantic_win.refresh()
 
-        process_result = knowledge.process_parse_tree(result, text)
+        process_result = world_knowledge.process_parse_tree(result, text)
         semantic_answer, frame_trees = process_result[0], process_result[1]
         if frame_trees is not None:
             modified_trees = [str(modified_parse_tree[1]) for modified_parse_tree in frame_trees 
                               if (len(modified_parse_tree) > 1 and 
-                                  isinstance(modified_parse_tree[1], Tree.Tree))]
+                                  isinstance(modified_parse_tree[1], tree.Tree))]
             # TODO: Remove after dupes stop coming in
             modified_trees = list(set(modified_trees))
             frames =  [str(frame_dict) for frame_dict in [frame[0] for frame in frame_trees \

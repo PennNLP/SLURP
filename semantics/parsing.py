@@ -5,16 +5,13 @@ Knowledge."""
 
 # -*- coding: iso-8859-1 -*-
 import re
-import Frames
+import frames
 import string
-from Tree import Tree
+from tree import Tree
 from wntools import morphy
 from collections import defaultdict
-from Structures import Predicate, Quantifier, EntityClass, \
+from structures import Predicate, Quantifier, EntityClass, \
                                      Command, Assertion, YNQuery, WhQuery, Event
-
-
-POSSIBLE_OBJECTS = ['hostage', 'bomb', 'badguy', 'terrorist', 'room']
 
 
 def get_semantics_from_parse_tree(parse_tree_string):
@@ -24,18 +21,18 @@ def get_semantics_from_parse_tree(parse_tree_string):
     parse_tree = Tree.parse(parse_tree_string)
 
     # Split clauses to handle them separately
-    split_clause_dict = Frames.split_clauses(parse_tree)
+    split_clause_dict = frames.split_clauses(parse_tree)
 
     # Activize clauses
     for key, (clause, conjunction) in split_clause_dict.items():
-        activized_clause = Frames.activize_clause(clause)
+        activized_clause = frames.activize_clause(clause)
         split_clause_dict[key] = (activized_clause, conjunction)
 
     result_list = []
         
     for (clause, conjunction) in split_clause_dict.values():
         # Split conjunctions and duplicate arguments if necessary
-        split_tree_dict = Frames.split_conjunctions(clause)
+        split_tree_dict = frames.split_conjunctions(clause)
         
         if conjunction != '':
             result_list.append(conjunction)
@@ -48,13 +45,13 @@ def get_semantics_from_parse_tree(parse_tree_string):
                 tag_list = []
 
                 # Store whether there was an existential there
-                if Frames.is_existential(str(tree)):
+                if frames.is_existential(str(tree)):
                     tag_list.append('ex')
 
                 # Transformational grammar stuff
-                tree = Frames.existential_there_insertion(tree)
-                tree = Frames.invert_clause(tree)
-                tree = Frames.wh_movement(tree)
+                tree = frames.existential_there_insertion(tree)
+                tree = frames.invert_clause(tree)
+                tree = frames.wh_movement(tree)
 
 
 
@@ -68,7 +65,7 @@ def get_semantics_from_parse_tree(parse_tree_string):
                 # Create VFOs for each verb, then match them to the parse tree
                 for verb in verbs:
                     lemmatized_verb = morphy(verb,'v')
-                    vfo_list = Frames.create_VerbFrameObjects(lemmatized_verb)
+                    vfo_list = frames.create_VerbFrameObjects(lemmatized_verb)
 
                     match_list = []
                     
@@ -78,7 +75,7 @@ def get_semantics_from_parse_tree(parse_tree_string):
                         if match:
                             match_list.append((match, vfo.classid))
 
-                    (best_match, sense) = Frames.pick_best_match(match_list)
+                    (best_match, sense) = frames.pick_best_match(match_list)
                     if not best_match is None:
                         result_list.append((best_match, tree, tag_list, sense))
                     
@@ -281,14 +278,14 @@ def create_semantic_structures(frame_semantic_list):
         for key, value in frame_items:
             entity_class_dict[key] = extract_entity_class(value, key)        
         
-        wh_question_type = Frames.get_wh_question_type(str(frame[1]))
+        wh_question_type = frames.get_wh_question_type(str(frame[1]))
         
         # If it's a WH-question, find the type of question it is and add the object
         if wh_question_type is not None and 'Theme' in entity_class_dict:
             semantic_representation_list.append(\
                 WhQuery(entity_class_dict['Theme'], wh_question_type))
         # If it's a yes-no question, add the theme of the question
-        elif Frames.is_yn_question(str(frame[1])):
+        elif frames.is_yn_question(str(frame[1])):
             if 'Theme' in entity_class_dict and 'Location' in entity_class_dict:
                 entity_class_dict['Theme'].predicates = \
                                         dict(entity_class_dict['Theme'].predicates.items() +

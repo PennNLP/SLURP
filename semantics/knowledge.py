@@ -8,8 +8,8 @@ Ian Perera June 2011"""
 import re
 from collections import defaultdict
 
-from Semantics import Parsing
-from Semantics.Structures import Predicate, Entity, Assertion, Event, YNQuery, Command, WhQuery
+from semantics import parsing
+from semantics.structures import Predicate, Entity, Assertion, Event, YNQuery, Command, WhQuery
 try:
     from subtle_msgs.msg import Fiducial
 except ImportError:
@@ -181,8 +181,8 @@ class Knowledge:
             return ("Okay, I'll belay those orders.", None, None, None)   
         else:
             # Actually do semantic parsing
-            semantics_result = Parsing.get_semantics_from_parse_tree(parse_tree_input)
-            semantic_structures = Parsing.create_semantic_structures(semantics_result)
+            semantics_result = parsing.get_semantics_from_parse_tree(parse_tree_input)
+            semantic_structures = parsing.create_semantic_structures(semantics_result)
             semantics_response = self.parse_semantic_structures(semantic_structures)
             print "Answer from semantics:", semantics_response
             try:
