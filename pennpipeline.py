@@ -88,12 +88,12 @@ def process_pipe_filter(text, process, line_filter=""):
     return text
 
 
-def parse_text(sent, force_nouns=set(), force_verbs=set()):
+def parse_text(text, force_nouns=set(), force_verbs=set()):
     """Run the text through the pipelines."""
     if not tokentag_pipe or not parse_pipe or not ecrestore_pipe:
         raise ValueError("You must call init_pipes before parsing")
 
-    tagged_sent = process_pipe_filter(sent, tokentag_pipe)
+    tagged_sent = process_pipe_filter(text, tokentag_pipe)
     bikel_clean_tagged = _tag_convert(tagged_sent, force_nouns, force_verbs)
     parsed_sent = process_pipe_filter(bikel_clean_tagged, parse_pipe, "(")
     restored_sent = process_pipe_filter(parsed_sent, ecrestore_pipe, "(")

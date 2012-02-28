@@ -1,8 +1,9 @@
 """Generates a logical specification from natural language."""
 
+import socket
 
 from semantics.knowledge import Knowledge
-from pennpipeline import parse_text, init_pipes, close_pipes
+from pipelinehost import socket_parse, DEFAULT_PORT
 
 # LTL Constants
 ALWAYS = "[]"
@@ -16,26 +17,18 @@ ROBOT_STATE = "s."
 ENV_STATE = "e."
 
 
-# TODO: Currently SpecGenerator assumes it's a singleton object
 class SpecGenerator(object):
     """Enables specification generation using natural language."""
 
-    instantiated = False
-
     def __init__(self):
-        if SpecGenerator.instantiated:
-            raise NotImplementedError("Can only instantiate one SpecGenerator.")
-        SpecGenerator.instantiated = True
-
-        # Start up the NLP pipeline and knowledge
-        init_pipes()
+        # Start knowledge and connect to the NLP pipeline
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            self.sock.connect(('localhost', DEFAULT_PORT))
+        except socket.error:
+            raise IOError("Could not connect to pipelinehost on port %d. "
+                          "Make sure that pipelinehost is running.")
         self.world_knowledge = Knowledge()
-
-    def __del__(self):
-        # We put this check as it may already be undefined during interpreter shutdown, but there's
-        # no guarantee this will succeed during shutdown anyway.
-        if close_pipes:
-            close_pipes()
 
     def generate(self, text, sensors, regions, props):
         """Generate a logical specification from natural language and propositions."""
@@ -51,20 +44,22 @@ class SpecGenerator(object):
         print "Props:", props
         print "Regions:", regions
         
-        # Make sets for POS coercions
-        force_nouns = set(list(regions) + list(sensors))
-        force_verbs = set(props)
+        # Make lists for POS conversions
+        force_nouns = list(regions) + list(sensors)
+        force_verbs = list(props)
         
         responses = []
         for line in text.split('\n'):
             if not line:
                 continue
             
-            print "Parsing:", repr(line)
-            parse = parse_text(text, force_nouns, force_verbs)
+            print "Sending to remote parser:", repr(line)
+            parse = socket_parse(asocket=self.sock, text=line, force_nouns=force_nouns,
+                                 force_verbs=force_verbs)
             print parse
-            print self.world_knowledge.process_parse_tree(parse, text)
-            responses.append("Ok!")
+            user_response, semantics_result, semantics_response, new_commands = \
+                self.world_knowledge.process_parse_tree(parse, line)
+            responses.append(user_response)
         
         environment_lines = []
         system_lines = ["[]<>(s.%s)" % region for region in regions]
@@ -72,7 +67,7 @@ class SpecGenerator(object):
     
         print "Spec generation complete, responses:"
         print responses
-        return environment_lines, system_lines, custom_props
+        return environment_lines, system_lines, custom_props, responses
 
 
 def _space(text):

@@ -7,17 +7,17 @@ from socket import timeout
 from Queue import Queue
 
 
-class CallbackSocket:
+class CallbackSocket(object):
     """Listen on a socket and call back when a message comes in."""
     name = "commproxy"
 
-    def __init__(self, port, msg_sep="\n"):
+    def __init__(self, port, msg_sep="\n", local=False):
         self.msg_sep = msg_sep
         self.callbacks = []
         self._queue = Queue()
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self._sock.bind(('', port))
+        self._sock.bind(('' if not local else 'localhost', port))
         self._sock.listen(1)
         self._conn = None
         self.client_addr = None
@@ -128,12 +128,9 @@ def _test(port):
         _ = raw_input()
     except KeyboardInterrupt:
         pass
-    except:
+    finally:
+        print "Exiting..."
         listener.shutdown()
-        raise
-
-    print "Exiting..."
-    listener.shutdown()
 
 
 def _test_callback(msg):
