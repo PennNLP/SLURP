@@ -27,7 +27,7 @@ class SpecGenerator(object):
             self.sock.connect(('localhost', DEFAULT_PORT))
         except socket.error:
             raise IOError("Could not connect to pipelinehost on port %d. "
-                          "Make sure that pipelinehost is running.")
+                          "Make sure that pipelinehost is running." % DEFAULT_PORT)
         self.world_knowledge = Knowledge()
 
     def generate(self, text, sensors, regions, props):
