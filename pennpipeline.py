@@ -32,7 +32,6 @@ ecrestore_classpath = "%s:%s/mallet-0.4/class" % (ecrestore_dir, tool_dir)
 SED = "sed -l" if sys.platform == "darwin" else "sed -u"
 tokenizer = "%s -f %s/tokenizer.sed" % (SED, tool_dir)
 tagger = "java -Xmx128m -classpath %s/mxpost/mxpost.jar tagger.TestTagger %s/mxpost/tagger.project/ 2> /dev/null" % (root_dir, root_dir)
-tagger_post = "%s/adwait2bikel.pl" % tool_dir
 parser = "%s -Xms%sm -Xmx%sm -cp %s %s %s -is %s  -sa - -out - 2> /dev/null" % \
     (java, max_heap, max_heap, parser_classpath, settings, parser_class, parse_model)
 ecrestore_wrapper = "%s/wrap-stream.pl" % ecrestore_dir 
@@ -40,7 +39,7 @@ ecrestorer = "%s -cp %s edu.upenn.cis.emptycategories.RestoreECs run - --percept
     % (java, ecrestore_classpath)
 
 tokentag_command = " | ".join((tokenizer, tagger))
-parser_command = " | ".join((tagger_post, parser))
+parser_command = parser
 ecrestore_command = " | ".join((ecrestore_wrapper, ecrestorer))
 
 tokentag_pipe = None
@@ -89,13 +88,14 @@ def process_pipe_filter(text, process, line_filter=""):
     return text
 
 
-def parse_text(sent):
+def parse_text(sent, force_nouns=set(), force_verbs=set()):
     """Run the text through the pipelines."""
     if not tokentag_pipe or not parse_pipe or not ecrestore_pipe:
         raise ValueError("You must call init_pipes before parsing")
 
     tagged_sent = process_pipe_filter(sent, tokentag_pipe)
-    parsed_sent = process_pipe_filter(tagged_sent, parse_pipe, "(")
+    bikel_clean_tagged = _tag_convert(tagged_sent, force_nouns, force_verbs)
+    parsed_sent = process_pipe_filter(bikel_clean_tagged, parse_pipe, "(")
     restored_sent = process_pipe_filter(parsed_sent, ecrestore_pipe, "(")
 
     # Remove extra parens from the parse with elements restored
@@ -104,11 +104,29 @@ def parse_text(sent):
     return final_parse
 
 
+def _tag_convert(sent, force_nouns, force_verbs):
+    """Convert from MXPOST to Bikel style tags, coercing tags."""
+    # MXPOST: word_tag
+    token_tags = [token.split('_') for token in sent.rstrip().split()]
+    # Coerce the tags
+    token_tags = [(word, _coerce_tag(word, tag, force_nouns, force_verbs)) 
+                  for word, tag in token_tags]
+    # Bikel: (word (tag)), with () around the line
+    return "(" + " ".join("(%s (%s))" % (word, tag) for word, tag in token_tags) + ")"
+
+
+def _coerce_tag(word, tag, force_nouns, force_verbs):
+    """Coerce a word's tag if it's in the sets force_nouns or force_verbs."""
+    tag = "NN" if word.lower() in force_nouns else tag
+    tag = "VB" if word.lower() in force_verbs else tag
+    return tag
+
+
 if __name__ == "__main__":
     print "Pipeline paths:"
     print tokenizer
     print tagger
-    print tagger_post
     print parser
     print ecrestore_wrapper
     print ecrestorer
+
