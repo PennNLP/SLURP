@@ -17,6 +17,7 @@
 import sys
 import urllib2
 import posixpath
+import shutil
 
 URLS = ("http://www.seas.upenn.edu/~lignos/data/nlpipeline.zip",)
 
@@ -31,8 +32,11 @@ for address in URLS:
         continue
 
     try:
-        localFile = open(filename, 'w')
-        localFile.write(url.read())
-        localFile.close()
+        with open(filename, 'wb') as localfile:
+            shutil.copyfileobj(url, localfile)
     except IOError:
         print >> sys.stderr, "Couldn't write filename", filename
+    finally:
+        url.close()
+
+
