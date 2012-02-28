@@ -11,9 +11,11 @@ from semantics import knowledge, tree
 
 MIN_HEIGHT = 35
 
+
 class WindowTooSmallError(RuntimeError):
     """Error for when the terminal window is too small for the UI."""
     pass
+
 
 def sigwinch_handler(dummy, unused):
     """Handle SIGWINCH events by recreating the window. 
@@ -33,8 +35,8 @@ def setup_windows(master_window):
                                   "and try again.")
 
     # Calculate window heights, top 1/4 is input, middle half is parse, remainder is semantics 
-    input_height = screen_height/6
-    parse_height = screen_height/6
+    input_height = screen_height / 6
+    parse_height = screen_height / 6
     semantic_height = screen_height - input_height - parse_height
 
     # Build input frame
@@ -140,8 +142,8 @@ def interactive_mode(window):
                                   isinstance(modified_parse_tree[1], tree.Tree))]
             # TODO: Remove after dupes stop coming in
             modified_trees = list(set(modified_trees))
-            frames =  [str(frame_dict) for frame_dict in [frame[0] for frame in frame_trees \
-                                                            if not isinstance(frame,str)]] 
+            frames = [str(frame_dict) for frame_dict in [frame[0] for frame in frame_trees \
+                                                         if not isinstance(frame, str)]] 
             semantics = "Modified trees: " + "\n".join(modified_trees) + \
                         "\nFrames: " + "\n".join(frames) + "\nResponse: " + str(semantic_answer)
         else:

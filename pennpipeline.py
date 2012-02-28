@@ -47,6 +47,8 @@ tokentag_pipe = None
 parse_pipe = None
 ecrestore_pipe = None
 
+OUTER_PARENS_RE = re.compile("\(\s*(.+)\s*\)")
+
 
 def init_pipes():
     """Initialize the nl processing pipelines.
@@ -87,7 +89,6 @@ def process_pipe_filter(text, process, line_filter=""):
     return text
 
 
-OUTER_PARENS_RE = re.compile("\(\s*(.+)\s*\)")
 def parse_text(sent):
     """Run the text through the pipelines."""
     if not tokentag_pipe or not parse_pipe or not ecrestore_pipe:

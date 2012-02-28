@@ -4,17 +4,13 @@
 import sys
 import json
 import socket
-from socket import error, timeout
+from socket import timeout
 import threading
-from traceback import print_exc
-
-#import rpdb2 
-#rpdb2.start_embedded_debugger('parse_server')
 
 from commproxy import _parse_msg
-from PennPipeline import parse_text, init_pipes, close_pipes
-from Semantics import Knowledge, Tree
-from Semantics.Knowledge import (SEARCH_ACTION, GO_ACTION, GET_ACTION, FOLLOW_ACTION, 
+from pennpipeline import parse_text, init_pipes, close_pipes
+from semantics import knowledge, tree
+from semantics.knowledge import (SEARCH_ACTION, GO_ACTION, GET_ACTION, FOLLOW_ACTION, 
                                  SEE_ACTION, TELL_ACTION, ACTION_ALIASES)
 
 SECRET_CODE = ",oO-i2De<2W5NVuJa6E"
@@ -73,7 +69,7 @@ class ServiceSocket:
 
                 # Start up a new thread to handle the client
                 name = "Client " + str(addr)
-                accept_thread = threading.Thread(target=self._handle_client, args=(conn,name))
+                accept_thread = threading.Thread(target=self._handle_client, args=(conn, name))
                 accept_thread.name = name
                 accept_thread.daemon = True
                 print "%s: Starting thread for client %s" % (self.name, accept_thread.name)
@@ -139,13 +135,13 @@ class ServiceSocket:
 
         if knowledge_demo:
             print "Secret demo mode!"
-            global WORLD_KNOWLEDGE
-            if not WORLD_KNOWLEDGE or text == "reset":                
-                WORLD_KNOWLEDGE = Knowledge.Knowledge()
+            global _WORLD_KNOWLEDGE
+            if not _WORLD_KNOWLEDGE or text == "reset":                
+                _WORLD_KNOWLEDGE = knowledge.Knowledge()
 
-            knowledge = WORLD_KNOWLEDGE
+            world_knowledge = _WORLD_KNOWLEDGE
         else:
-            knowledge = Knowledge.Knowledge()
+            world_knowledge = world_knowledge.Knowledge()
         
         response = {}
 
@@ -154,7 +150,7 @@ class ServiceSocket:
         response['parse'] = parse.replace('(', '[').replace(')', ']')
         
         # Get the results from semantics
-        results = knowledge.process_parse_tree(parse, text)
+        results = world_knowledge.process_parse_tree(parse, text)
         answer, frame_trees, new_commands = results[0], results[1], results[3]
 
         # Use the answer if there was one and it was a string
@@ -175,11 +171,11 @@ class ServiceSocket:
             modified_trees = [str(modified_parse_tree[1]).replace('(', '[').replace(')', ']')
                               for modified_parse_tree in frame_trees 
                               if (len(modified_parse_tree) > 1 and 
-                                  isinstance(modified_parse_tree[1], Tree.Tree))]
+                                  isinstance(modified_parse_tree[1], tree.Tree))]
             response['trees'] = list(set(modified_trees))
             
-            frames =  [frame_dict for frame_dict in [frame[0] for frame in frame_trees
-                                                     if isinstance(frame[0], dict)]]
+            frames = [frame_dict for frame_dict in [frame[0] for frame in frame_trees
+                                                    if isinstance(frame[0], dict)]]
             response['frames'] = frames
         else:
             response['trees'] = []
@@ -188,7 +184,7 @@ class ServiceSocket:
         # Extract the command queue and add it to the response.
         # This is turned off for now because better talkback makes it
         # unnecessary.
-        #command_queue = knowledge.command_queue
+        #command_queue = world_knowledge.command_queue
         #if command_queue:
         #    response['response'] += " Commands: " + str(command_queue) 
 
@@ -273,7 +269,7 @@ def _join_commands(commands):
     """Join the commands in a semi-grammatical fashion."""
     # Put in ands and commas as needed
     if len(commands) == 1:
-        actions =  _englishify_command(commands[0])
+        actions = _englishify_command(commands[0])
     elif len(commands) == 2:
         actions = " and ".join(_englishify_command(command) for command in commands)
     else:

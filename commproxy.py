@@ -10,7 +10,7 @@ from Queue import Queue
 class CallbackSocket:
     """Listen on a socket and call back when a message comes in."""
     name = "commproxy"
-    
+
     def __init__(self, port, msg_sep="\n"):
         self.msg_sep = msg_sep
         self.callbacks = []
@@ -33,7 +33,6 @@ class CallbackSocket:
         callback_thread = threading.Thread(target=self._pumpmsg)
         callback_thread.daemon = True
         callback_thread.start()
-
 
     def _accept(self):
         """Accept connections on the listening port."""
@@ -104,10 +103,11 @@ class CallbackSocket:
         """Read messages and synchronously call back listeners."""
         while True:
             msg = self._queue.get()
-            with self._callback_lock :
+            with self._callback_lock:
                 for func in self.callbacks:
                     func(msg)
-                
+
+
 def _parse_msg(buff, delim):
     """Split a buffer into the msg and the remaining data."""
     idx = buff.find(delim)
@@ -118,13 +118,14 @@ def _parse_msg(buff, delim):
         # Return no message, only buffer
         return (None, buff)
 
+
 def _test(port):
     """Test the listener."""
     listener = CallbackSocket(port)
     listener.register_callback(_test_callback)
 
     try:
-        unused = raw_input()
+        _ = raw_input()
     except KeyboardInterrupt:
         pass
     except:
