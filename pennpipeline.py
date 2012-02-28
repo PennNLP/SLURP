@@ -11,7 +11,7 @@ from subprocess import Popen, PIPE
 root_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'nlpipeline')
 if not os.path.exists(root_dir):
     raise ImportError("The nlpipeline must be placed in the module directory %s "
-                      "to use the Penn NLP pipeline." % root_dir)
+                      "to use the Penn NLP pipeline. Run download.py to download it." % root_dir)
 tool_dir = root_dir + "/tools"
 parse_props = root_dir + "/models/eatb3.properties"
 parse_model = root_dir + "/models/wsjall.obj"
