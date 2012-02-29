@@ -68,6 +68,7 @@ class SpecGenerator(object):
         responses = []
         system_lines = []
         env_lines = []
+        env_lines_set = set() # Used to track duplicates
         custom_props = set()
         generation_trees = []
         for line in text.split('\n'):
@@ -99,7 +100,12 @@ class SpecGenerator(object):
                     continue
                 
                 system_lines.extend(new_sys_lines)
-                env_lines.extend(new_env_lines)
+                # We need to ensure no duplicates are inserted into env_lines, so we keep
+                # an redundant set. If we were requiring 2.7 we would use OrderedDict.
+                for env_line in new_env_lines:
+                    if env_line not in env_lines_set:
+                        env_lines.append(env_line)
+                        env_lines_set.add(env_line)
                 custom_props.update(new_custom_props)
                 # Add the statements as the children of the generation tree
                 generation_tree[1].append([str(command), [new_env_lines, new_sys_lines]])
