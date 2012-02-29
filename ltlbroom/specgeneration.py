@@ -98,8 +98,7 @@ class SpecGenerator(object):
                 new_env_lines.extend(new_env_lines)
                 custom_props.update(new_custom_props)
                 # Add the statements as the children of the generation tree
-                generation_tree[1].append([str(command), [[(stmt,) for stmt in new_env_lines], 
-                                                     [(stmt,) for stmt in new_sys_lines]]])
+                generation_tree[1].append([str(command), [new_env_lines, new_sys_lines]])
                 
             # Add a true response if there were commands and no failures
             responses.append(new_commands and not failure)
