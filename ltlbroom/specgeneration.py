@@ -24,7 +24,8 @@ SOURCE = "Source"
 UNDERSPECIFIED = "*"
 
 # Generation constants
-VISIT = "m_visit"
+MEM = "m"
+VISIT = "visit"
 
 class SpecGenerator(object):
     """Enables specification generation using natural language."""
@@ -56,17 +57,21 @@ class SpecGenerator(object):
         print "Regions:", regions
         print "Text:", repr(text)
         
-        # Make lists for POS conversions
+        # Make lists for POS conversions, including the metapar keywords
         force_nouns = list(regions) + list(sensors)
-        force_verbs = list(props)
+        force_verbs = list(props) + METAPARS.keys()
         
         responses = []
         system_lines = []
         environment_lines = []
         custom_props = set()
+        generation_trees = []
         for line in text.split('\n'):
             if not line:
                 continue
+            
+            # Init the generation tree to the empty result
+            generation_tree = [line.strip(), []] 
             
             # Lowercase and strip the text before using it
             line = line.strip().lower()
@@ -77,14 +82,28 @@ class SpecGenerator(object):
             print parse
             user_response, semantics_result, semantics_response, new_commands = \
                 self.world_knowledge.process_parse_tree(parse, line)
-            responses.append(user_response)
             
             # Build the metapars
+            failure = False
             for command in new_commands:
-                new_sys_lines, new_env_lines, new_custom_props = _apply_metapar(command)
+                try:
+                    new_sys_lines, new_env_lines, new_custom_props = _apply_metapar(command)
+                except KeyError:
+                    failure = True
+                    continue
+                
                 system_lines.extend(new_sys_lines)
                 new_env_lines.extend(new_env_lines)
                 custom_props.update(new_custom_props)
+                # Add the statements as the children of the generation tree
+                generation_tree[1].append([command, [[(stmt,) for stmt in new_env_lines], 
+                                                     [(stmt,) for stmt in new_sys_lines]]])
+                
+            # Add a true response if there were commands and no failures
+            responses.append(new_commands and not failure)
+                
+            # Add this line's stuff to the generation tree
+            generation_trees.append(generation_tree)
 
         # Convert custom props into a list
         custom_props = list(custom_props)
@@ -94,7 +113,8 @@ class SpecGenerator(object):
         print "Environment lines:", environment_lines
         print "System lines:", system_lines
         print "Custom props:", custom_props
-        return environment_lines, system_lines, custom_props, responses
+        print "Generation tree:", generation_trees
+        return environment_lines, system_lines, custom_props, responses, generation_trees
 
 
 def _apply_metapar(command):
@@ -109,21 +129,38 @@ def _apply_metapar(command):
 
 def _gen_patrol(region):
     """Generate a statement to always eventually be in a location."""
-    return (_always_eventually(_sys(region)), [], [])
-            
+    return ([_always_eventually(_sys(region))], [], [])
+
+
 def _gen_go(region):
     """Generate a statement to go to a location once."""
-    return ([_always_eventually(_sys(_have_visited(region))), 
-             _always(_iff(_next(_sys(_have_visited(region))), _or((_next(_sys(region)),
-                                                                  _sys(_have_visited(region))))))],
-            [], [_have_visited(region)])
+    return ([_always_eventually(_sys(_prop_mem_visit(region))), 
+             _always(_iff(_next(_sys(_prop_mem_visit(region))), _or((_next(_sys(region)),
+                                                                  _sys(_prop_mem_visit(region))))))],
+            [], [_prop_mem_visit(region)])
 
-def _have_visited(region):
+
+def _gen_avoid(region):
+    """Generate a statement to avoid a location and that the robot does not start there."""
+    return ([_always(_not(_sys(region))), _not(_sys(region))], [], [])
+
+
+def _gen_search(region):
+    """Generate a statement to go to a search a region."""
+    return ([_always_eventually(_sys(_prop_mem_visit(region))), 
+             _always(_iff(_next(_sys(_prop_mem_visit(region))), _or((_next(_sys(region)),
+                                                                  _sys(_prop_mem_visit(region))))))],
+            [], [_prop_mem_visit(region)])
+    
+
+def _prop_mem_visit(region):
     """Generate a proposition for having visited a region."""
-    return VISIT + '_' + region
+    return "_".join((MEM, VISIT, region))
 
-# MetaPARS have to be defined after all handler
-METAPARS = {'patrol': (_gen_patrol, (LOCATION,)), 'go': (_gen_go, (LOCATION,))}
+
+# MetaPARS have to be defined after all handlers have been defined
+METAPARS = {'patrol': (_gen_patrol, (LOCATION,)), 'go': (_gen_go, (LOCATION,)), 
+            'avoid': (_gen_avoid, (LOCATION,)), 'search': (_gen_search, (LOCATION,))}
 
 
 def _space(text):
