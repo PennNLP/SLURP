@@ -151,10 +151,8 @@ def _gen_patrol(region):
 def _gen_go(region):
     """Generate statements to go to a location once."""
     mem_prop = _prop_mem(region, VISIT)
-    return ([_always_eventually(_sys(mem_prop)), 
-             _always(_iff(_next(_sys(mem_prop)), _or((_next(_sys(region)),
-                                                                  _sys(mem_prop)))))],
-            [], [mem_prop])
+    alo_sys = _gen_atleastonce(mem_prop, _next(_sys(region)))
+    return (alo_sys, [], [mem_prop])
 
 
 def _gen_avoid(region):
