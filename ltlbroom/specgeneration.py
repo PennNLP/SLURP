@@ -127,6 +127,11 @@ def _apply_metapar(command):
     return handler(*args)
 
 
+def _gen_begin(region):
+    """Generate a statement to begin in a location."""
+    return ([_sys(region)], [], [])
+
+
 def _gen_patrol(region):
     """Generate a statement to always eventually be in a location."""
     return ([_always_eventually(_sys(region))], [], [])
@@ -160,7 +165,8 @@ def _prop_mem_visit(region):
 
 # MetaPARS have to be defined after all handlers have been defined
 METAPARS = {'patrol': (_gen_patrol, (LOCATION,)), 'go': (_gen_go, (LOCATION,)), 
-            'avoid': (_gen_avoid, (LOCATION,)), 'search': (_gen_search, (LOCATION,))}
+            'avoid': (_gen_avoid, (LOCATION,)), 'search': (_gen_search, (LOCATION,)),
+            'begin': (_gen_begin, (THEME,))}
 
 
 def _space(text):
