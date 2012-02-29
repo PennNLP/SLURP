@@ -68,6 +68,8 @@ class SpecGenerator(object):
         generation_trees = []
         for line in text.split('\n'):
             if not line:
+                # Blank lines are counted as being processed correctly but are skipped
+                responses.append(True)
                 continue
             
             # Init the generation tree to the empty result
