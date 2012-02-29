@@ -8,35 +8,39 @@ from subprocess import Popen, PIPE
 
 ## Global constants for system configuration
 # Paths
+NULL = "NUL" if sys.platform == "win32" else "/dev/null"
 root_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'nlpipeline')
 if not os.path.exists(root_dir):
     raise ImportError("The nlpipeline must be placed in the module directory %s "
                       "to use the Penn NLP pipeline. Run download.py to download it." % root_dir)
-tool_dir = root_dir + "/tools"
-parse_props = root_dir + "/models/eatb3.properties"
-parse_model = root_dir + "/models/wsjall.obj"
-parser_dir = root_dir + "/dbparser-0.9.9c-modified"
-ecrestore_dir = root_dir + "/addnulls-mod" 
+tool_dir = os.path.join(root_dir, "tools")
+parse_props = os.path.join(root_dir, "models", "eatb3.properties")
+parse_model = os.path.join(root_dir, "models", "wsjall.obj")
+parser_dir = os.path.join(root_dir, "dbparser-0.9.9c-modified")
+ecrestore_dir = os.path.join(root_dir, "addnulls-mod") 
 
 # Parser/java options
 java = "java"
 max_heap = "1000"
 parser_class = "danbikel.parser.Parser"
 settings = "-Dparser.settingsFile=%s" % parse_props
-parser_classpath = parser_dir + "/dbparser.jar:" + parser_dir + "/dbparser-ext.jar"
+parser_classpath = (os.path.join(parser_dir, "dbparser.jar") + ':' + 
+                    os.path.join(parser_dir, "dbparser-ext.jar"))
 
 # EC Restore/java options
-ecrestore_classpath = "%s:%s/mallet-0.4/class" % (ecrestore_dir, tool_dir)
+ecrestore_classpath = ecrestore_dir + ':' + os.path.join(tool_dir, "mallet-0.4", "class")
 
 # Pipeline commands
 SED = "sed -l" if sys.platform == "darwin" else "sed -u"
-tokenizer = "%s -f %s/tokenizer.sed" % (SED, tool_dir)
-tagger = "java -Xmx128m -classpath %s/mxpost/mxpost.jar tagger.TestTagger %s/mxpost/tagger.project/ 2> /dev/null" % (root_dir, root_dir)
-parser = "%s -Xms%sm -Xmx%sm -cp %s %s %s -is %s  -sa - -out - 2> /dev/null" % \
-    (java, max_heap, max_heap, parser_classpath, settings, parser_class, parse_model)
-ecrestore_wrapper = "%s/wrap-stream.pl" % ecrestore_dir 
-ecrestorer = "%s -cp %s edu.upenn.cis.emptycategories.RestoreECs run - --perceptron --ante_perceptron --nptrace --whxp --wh --whxpdiscern --nptraceante --noante 2> /dev/null" \
-    % (java, ecrestore_classpath)
+tokenizer = SED +" -f " + os.path.join(tool_dir, "tokenizer.sed")
+tagger_jar = os.path.join(root_dir, "mxpost", "mxpost.jar")
+tagger_project = os.path.join(root_dir, "mxpost", "tagger.project")
+tagger = "java -Xmx128m -classpath %s tagger.TestTagger %s 2> %s" % (tagger_jar, tagger_project, NULL)
+parser = "%s -Xms%sm -Xmx%sm -cp %s %s %s -is %s  -sa - -out - 2> %s" % \
+    (java, max_heap, max_heap, parser_classpath, settings, parser_class, parse_model, NULL)
+ecrestore_wrapper = os.path.join(ecrestore_dir, "wrap-stream.pl")
+ecrestorer = "%s -cp %s edu.upenn.cis.emptycategories.RestoreECs run - --perceptron --ante_perceptron --nptrace --whxp --wh --whxpdiscern --nptraceante --noante 2> %s" \
+    % (java, ecrestore_classpath, NULL)
 
 tokentag_command = " | ".join((tokenizer, tagger))
 parser_command = parser

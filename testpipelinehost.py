@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """An interactive test client for the pipelin host."""
 
 import socket
