@@ -25,7 +25,11 @@ UNDERSPECIFIED = "*"
 
 # Generation constants
 MEM = "m"
+DONE = "done"
 VISIT = "visit"
+
+# Actuators
+SWEEP = "sweep"
 
 class SpecGenerator(object):
     """Enables specification generation using natural language."""
@@ -63,7 +67,7 @@ class SpecGenerator(object):
         
         responses = []
         system_lines = []
-        environment_lines = []
+        env_lines = []
         custom_props = set()
         generation_trees = []
         for line in text.split('\n'):
@@ -95,7 +99,7 @@ class SpecGenerator(object):
                     continue
                 
                 system_lines.extend(new_sys_lines)
-                new_env_lines.extend(new_env_lines)
+                env_lines.extend(new_env_lines)
                 custom_props.update(new_custom_props)
                 # Add the statements as the children of the generation tree
                 generation_tree[1].append([str(command), [new_env_lines, new_sys_lines]])
@@ -111,11 +115,11 @@ class SpecGenerator(object):
 
         print "Spec generation complete."
         print "Responses:", responses
-        print "Environment lines:", environment_lines
+        print "Environment lines:", env_lines
         print "System lines:", system_lines
         print "Custom props:", custom_props
         print "Generation tree:", generation_trees
-        return environment_lines, system_lines, custom_props, responses, generation_trees
+        return env_lines, system_lines, custom_props, responses, generation_trees
 
 
 def _apply_metapar(command):
@@ -129,39 +133,58 @@ def _apply_metapar(command):
 
 
 def _gen_begin(region):
-    """Generate a statement to begin in a location."""
+    """Generate statements to begin in a location."""
     return ([_sys(region)], [], [])
 
 
 def _gen_patrol(region):
-    """Generate a statement to always eventually be in a location."""
+    """Generate statements to always eventually be in a location."""
     return ([_always_eventually(_sys(region))], [], [])
 
 
 def _gen_go(region):
-    """Generate a statement to go to a location once."""
-    return ([_always_eventually(_sys(_prop_mem_visit(region))), 
-             _always(_iff(_next(_sys(_prop_mem_visit(region))), _or((_next(_sys(region)),
-                                                                  _sys(_prop_mem_visit(region))))))],
-            [], [_prop_mem_visit(region)])
+    """Generate statements to go to a location once."""
+    mem_prop = _prop_mem(region, VISIT)
+    return ([_always_eventually(_sys(mem_prop)), 
+             _always(_iff(_next(_sys(mem_prop)), _or((_next(_sys(region)),
+                                                                  _sys(mem_prop)))))],
+            [], [mem_prop])
 
 
 def _gen_avoid(region):
-    """Generate a statement to avoid a location and that the robot does not start there."""
+    """Generate statements for avoiding a location, adding that the robot does not start there."""
     return ([_always(_not(_sys(region))), _not(_sys(region))], [], [])
 
 
 def _gen_search(region):
-    """Generate a statement to go to a search a region."""
-    return ([_always_eventually(_sys(_prop_mem_visit(region))), 
-             _always(_iff(_next(_sys(_prop_mem_visit(region))), _or((_next(_sys(region)),
-                                                                  _sys(_prop_mem_visit(region))))))],
-            [], [_prop_mem_visit(region)])
+    """Generate statements for searching a region."""
+    mem_prop = _prop_mem(region, SWEEP)
+    cic_frag, cic_env = _frag_complete_context(SWEEP, _sys(region))
+    alo_sys = _gen_atleastonce(mem_prop, cic_frag)
+    return (alo_sys, cic_env, [mem_prop])
     
 
-def _prop_mem_visit(region):
+def _gen_atleastonce(mem_prop, fragment):
+    """Generate statements for perfoming an action at least once by using a memory proposition."""
+    return [_always_eventually(_sys(mem_prop)), 
+            _always(_iff(_next(_sys(mem_prop)), _or((_sys(mem_prop), fragment))))]
+
+
+def _frag_complete_context(actuator, context_prop):
+    """Generate a fragment for completing an action in context."""
+    actuator_done = _prop_actuator_done(actuator)
+    eventually_actuator = _always_eventually(_env(actuator_done))
+    return [_and((_sys(actuator), _next(_env(actuator_done)), context_prop)), [eventually_actuator]]
+
+
+def _prop_mem(region, event):
     """Generate a proposition for having visited a region."""
-    return "_".join((MEM, VISIT, region))
+    return "_".join((MEM, event, region))
+
+
+def _prop_actuator_done(actuator):
+    """Generate a proposition for an actuator's completion."""
+    return "_".join((actuator, DONE))
 
 
 # MetaPARS have to be defined after all handlers have been defined
