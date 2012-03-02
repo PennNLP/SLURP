@@ -1,14 +1,18 @@
 #!/usr/bin/env python
-"""Functions for accessing the Penn NLP Pipeline."""
+"""Functions for accessing the Penn NLP Pipeline.
+
+Depends on the nlpipeline, sed, and java."""
 
 import sys
 import os
 import re
 from subprocess import Popen, PIPE
+import shlex
 
 ## Global constants for system configuration
 # Paths
 NULL = "NUL" if sys.platform == "win32" else "/dev/null"
+CLASSPATH_SEP = ";" if sys.platform == "win32" else ":"
 root_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'nlpipeline')
 if not os.path.exists(root_dir):
     raise ImportError("The nlpipeline must be placed in the module directory %s "
@@ -24,31 +28,28 @@ java = "java"
 max_heap = "1000"
 parser_class = "danbikel.parser.Parser"
 settings = "-Dparser.settingsFile=%s" % parse_props
-parser_classpath = (os.path.join(parser_dir, "dbparser.jar") + ':' + 
+parser_classpath = (os.path.join(parser_dir, "dbparser.jar") + CLASSPATH_SEP + 
                     os.path.join(parser_dir, "dbparser-ext.jar"))
 
 # EC Restore/java options
-ecrestore_classpath = ecrestore_dir + ':' + os.path.join(tool_dir, "mallet-0.4", "class")
+ecrestore_classpath = ecrestore_dir + CLASSPATH_SEP + os.path.join(tool_dir, "mallet-0.4", "class")
 
 # Pipeline commands
 SED = "sed -l" if sys.platform == "darwin" else "sed -u"
 tokenizer = SED +" -f " + os.path.join(tool_dir, "tokenizer.sed")
 tagger_jar = os.path.join(root_dir, "mxpost", "mxpost.jar")
 tagger_project = os.path.join(root_dir, "mxpost", "tagger.project")
-tagger = "java -Xmx128m -classpath %s tagger.TestTagger %s 2> %s" % (tagger_jar, tagger_project, NULL)
-parser = "%s -Xms%sm -Xmx%sm -cp %s %s %s -is %s  -sa - -out - 2> %s" % \
-    (java, max_heap, max_heap, parser_classpath, settings, parser_class, parse_model, NULL)
-ecrestore_wrapper = os.path.join(ecrestore_dir, "wrap-stream.pl")
-ecrestorer = "%s -cp %s edu.upenn.cis.emptycategories.RestoreECs run - --perceptron --ante_perceptron --nptrace --whxp --wh --whxpdiscern --nptraceante --noante 2> %s" \
-    % (java, ecrestore_classpath, NULL)
+tagger = "java -Xmx128m -classpath %s tagger.TestTagger %s" % (tagger_jar, tagger_project)
+parser = "%s -Xms%sm -Xmx%sm -cp %s %s %s -is %s  -sa - -out -" % \
+    (java, max_heap, max_heap, parser_classpath, settings, parser_class, parse_model)
+ecrestorer = "%s -cp %s edu.upenn.cis.emptycategories.RestoreECs run - --perceptron --ante_perceptron --nptrace --whxp --wh --whxpdiscern --nptraceante --noante" \
+    % (java, ecrestore_classpath)
 
-tokentag_command = " | ".join((tokenizer, tagger))
-parser_command = parser
-ecrestore_command = " | ".join((ecrestore_wrapper, ecrestorer))
-
-tokentag_pipe = None
-parse_pipe = None
-ecrestore_pipe = None
+token_proc = None
+tag_proc = None
+parse_proc = None
+ecrestore_proc = None
+null_out = None
 
 OUTER_PARENS_RE = re.compile("\(\s*(.+)\s*\)")
 
@@ -58,24 +59,35 @@ def init_pipes():
 
     You must call this before calling any other functions"""
     # pylint: disable=W0603
-    global tokentag_pipe, parse_pipe, ecrestore_pipe
+    global token_proc, tag_proc, parse_proc, ecrestore_proc, null_out
 
-    # Set up the pipes
-    tokentag_pipe = setup_pipe(tokentag_command)
-    parse_pipe = setup_pipe(parser_command)
-    ecrestore_pipe = setup_pipe(ecrestore_command, ecrestore_dir)
+    # Set up the null sink and the pipes
+    null_out = open(NULL, 'w')
+    token_proc = setup_pipe(tokenizer)
+    tag_proc = setup_pipe(tagger)
+    parse_proc = setup_pipe(parser)
+    ecrestore_proc = setup_pipe(ecrestorer, ecrestore_dir)
 
 
 def close_pipes():
     """Terminate all pipelines."""
-    tokentag_pipe.terminate()
-    parse_pipe.terminate()
-    ecrestore_pipe.terminate()
+    token_proc.terminate()
+    tag_proc.terminate()
+    parse_proc.terminate()
+    ecrestore_proc.terminate()
+    null_out.close()
 
 
 def setup_pipe(command, cwd=None):
     """Set up a pipeline using the given command."""
-    return Popen(command, stdin=PIPE, stdout=PIPE, shell=True, cwd=cwd)
+    # Windows expects a string for the command, so only lex other systems
+    if sys.platform != "win32":
+        command = shlex.split(command)
+    
+    try:
+        return Popen(command, stdin=PIPE, stdout=PIPE, stderr=null_out, cwd=cwd)
+    except OSError:
+        raise OSError("Subprocess failed to run command: %s" % command)
 
 
 def process_pipe_filter(text, process, line_filter=""):
@@ -94,13 +106,15 @@ def process_pipe_filter(text, process, line_filter=""):
 
 def parse_text(text, force_nouns=set(), force_verbs=set()):
     """Run the text through the pipelines."""
-    if not tokentag_pipe or not parse_pipe or not ecrestore_pipe:
-        raise ValueError("You must call init_pipes before parsing")
+    if not all((token_proc, tag_proc, parse_proc, ecrestore_proc)):
+        raise ValueError("You must call init_pipes before parsing.")
 
-    tagged_sent = process_pipe_filter(text, tokentag_pipe)
-    bikel_clean_tagged = _tag_convert(tagged_sent, force_nouns, force_verbs)
-    parsed_sent = process_pipe_filter(bikel_clean_tagged, parse_pipe, "(")
-    restored_sent = process_pipe_filter(parsed_sent, ecrestore_pipe, "(")
+    token_sent = process_pipe_filter(text, token_proc)
+    tagged_sent = process_pipe_filter(token_sent, tag_proc)
+    clean_tagged_sent = _tag_convert(tagged_sent, force_nouns, force_verbs)
+    parsed_sent = process_pipe_filter(clean_tagged_sent, parse_proc, "(")
+    # Wrap input to the null restorer as ( x) exactly as wrap-stream.pl used to do
+    restored_sent = process_pipe_filter("( " + parsed_sent + ")", ecrestore_proc, "(")
 
     # Remove extra parens from the parse with elements restored
     final_parse = OUTER_PARENS_RE.match(restored_sent).group(1)
@@ -131,6 +145,5 @@ if __name__ == "__main__":
     print tokenizer
     print tagger
     print parser
-    print ecrestore_wrapper
     print ecrestorer
 
