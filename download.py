@@ -18,6 +18,7 @@ import sys
 import urllib2
 import posixpath
 import shutil
+from zipfile import ZipFile
 
 URLS = ("http://www.seas.upenn.edu/~lignos/data/nlpipeline.zip",)
 
@@ -35,8 +36,14 @@ for address in URLS:
         with open(filename, 'wb') as localfile:
             shutil.copyfileobj(url, localfile)
     except IOError:
-        print >> sys.stderr, "Couldn't write filename", filename
+        print >> sys.stderr, "Couldn't write file", filename
+        continue
     finally:
         url.close()
 
-
+    print "Unzipping %s..." % filename
+    try:
+        zfile = ZipFile(filename)
+        zfile.extractall()
+    except BadZipFile:
+        print >> sys.stderr, "Couldn't unzip file", filename
