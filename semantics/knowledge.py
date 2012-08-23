@@ -8,8 +8,9 @@ Ian Perera June 2011"""
 import re
 from collections import defaultdict
 
-from semantics import parsing
-from semantics.structures import Predicate, Entity, Assertion, Event, YNQuery, Command, WhQuery
+import parsing
+from structures import Predicate, Entity, Assertion, Event, YNQuery, Command, WhQuery
+from lexical_constants import *
 try:
     from subtle_msgs.msg import Fiducial
 except ImportError:
@@ -18,91 +19,15 @@ except ImportError:
 
 DEFAULT_LOCATION = "unknown_current_location"
 
-ENTITY_ALIASES = {'me': 'Commander',
-                  'i': 'Commander'}
-
-SEARCH_ACTION = "search"
-GO_ACTION = "go"
-GET_ACTION = "retrieve"
-FOLLOW_ACTION = "follow"
-SEE_ACTION = "see"
-TELL_ACTION = "tell"
-# We include the identity entries just to make things easier on the talkback side
-ACTION_ALIASES = {'find': SEARCH_ACTION,
-                  'look': SEARCH_ACTION,
-                  'appear': GO_ACTION,
-                  'get': GET_ACTION,
-                  'meander': GO_ACTION,
-                  'nonvehicle': GO_ACTION,
-                  'escape': GO_ACTION,
-                  'rummage': SEARCH_ACTION,
-                  'characterize': SEE_ACTION,
-                  'chase': FOLLOW_ACTION,
-                  SEARCH_ACTION: SEARCH_ACTION,
-                  GO_ACTION: GO_ACTION,
-                  GET_ACTION: GET_ACTION,
-                  FOLLOW_ACTION: FOLLOW_ACTION,
-                  SEE_ACTION: SEE_ACTION,
-                  TELL_ACTION: TELL_ACTION}
-
-
-class RoomState:
-    """Contains the information for a room. Deprecated."""
-    def __init__(self, state_string=None):
-        self.objects = {}
-        self.explored = False
-        if state_string is not None:
-            input_string_split = state_string.split(';')
-            index = 0
-            while index < len(input_string_split):
-                section = input_string_split[index].split('=')
-                key = section[0]
-                value = int(section[1])
-                self.objects[key] = value
-                index = index + 1
-            self.explored = True
-        
-
-    def __str__(self):
-        description = ''
-        for key, value in self.objects.items():
-            description += str(value) + ' ' + key
-            if value > 1:
-                description += 's, '
-            else:
-                description += ', '
-
-        description = description[:-2]
-        return description
-
-class PredicateDictionary:
-    """Future data structure for storing world knowledge. Not used ATM,
-    and I don't think it works yet."""
-    def __init__(self):
-        self.dict = defaultdict(list)
-
-    def add_predicates(self, predicate_dict):
-        """Add a dictionary of predicates (Entity) to the structure."""
-        for key, value in predicate_dict.items():
-            self.dict[(key, value)].append(predicate_dict)
-
-    def __getitem__(self, key):
-        return self.dict[key]
-
         
 class Knowledge:
     """Encompasses world knowledge and handles IO with text input and sensor
     data."""
-    BELIEF_CONFIDENCE_THRESHOLD = .5
 
     def __init__(self, nlmaster=None):
         # Mapping from id to Entity
         self.junior_known_entities = {}
         self.commander_known_entities = {}
-
-        # Mapping from room number to RoomState
-        self.junior_belief_map = {}
-        self.commander_belief_map = {}
 
         _junior_entity = Entity({'EntityType' : [Predicate('EntityType', 'Junior')],
                                   'Location' : [Predicate('Location', 'unknown')]})
@@ -124,8 +49,9 @@ class Knowledge:
         # Stores the command queue after each utterance is processed so it can be diffed.
         self.old_command_queue = []
 
-        # This will be filled in later by a caller
+        # These will be filled in later by a caller
         self.direction_proxy = None
+        self.map_proxy = None
 
         # Hold on to nlmaster
         self.nlmaster = nlmaster
@@ -531,26 +457,6 @@ class Knowledge:
         for key, value in query_structure.parameters.items():
             if value is None:
                 unknown_parameters.append(key)
-
- #   def resolve_unspecified_parameter(self, semantic_structure, parameter_type, max_depth = 2):
-        """Given an underspecified semantic structure, search the discourse stack
-        for parameters to be substituted."""
-
-   #     raise NotImplementedError
-##        unspecified_parameters = []
-##        preposition_parameters = []
-##
-##        current_depth = 0
-##        semantic_quantifier = semantic_structure.entity_class.quantifier
-##
-##        for utterance_structure in reversed(self.discourse_stack):
-##            if current_depth == max_depth:
-##                break
-##            current_depth += 1
-##            if (utterance_structure.parameters[parameter] is not None and
-##                    utterance_structure.entity_class.subsumes(semantic_quantifier)):
-##                semantic_structure.parameters[parameter] = utterance_structure.parameters[parameter]
-##                break
             
     
 def rename_entity(old_name, new_name):
