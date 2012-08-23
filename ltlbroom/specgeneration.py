@@ -2,7 +2,7 @@
 
 import socket
 
-from semantics.knowledge import Knowledge
+from semantics.processing import process_parse_tree
 from pipelinehost import socket_parse, DEFAULT_PORT
 
 # LTL Constants
@@ -42,7 +42,6 @@ class SpecGenerator(object):
         except socket.error:
             raise IOError("Could not connect to pipelinehost on port %d. "
                           "Make sure that pipelinehost is running." % DEFAULT_PORT)
-        self.world_knowledge = Knowledge()
         
         # Sets of propositions, accessible to all methods
         self.custom_props = set()
@@ -89,7 +88,7 @@ class SpecGenerator(object):
                                  force_verbs=force_verbs)
             print parse
             user_response, semantics_result, semantics_response, new_commands = \
-                self.world_knowledge.process_spec_parse_tree(parse, line)
+                process_parse_tree(parse, line)
             
             # Build the metapars
             failure = False
