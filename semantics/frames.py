@@ -258,7 +258,7 @@ def activize_clause(parse_tree_clause):
         if isinstance(subtree, Tree) and \
            sbj_match.match(subtree.node) is not None:
             sbj_position = position
-        elif isinstance(subtree[0], Tree) and subtree[0][0] == '*':
+        elif isinstance(subtree[0], Tree) and subtree[0] and subtree[0][0] == '*':
             null_obj_position = position
         if isinstance(subtree, Tree) and subtree[0] in auxiliary_verbs:
             aux_verb_position = position
