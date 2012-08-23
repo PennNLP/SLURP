@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """Download data files needed by SLURP."""
 
 # Copyright (C) 2012 Constantine Lignos
