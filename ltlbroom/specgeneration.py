@@ -60,6 +60,7 @@ class SpecGenerator(object):
         print "Props:", props
         print "Regions:", regions
         print "Text:", repr(text)
+        print
         
         # Make lists for POS conversions, including the metapar keywords
         force_nouns = list(regions) + list(sensors)
@@ -88,7 +89,7 @@ class SpecGenerator(object):
                                  force_verbs=force_verbs)
             print parse
             user_response, semantics_result, semantics_response, new_commands = \
-                self.world_knowledge.process_parse_tree(parse, line)
+                self.world_knowledge.process_spec_parse_tree(parse, line)
             
             # Build the metapars
             failure = False
@@ -115,6 +116,8 @@ class SpecGenerator(object):
                 
             # Add this line's stuff to the generation tree
             generation_trees.append(generation_tree)
+            
+            print
 
         # Convert custom props into a list
         custom_props = list(custom_props)
