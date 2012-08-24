@@ -24,6 +24,7 @@ SENSOR_MAPPING = {Fiducial.TYPE_BOMB: "bomb",
                   Fiducial.TYPE_USER2: "user_2"}
 
 SIMPLE_ACTUATORS = set((SEARCH_PROP, FOLLOW_PROP, DEFUSE_PROP, EXPLORE_PROP))
+VALIDATE_TARGET_ACTUATORS = set((DEFUSE_PROP))
 
 # Semantics constants
 KNOWN_ACTIONS = set((SEARCH_ACTION, GO_ACTION, GET_ACTION, FOLLOW_ACTION, SEE_ACTION, 
@@ -38,6 +39,7 @@ UNDERSPECIFIED = "*"
 OKAY = "Understood. I'm carrying out your orders now."
 FAILURE = "Sorry, I can't make a plan from those orders. Here's why: "
 DUNNO = "Sorry, I don't know how to %s."
+DUNNO_OBJECT = "Sorry, I don't know how anything about %s."
 GOTIT = "Got it. I'll %s."
 MISUNDERSTAND = "Sorry, I didn't understand that at all."
 
@@ -375,9 +377,10 @@ def make_response(new_commands):
     if not new_commands:
         return MISUNDERSTAND
 
-    # Split into good and bad commands, futher filtering the good ones
+    # Split into good and bad commands, further filtering the good ones
     good_commands = []
     bad_commands = []
+    bad_targets = []
     for verb, target in new_commands:
         # Skip the SEE_ACTION entirely
         if verb == SEE_ACTION or (verb in ACTION_ALIASES and ACTION_ALIASES[verb] == SEE_ACTION):
@@ -385,11 +388,25 @@ def make_response(new_commands):
 
         # Filter to known verbs, aliasing if needed
         if verb in ACTION_ALIASES or verb in SIMPLE_ACTUATORS or verb in COMPLEX_ACTUATORS:
+            # Perform target check for actuators
+            if verb in VALIDATE_TARGET_ACTUATORS:
+                target_name = target[THEME] if THEME in target else None
+                good_target = target_name in SENSOR_MAPPING.values()
+            else:
+                # Give it a freebie otherwise
+                good_target = True
+
             try:
                 verb = ACTION_ALIASES[verb]
             except KeyError:
                 pass
-            good_commands.append((verb, target))
+            
+            if good_target:
+                good_commands.append((verb, target))
+            else:
+                print "Bad target:", target
+                if THEME in target:
+                    bad_targets.append(target[THEME])
         else:
             bad_commands.append((verb, target))
 
@@ -397,14 +414,20 @@ def make_response(new_commands):
     # Build up the response
     response = ""
     if good_commands:
-        response += GOTIT % _join_commands(good_commands)
+        response += GOTIT % _join_commands([_englishify_command(command) for command in good_commands])
 
     if bad_commands:
         # Pad the initial response if there's something there
         if response:
             response += " "
 
-        response += DUNNO % _join_commands(bad_commands)
+        response += DUNNO % _join_commands([_englishify_command(command) for command in bad_commands])
+
+    if bad_targets:
+        if response:
+            response += " "
+
+        response += DUNNO_OBJECT % _join_commands(bad_targets)
 
     # Return the response if we made it successfully. The expected case
     # where we wouldn't is if there's only a SEE_ACTION command.
@@ -415,12 +438,12 @@ def _join_commands(commands):
     """Join the commands in a semi-grammatical fashion."""
     # Put in ands and commas as needed
     if len(commands) == 1:
-        actions =  _englishify_command(commands[0])
+        actions = commands[0]
     elif len(commands) == 2:
-        actions = " and ".join(_englishify_command(command) for command in commands)
+        actions = " and ".join(commands)
     else:
-        actions = ", ".join(_englishify_command(command) for command in commands[:-1])
-        actions += ", and " + _englishify_command(commands[-1])
+        actions = ", ".join(commands[:-1])
+        actions += ", and " + commands[-1]
 
     return actions
 
