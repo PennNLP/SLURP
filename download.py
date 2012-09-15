@@ -19,7 +19,7 @@ import sys
 import urllib2
 import posixpath
 import shutil
-from zipfile import ZipFile
+from zipfile import ZipFile, BadZipfile
 
 URLS = ("http://www.seas.upenn.edu/~lignos/data/nlpipeline.zip",)
 
@@ -46,5 +46,5 @@ for address in URLS:
     try:
         zfile = ZipFile(filename)
         zfile.extractall()
-    except BadZipFile:
+    except BadZipfile:
         print >> sys.stderr, "Couldn't unzip file", filename
