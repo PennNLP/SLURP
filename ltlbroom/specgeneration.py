@@ -54,16 +54,17 @@ SWEEP = "sweep"
 class SpecGenerator(object):
     """Enables specification generation using natural language."""
 
-    def __init__(self):
+    def __init__(self, hostname='localhost'):
         # Start knowledge and connect to the NLP pipeline
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            self.sock.connect(('localhost', DEFAULT_PORT))
+            self.sock.connect((hostname, DEFAULT_PORT))
         except socket.error:
-            raise IOError("Could not connect to pipelinehost on port %d. "
-                          "Make sure that pipelinehost is running." % DEFAULT_PORT)
+            raise IOError("Could not connect to pipelinehost on %s:%d. "
+                          "Make sure that pipelinehost is running." % 
+                            (hostname, DEFAULT_PORT))
         
-        # Sets of propositions, accessible to all methods
+        # Sets of propositions
         self.custom_props = set()
 
     def generate(self, text, sensors, regions, props):
@@ -284,6 +285,7 @@ def _iff(prop1, prop2):
 def _implies(prop1, prop2):
     """Connect two propositions with implies."""
     return _parens(prop1 + _space(TO) + prop2)
+
 
 if __name__ == "__main__":
     s = SpecGenerator()
