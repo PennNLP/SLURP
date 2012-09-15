@@ -1,12 +1,32 @@
 #!/usr/bin/env python
-"""Hosts requests sent to the NLPipeline over sockets."""
+"""
+Hosts requests sent to the NLPipeline over sockets.
+
+"""
+
+# Copyright (C) 2012 Constantine Lignos
+#
+# This file is a part of SLURP.
+#
+# SLURP is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# SLURP is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with SLURP.  If not, see <http://www.gnu.org/licenses/>.
 
 import json
 from commproxy import CallbackSocket, _parse_msg
 from pennpipeline import parse_text, init_pipes, close_pipes
 
 MSG_SEP = "\n"
-DEFAULT_PORT = 10001
+DEFAULT_PORT = 9001
 
 
 def socket_parse(**kwargs):
@@ -34,8 +54,8 @@ class PipelineHost(CallbackSocket):
         init_pipes()
 
     def __del__(self):
-        # We put this check as it may already be undefined during interpreter shutdown, but there's
-        # no guarantee this will succeed during shutdown anyway.
+        # We put this check as it may already be undefined during interpreter shutdown.
+        # There's no guarantee this will succeed during shutdown anyway.
         if close_pipes:
             close_pipes()
 
