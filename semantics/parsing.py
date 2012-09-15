@@ -53,7 +53,7 @@ def get_semantics_from_parse_tree(parse_tree_string):
                 tree = frames.invert_clause(tree)
                 tree = frames.wh_movement(tree)
 
-
+# TODO: Negation support should go somewhere in here
 
                 # Regex for finding verbs 
                 verb_finder = re.compile(r'(?<=VB[ DGNPZ]) *\w*(?=\))')

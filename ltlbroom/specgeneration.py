@@ -21,6 +21,7 @@ Generates a logical specification from natural language.
 # along with SLURP.  If not, see <http://www.gnu.org/licenses/>.
 
 import socket
+import sys
 
 from semantics.processing import process_parse_tree
 from pipelinehost import socket_parse, DEFAULT_PORT
@@ -110,6 +111,13 @@ class SpecGenerator(object):
             print parse
             user_response, semantics_result, semantics_response, new_commands = \
                 process_parse_tree(parse, line)
+            print "Returned values from semantics:"
+            print "User response:", repr(user_response)
+            print "Semantics results:"
+            for result in semantics_result:
+                    print "\t" + str(result)
+            print "Semantics response:", semantics_response
+            print "New commands:", new_commands
             
             # Build the metapars
             failure = False
@@ -289,4 +297,4 @@ def _implies(prop1, prop2):
 
 if __name__ == "__main__":
     s = SpecGenerator()
-    s.generate("Go to r1.", (), ("r1",), ())
+    s.generate(sys.argv[1], (), ("r1",), ())

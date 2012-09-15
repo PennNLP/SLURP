@@ -1,13 +1,14 @@
 
 import parsing
 from lexical_constants import *
-from structures import Predicate, Entity, Assertion, Event, YNQuery, Command, WhQuery
+from structures import Entity, Assertion, Event, Command, WhQuery
 
 def process_parse_tree(parse_tree_input, text_input):
     """Produces semantic interpretations of parse trees."""
 
     print "Processing:", repr(text_input)
     semantics_result = parsing.get_semantics_from_parse_tree(parse_tree_input)
+    print "Semantics result:", semantics_result
     semantic_structures = parsing.create_semantic_structures(semantics_result)
     semantics_response = parse_semantic_structures(semantic_structures)
     print "Answer from semantics:", semantics_response
@@ -35,6 +36,7 @@ def parse_semantic_structures(semantic_structure_list):
     response = ""
     
     for semantic_structure in semantic_structure_list:
+        print "Semantic structure:", semantic_structure
         if str(semantic_structure) == "['if']" or str(semantic_structure) == "['when']":
             continue
         elif str(semantic_structure) == "or":
