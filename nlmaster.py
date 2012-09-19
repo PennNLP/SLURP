@@ -21,12 +21,12 @@ from tf import TransformListener
 from tf import ExtrapolationException
 
 from semantics.knowledge import Knowledge, rename_entity
-from rosmarc.statemanager import StateManager, make_response
-from rosmarc.nlproxy import add_subscriber, add_ltl_publisher
+from jr.statemanager import StateManager, make_response
+from jr.nlproxy import add_subscriber, add_ltl_publisher
 from commproxy import CallbackSocket
 from pennpipeline import parse_text, init_pipes, close_pipes
-from rosmarc.mapcontrol import iPadConnection, MapProxy, RobotPositionProxy
-from rosmarc.directions import DirectionProxy
+from jr.mapcontrol import iPadConnection, MapProxy, RobotPositionProxy
+from jr.directions import DirectionProxy
 
 LTL_ENVIRONMENT_TOPIC = "LTLInfo"
 ODOM_TOPIC = "odom"
