@@ -4,7 +4,7 @@
 import re
 from threading import Lock
 
-from Semantics.Knowledge import (SEARCH_ACTION, GO_ACTION, GET_ACTION, FOLLOW_ACTION, 
+from semantics.lexical_constants import (SEARCH_ACTION, GO_ACTION, GET_ACTION, FOLLOW_ACTION, 
                                  SEE_ACTION, TELL_ACTION, ACTION_ALIASES)
 from ltlbroom.fsa import Automaton
 from ltlbroom.ltlgeneration import LTLGenerator, FOLLOW_PROP, SEARCH_PROP, EXPLORE_PROP, UnrealizableError

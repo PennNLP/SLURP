@@ -8,7 +8,7 @@ import time
 
 # Stash the path before any more imports are performed
 MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
-LTLGEN_BASE_DIR = os.path.join(MODULE_DIR, 'LTLMoP', 'src', 'etc', 'jtlv')
+LTLGEN_BASE_DIR = os.path.join(MODULE_DIR, '..', 'LTLMoP', 'src', 'etc', 'jtlv')
 
 # Don't move the ros imports or very bad things might happen
 import roslib
@@ -20,13 +20,13 @@ from std_msgs.msg import String
 from tf import TransformListener
 from tf import ExtrapolationException
 
-from statemanager import StateManager, make_response
-from nlproxy import add_subscriber, add_ltl_publisher
+from semantics.knowledge import Knowledge, rename_entity
+from rosmarc.statemanager import StateManager, make_response
+from rosmarc.nlproxy import add_subscriber, add_ltl_publisher
 from commproxy import CallbackSocket
-from Semantics import Knowledge
-from PennPipeline import parse_text, init_pipes, close_pipes
-from mapcontrol import iPadConnection, MapProxy, RobotPositionProxy
-from directions import DirectionProxy
+from pennpipeline import parse_text, init_pipes, close_pipes
+from rosmarc.mapcontrol import iPadConnection, MapProxy, RobotPositionProxy
+from rosmarc.directions import DirectionProxy
 
 LTL_ENVIRONMENT_TOPIC = "LTLInfo"
 ODOM_TOPIC = "odom"
@@ -73,7 +73,7 @@ class NLMaster:
     
         # Create world knowledge
         print "Starting knowledge..."
-        WORLD_KNOWLEDGE = Knowledge.Knowledge(self)
+        WORLD_KNOWLEDGE = Knowledge(self)
         self.state_mgr.world_knowledge = WORLD_KNOWLEDGE
         
         # Wait a little for ROS to avoid timing startup issues.
@@ -93,7 +93,7 @@ class NLMaster:
         self.comm_proxy = CallbackSocket(self.text_port)
         self.comm_proxy.register_callback(self.process_text)
         self.ipad_conn = iPadConnection(self.map_port)
-        self.ipad_conn.register_rename_callback(Knowledge.rename_entity)
+        self.ipad_conn.register_rename_callback(rename_entity)
         self.ipad_conn.register_text_callback(self.process_text)
         # TODO Add highlight callback
         self.map_proxy = MapProxy(self.ipad_conn)
