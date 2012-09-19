@@ -364,11 +364,18 @@ class StateManager:
 
         response = ("I'm now going to %s the %s in the %s." % (action, target, self.location) 
                     if target else  "I'm now going to %s in the %s." % (action, self.location))
-        self.nlmaster.send_response(response)
+        if self.nlmaster:
+            self.nlmaster.send_response(response)
+        else:
+            print response
 
     def notify_done(self):
         """Notify the commander that we're done."""
-        self.nlmaster.send_response("I'm done and I'm in the %s." % self.location)
+        response = "I'm done and I'm in the %s." % self.location
+        if self.nlmaster:
+            self.nlmaster.send_response(response)
+        else:
+            print response
 
 
 def make_response(new_commands):

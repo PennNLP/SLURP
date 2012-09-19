@@ -6,6 +6,10 @@ import os
 import roslib
 roslib.load_manifest('NL')
 
+# Hack path before imports
+MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.join(MODULE_DIR, '..', '..'))
+
 from statemanager import StateManager
 from subtle_msgs.msg import Fiducial
 
@@ -13,8 +17,7 @@ INIT_ROOM = "hall"
 TEST_WORLD_MAP = (["hall", "library", "classroom"], 
                   [("hall", "hall"), ("hall", "library"), ("hall", "classroom"),
                    ("library", "library"), ("classroom", "classroom")])
-MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
-LTLGEN_BASE_DIR = os.path.join(*[MODULE_DIR, 'LTLMoP', 'src', 'etc', 'jtlv'])
+LTLGEN_BASE_DIR = os.path.join(MODULE_DIR, '..', '..', 'LTLMoP', 'src', 'etc', 'jtlv')
 
 class FakePublisher:
     """A fake LTL publisher."""
