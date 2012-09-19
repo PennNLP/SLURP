@@ -15,36 +15,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys
-import urllib2
-import posixpath
-import shutil
-from zipfile import ZipFile, BadZipfile
+import os
 
-URLS = ("http://www.seas.upenn.edu/~lignos/data/nlpipeline.zip",)
+from datamanager import download, unzip
 
-for address in URLS:
-    filename = posixpath.basename(address)
-    print "Downloading %s..." % address
+# Assume that download.py and pennpipeline.py are located in the same
+# directory
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+PIPELINE_URL = "http://www.seas.upenn.edu/~lignos/data/nlpipeline.zip"
+FILENAME = os.path.join(ROOT_DIR, "nlpipeline.zip")
 
-    try:
-        url = urllib2.urlopen(address)
-    except urllib2.HTTPError:
-        print >> sys.stderr, "Couldn't open URL", address
-        continue
-
-    try:
-        with open(filename, 'wb') as localfile:
-            shutil.copyfileobj(url, localfile)
-    except IOError:
-        print >> sys.stderr, "Couldn't write file", filename
-        continue
-    finally:
-        url.close()
-
-    print "Unzipping %s..." % filename
-    try:
-        zfile = ZipFile(filename)
-        zfile.extractall()
-    except BadZipfile:
-        print >> sys.stderr, "Couldn't unzip file", filename
+download(PIPELINE_URL, FILENAME)
+unzip(FILENAME, ROOT_DIR)
