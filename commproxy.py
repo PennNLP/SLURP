@@ -3,7 +3,7 @@
 import sys
 import socket
 import threading
-from socket import timeout
+from socket import timeout, error
 from Queue import Queue
 
 
@@ -57,6 +57,8 @@ class CallbackSocket(object):
                     buff = self._conn.recv(4096)
                 except timeout:
                     continue
+                except error:
+                    break
                 if not buff:
                     break
                 while buff:
