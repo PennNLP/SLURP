@@ -141,7 +141,7 @@ class ServiceSocket:
 
             world_knowledge = _WORLD_KNOWLEDGE
         else:
-            world_knowledge = world_knowledge.Knowledge()
+            world_knowledge = knowledge.Knowledge()
         
         response = {}
 
