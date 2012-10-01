@@ -25,7 +25,6 @@ ecrestore_dir = os.path.join(root_dir, "addnulls-mod")
 
 # Parser/java options
 java = "java"
-max_heap = "1000"
 parser_class = "danbikel.parser.Parser"
 settings = "-Dparser.settingsFile=%s" % parse_props
 parser_classpath = (os.path.join(parser_dir, "dbparser.jar") + CLASSPATH_SEP + 
@@ -40,8 +39,8 @@ tokenizer = SED +" -f " + os.path.join(tool_dir, "tokenizer.sed")
 tagger_jar = os.path.join(root_dir, "mxpost", "mxpost.jar")
 tagger_project = os.path.join(root_dir, "mxpost", "tagger.project")
 tagger = "java -Xmx128m -classpath %s tagger.TestTagger %s" % (tagger_jar, tagger_project)
-parser = "%s -Xms%sm -Xmx%sm -cp %s %s %s -is %s  -sa - -out -" % \
-    (java, max_heap, max_heap, parser_classpath, settings, parser_class, parse_model)
+parser = "%s -Xmx768m -cp %s %s %s -is %s  -sa - -out -" % \
+    (java, parser_classpath, settings, parser_class, parse_model)
 ecrestorer = "%s -cp %s edu.upenn.cis.emptycategories.RestoreECs run - --perceptron --ante_perceptron --nptrace --whxp --wh --whxpdiscern --nptraceante --noante" \
     % (java, ecrestore_classpath)
 
