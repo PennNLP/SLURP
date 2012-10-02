@@ -130,7 +130,8 @@ def parse_text(text, force_nouns=set(), force_verbs=set()):
 def _tag_convert(sent, force_nouns, force_verbs):
     """Convert from MXPOST to Bikel style tags, coercing tags."""
     # MXPOST: word_tag
-    token_tags = [token.split('_') for token in sent.rstrip().split()]
+    # We use rsplit with one to make sure underscores in the token aren't harmed.
+    token_tags = [token.rsplit('_', 1) for token in sent.rstrip().split()]
     # Coerce the tags
     token_tags = [(word, _coerce_tag(word, tag, force_nouns, force_verbs)) 
                   for word, tag in token_tags]
