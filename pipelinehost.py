@@ -77,10 +77,6 @@ def main():
             raw_input()
     except KeyboardInterrupt:
         pass
-    except:
-        raise
-    finally:
-        del host
 
     
 if __name__ == "__main__":
