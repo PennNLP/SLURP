@@ -70,11 +70,17 @@ def init_pipes():
 
 def close_pipes():
     """Terminate all pipelines."""
-    token_proc.terminate()
-    tag_proc.terminate()
-    parse_proc.terminate()
-    ecrestore_proc.terminate()
+    for proc in (token_proc, tag_proc, parse_proc, ecrestore_proc):
+        _terminate_with_extreme_prejudice(proc)
     null_out.close()
+
+
+def _terminate_with_extreme_prejudice(proc):
+    """Terminate a process without any regard for exceptions."""
+    try:
+        proc.terminate()
+    except:
+        pass
 
 
 def setup_pipe(command, cwd=None):
