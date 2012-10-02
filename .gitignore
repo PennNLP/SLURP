@@ -12,3 +12,8 @@ ltlgen.debug
 .settings
 nlpipeline
 nlpipeline.zip
+build
+CMakeFiles
+CMakeCache.txt
+*.dox
+srv_gen
