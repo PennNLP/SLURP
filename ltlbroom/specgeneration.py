@@ -26,6 +26,9 @@ import sys
 from semantics.processing import process_parse_tree
 from pipelinehost import socket_parse, DEFAULT_PORT
 
+# Debug constants
+SEMANTICS_DEBUG = False
+
 # LTL Constants
 ALWAYS = "[]"
 EVENTUALLY = "<>"
@@ -85,7 +88,7 @@ class SpecGenerator(object):
         
         # Make lists for POS conversions, including the metapar keywords
         force_nouns = list(regions) + list(sensors)
-        force_verbs = list(props) + METAPARS.keys()
+        force_verbs = list(props) + PARS.keys()
         
         responses = []
         system_lines = []
@@ -111,13 +114,15 @@ class SpecGenerator(object):
             print parse
             user_response, semantics_result, semantics_response, new_commands = \
                 process_parse_tree(parse, line)
-            print "Returned values from semantics:"
-            print "User response:", repr(user_response)
-            print "Semantics results:"
-            for result in semantics_result:
-                    print "\t" + str(result)
-            print "Semantics response:", semantics_response
-            print "New commands:", new_commands
+            
+            if SEMANTICS_DEBUG:
+                print "Returned values from semantics:"
+                print "User response:", repr(user_response)
+                print "Semantics results:"
+                for result in semantics_result:
+                        print "\t" + str(result)
+                print "Semantics response:", semantics_response
+                print "New commands:", new_commands
             
             # Build the metapars
             failure = False
@@ -163,7 +168,7 @@ def _apply_metapar(command):
     """Generate a metapar for a command."""
     # ('go', {'Location': 'porch'})
     name, args = command
-    handler, targets = METAPARS[name]
+    handler, targets = PARS[name]
     # Extract the targets from args
     args = [args[target] for target in targets]
     return handler(*args)
@@ -223,7 +228,7 @@ def _prop_actuator_done(actuator):
 
 
 # MetaPARS have to be defined after all handlers have been defined
-METAPARS = {'patrol': (_gen_patrol, (LOCATION,)), 'go': (_gen_go, (LOCATION,)), 
+PARS = {'patrol': (_gen_patrol, (LOCATION,)), 'go': (_gen_go, (LOCATION,)), 
             'avoid': (_gen_avoid, (LOCATION,)), 'search': (_gen_search, (LOCATION,)),
             'begin': (_gen_begin, (THEME,))}
 
@@ -297,4 +302,4 @@ def _implies(prop1, prop2):
 
 if __name__ == "__main__":
     s = SpecGenerator()
-    s.generate(sys.argv[1], (), ("r1",), ())
+    s.generate(sys.argv[1], (), ("r1", "r2", "r3", "r4"), ())
