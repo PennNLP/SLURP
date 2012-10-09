@@ -147,7 +147,7 @@ class SpecGenerator(object):
                 custom_props.update(new_custom_props)
                 custom_sensors.update(new_custom_sensors)
                 # Add the statements as the children of the generation tree
-                generation_tree[1].append([str(command), [new_env_lines, new_sys_lines]])
+                generation_tree[1].append([format_command(command), [new_env_lines, new_sys_lines]])
                 
             # Add a true response if there were commands and no failures
             responses.append(new_commands and not failure)
@@ -169,6 +169,15 @@ class SpecGenerator(object):
         print "Custom sensors:", custom_sensors
         print "Generation tree:", generation_trees
         return env_lines, system_lines, custom_props, custom_sensors, responses, generation_trees
+
+
+def format_command(command):
+    """Format a command nicely for display."""
+    # Structure: ('follow', {'Theme': 'Commander'})
+    action, arg_dict = command
+    action = action.capitalize()
+    return ("{0}: ".format(action) + 
+            ", ".join(["{1} ({0})".format(key, val) for key, val in arg_dict.items()]))
 
 
 def _apply_metapar(command, regions):
