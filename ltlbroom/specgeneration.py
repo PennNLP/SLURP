@@ -51,6 +51,8 @@ UNDERSPECIFIED = "*"
 MEM = "m"
 DONE = "done"
 VISIT = "visit"
+FOLLOW_STATIONARY = "env_stationary"
+FOLLOW_SENSORS = "ENVIRONMENT TOPOLOGY"
 
 # Actuators
 SWEEP = "sweep"
@@ -95,6 +97,7 @@ class SpecGenerator(object):
         env_lines = []
         env_lines_set = set() # Used to track duplicates
         custom_props = set()
+        custom_sensors = set()
         generation_trees = []
         for line in text.split('\n'):
             if not line:
@@ -128,7 +131,8 @@ class SpecGenerator(object):
             failure = False
             for command in new_commands:
                 try:
-                    new_sys_lines, new_env_lines, new_custom_props = _apply_metapar(command)
+                    new_sys_lines, new_env_lines, new_custom_props, new_custom_sensors = \
+                        _apply_metapar(command, regions)
                 except KeyError:
                     failure = True
                     continue
@@ -141,6 +145,7 @@ class SpecGenerator(object):
                         env_lines.append(env_line)
                         env_lines_set.add(env_line)
                 custom_props.update(new_custom_props)
+                custom_sensors.update(new_custom_sensors)
                 # Add the statements as the children of the generation tree
                 generation_tree[1].append([str(command), [new_env_lines, new_sys_lines]])
                 
@@ -152,60 +157,82 @@ class SpecGenerator(object):
             
             print
 
-        # Convert custom props into a list
+        # Convert sets to lists for the caller
         custom_props = list(custom_props)
+        custom_sensors = list(custom_sensors)
 
         print "Spec generation complete."
         print "Responses:", responses
         print "Environment lines:", env_lines
         print "System lines:", system_lines
         print "Custom props:", custom_props
+        print "Custom sensors:", custom_sensors
         print "Generation tree:", generation_trees
-        return env_lines, system_lines, custom_props, responses, generation_trees
+        return env_lines, system_lines, custom_props, custom_sensors, responses, generation_trees
 
 
-def _apply_metapar(command):
+def _apply_metapar(command, regions):
     """Generate a metapar for a command."""
     # ('go', {'Location': 'porch'})
     name, args = command
     handler, targets = PARS[name]
-    # Extract the targets from args
-    args = [args[target] for target in targets]
-    return handler(*args)
+    
+    if targets:
+        # Extract the targets from args and pass them as arguments
+        args = [args[target] for target in targets]
+        return handler(*args)
+    else:
+        # If there are no targets, pass in the map
+        return handler(regions)
 
 
+# The return signature of the statement generators is:
+# ([system lines], [env lines], [custom propositions], [custom sensors])
 def _gen_begin(region):
     """Generate statements to begin in a location."""
-    return ([_sys(region)], [], [])
+    return ([_sys(region)], [], [], [])
 
 
 def _gen_patrol(region):
     """Generate statements to always eventually be in a location."""
-    return ([_always_eventually(_sys(region))], [], [])
+    return ([_always_eventually(_sys(region))], [], [], [])
 
 
 def _gen_go(region):
     """Generate statements to go to a location once."""
     mem_prop = _prop_mem(region, VISIT)
-    alo_sys = _gen_atleastonce(mem_prop, _next(_sys(region)))
-    return (alo_sys, [], [mem_prop])
+    alo_sys = _frag_atleastonce(mem_prop, _next(_sys(region)))
+    return (alo_sys, [], [mem_prop], [])
 
 
 def _gen_avoid(region):
     """Generate statements for avoiding a location, adding that the robot does not start there."""
-    return ([_always(_not(_sys(region))), _not(_sys(region))], [], [])
+    return ([_always(_not(_sys(region))), _not(_sys(region))], [], [], [])
 
 
 def _gen_search(region):
     """Generate statements for searching a region."""
     mem_prop = _prop_mem(region, SWEEP)
     cic_frag, cic_env = _frag_complete_context(SWEEP, _sys(region))
-    alo_sys = _gen_atleastonce(mem_prop, cic_frag)
-    return (alo_sys, cic_env, [mem_prop])
-    
+    alo_sys = _frag_atleastonce(mem_prop, cic_frag)
+    return (alo_sys, cic_env, [mem_prop], [_prop_actuator_done(SWEEP)])
 
-def _gen_atleastonce(mem_prop, fragment):
-    """Generate statements for perfoming an action at least once by using a memory proposition."""
+
+def _gen_follow(regions):
+    """Generate statements for following."""
+    # Env is stationary iff in the last state change our region and the env's region were stable
+    env_stationary_safeties = \
+        _always(_iff(_next(_sys(FOLLOW_STATIONARY)), 
+                     _and([_iff(_env(region), _next(_env(region))) for region in regions])))
+    # Match the sensor location to ours
+    follow_goals = \
+        [_always_eventually(_implies(_and((_sys(FOLLOW_STATIONARY), _env(region))), _sys(region)))
+         for region in regions]
+    return ([env_stationary_safeties] + follow_goals, [FOLLOW_SENSORS], [FOLLOW_STATIONARY], [])
+
+
+def _frag_atleastonce(mem_prop, fragment):
+    """Generate statements for performing an action at least once by using a memory proposition."""
     return [_always_eventually(_sys(mem_prop)), 
             _always(_iff(_next(_sys(mem_prop)), _or((_sys(mem_prop), fragment))))]
 
@@ -227,10 +254,10 @@ def _prop_actuator_done(actuator):
     return "_".join((actuator, DONE))
 
 
-# MetaPARS have to be defined after all handlers have been defined
+# PARS have to be defined after all handlers have been defined
 PARS = {'patrol': (_gen_patrol, (LOCATION,)), 'go': (_gen_go, (LOCATION,)), 
             'avoid': (_gen_avoid, (LOCATION,)), 'search': (_gen_search, (LOCATION,)),
-            'begin': (_gen_begin, (THEME,))}
+            'begin': (_gen_begin, (THEME,)), 'follow': (_gen_follow, ())}
 
 
 def _space(text):
