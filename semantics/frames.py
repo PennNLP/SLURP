@@ -26,9 +26,28 @@ def load_word_sense_mapping():
     
     word_sense_path = os.path.join(VERBNET_DIRECTORY, WORD_SENSE_FILENAME)
     try:
+        # Try to open the pickled file, allowing us to fail fast if 
+        # there's no pickle file
         word_sense_file = open(word_sense_path, 'r')
+        
+        # Otherwise, confirm that the pickled file is up to date
+        # Get the most recent file in the directory
+        max_mtime = 0
+        for dirname, _, files in os.walk(VERBNET_DIRECTORY):
+            for filename in files:
+                full_path = os.path.join(dirname, filename)
+                mtime = os.stat(full_path).st_mtime
+                if mtime > max_mtime:
+                    max_mtime = mtime
+                    max_file = filename
+        # Make sure the pickle file is most recent
+        if max_file != WORD_SENSE_FILENAME:
+            raise IOError
+        
+        # Load the file if all is well
         result = pickle.load(word_sense_file)
     except IOError:
+        print "Word sense pickle file is missing or out of date, creating it..."
         result = generate_mapping(word_sense_path)
 
     return result
