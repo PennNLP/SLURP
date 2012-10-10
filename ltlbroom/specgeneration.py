@@ -23,7 +23,7 @@ Generates a logical specification from natural language.
 import socket
 import sys
 
-from semantics.processing import process_parse_tree
+from semantics.processing import process_parse_tree, CONDITION_ARGUMENT
 from pipelinehost import socket_parse, DEFAULT_PORT
 
 # Debug constants
@@ -57,6 +57,7 @@ FOLLOW_SENSORS = "ENVIRONMENT TOPOLOGY"
 # Actuators
 SWEEP = "sweep"
 
+
 class SpecGenerator(object):
     """Enables specification generation using natural language."""
 
@@ -69,28 +70,35 @@ class SpecGenerator(object):
             raise IOError("Could not connect to pipelinehost on %s:%d. "
                           "Make sure that pipelinehost is running." % 
                             (hostname, DEFAULT_PORT))
+            
+        # Handlers
+        self.PARS = {'patrol': (_gen_patrol, (LOCATION,)), 'go': (_gen_go, (LOCATION,)), 
+                     'avoid': (_gen_avoid, (LOCATION,)), 'search': (_gen_search, (LOCATION,)),
+                     'begin': (_gen_begin, (THEME,)), 'follow': (self._gen_follow, ())}
         
-        # Sets of propositions
-        self.custom_props = set()
+        # Information about the scenario will be updated at generation time
+        self.sensors = None
+        self.regions = None
+        self.props = None
 
     def generate(self, text, sensors, regions, props):
         """Generate a logical specification from natural language and propositions."""
         # Clean unicode out of everything
         text = text.encode('ascii', 'ignore')
-        sensors = [astr.encode('ascii', 'ignore') for astr in sensors]
-        regions = [astr.encode('ascii', 'ignore') for astr in regions]
-        props = [astr.encode('ascii', 'ignore') for astr in props]
+        self.sensors = [astr.encode('ascii', 'ignore') for astr in sensors]
+        self.regions = [astr.encode('ascii', 'ignore') for astr in regions]
+        self.props = [astr.encode('ascii', 'ignore') for astr in props]
         
         print "NL->LTL Generation called on:"
-        print "Sensors:", sensors
-        print "Props:", props
-        print "Regions:", regions
+        print "Sensors:", self.sensors
+        print "Props:", self.props
+        print "Regions:", self.regions
         print "Text:", repr(text)
         print
         
         # Make lists for POS conversions, including the metapar keywords
-        force_nouns = list(regions) + list(sensors)
-        force_verbs = list(props) + PARS.keys()
+        force_nouns = list(self.regions) + list(self.sensors)
+        force_verbs = list(self.props) + self.PARS.keys()
         
         responses = []
         system_lines = []
@@ -123,7 +131,7 @@ class SpecGenerator(object):
                 print "User response:", repr(user_response)
                 print "Semantics results:"
                 for result in semantics_result:
-                        print "\t" + str(result)
+                    print "\t" + str(result)
                 print "Semantics response:", semantics_response
                 print "New commands:", new_commands
             
@@ -132,8 +140,9 @@ class SpecGenerator(object):
             for command in new_commands:
                 try:
                     new_sys_lines, new_env_lines, new_custom_props, new_custom_sensors = \
-                        _apply_metapar(command, regions)
-                except KeyError:
+                        self._apply_metapar(command)
+                except KeyError as err:
+                    print "Could not understand command {0} due to error: {1}".format(command, err)
                     failure = True
                     continue
                 
@@ -169,34 +178,60 @@ class SpecGenerator(object):
         print "Custom sensors:", custom_sensors
         print "Generation tree:", generation_trees
         return env_lines, system_lines, custom_props, custom_sensors, responses, generation_trees
-
-
-def format_command(command):
-    """Format a command nicely for display."""
-    # Structure: ('follow', {'Theme': 'Commander'})
-    action, arg_dict = command
-    action = action.capitalize()
-    return ("{0}: ".format(action) + 
-            ", ".join(["{1} ({0})".format(key, val) for key, val in arg_dict.items()]))
-
-
-def _apply_metapar(command, regions):
-    """Generate a metapar for a command."""
-    # ('go', {'Location': 'porch'})
-    name, args = command
-    handler, targets = PARS[name]
     
-    if targets:
+    def _apply_metapar(self, command):
+        """Generate a metapar for a command."""
+        # ('go', {'Location': 'porch'})
+        name, arg_dict = command
+        handler, targets = self.PARS[name]
         # Extract the targets from args and pass them as arguments
-        args = [args[target] for target in targets]
-        return handler(*args)
-    else:
-        # If there are no targets, pass in the map
-        return handler(regions)
+        args = [arg_dict[target] for target in targets]
+        
+        if CONDITION_ARGUMENT in arg_dict:
+            return self._gen_conditional(name, args, arg_dict[CONDITION_ARGUMENT])
+        else:
+            return handler(*args)
+    
+    def _gen_follow(self):
+        """Generate statements for following."""
+        # Env is stationary iff in the last state change our region and the env's region were stable
+        env_stationary_safeties = \
+            _always(_iff(_next(_sys(FOLLOW_STATIONARY)), 
+                         _and([_iff(_env(region), _next(_env(region)))
+                               for region in self.regions])))
+        # Match the sensor location to ours
+        follow_goals = \
+            [_always_eventually(_implies(_and((_sys(FOLLOW_STATIONARY), _env(region))), _sys(region)))
+             for region in self.regions]
+        return ([env_stationary_safeties] + follow_goals, [FOLLOW_SENSORS], [FOLLOW_STATIONARY], [])
+
+    def _gen_conditional(self, action, args, condition):
+        """Generate a conditional action"""
+        # Validate the condition
+        if condition in self.sensors:
+            condition_stmt = _env(condition)
+        else:
+            raise KeyError("Unknown condition {0}".format(condition))
+        
+        # Validate the action
+        if action in self.props:
+            action_stmt = _sys(action)
+        elif action == "go":
+            action_stmt = _sys(args[0])
+        else:
+            raise KeyError("Unknown action {0}".format(action))
+
+        safety = _always(_iff(_next(condition_stmt), _next(action_stmt)))
+        # To ensure satisfiability, require that the condition eventually go away
+        assumption = _always_eventually(_not(condition_stmt))
+        # Similarly, require that the condition not be true at the start
+        init_condition = _not(condition_stmt)
+        return ([init_condition, safety], [assumption], [], [])
 
 
 # The return signature of the statement generators is:
 # ([system lines], [env lines], [custom propositions], [custom sensors])
+
 def _gen_begin(region):
     """Generate statements to begin in a location."""
     return ([_sys(region)], [], [], [])
@@ -227,19 +262,6 @@ def _gen_search(region):
     return (alo_sys, cic_env, [mem_prop], [_prop_actuator_done(SWEEP)])
 
 
-def _gen_follow(regions):
-    """Generate statements for following."""
-    # Env is stationary iff in the last state change our region and the env's region were stable
-    env_stationary_safeties = \
-        _always(_iff(_next(_sys(FOLLOW_STATIONARY)), 
-                     _and([_iff(_env(region), _next(_env(region))) for region in regions])))
-    # Match the sensor location to ours
-    follow_goals = \
-        [_always_eventually(_implies(_and((_sys(FOLLOW_STATIONARY), _env(region))), _sys(region)))
-         for region in regions]
-    return ([env_stationary_safeties] + follow_goals, [FOLLOW_SENSORS], [FOLLOW_STATIONARY], [])
-
-
 def _frag_atleastonce(mem_prop, fragment):
     """Generate statements for performing an action at least once by using a memory proposition."""
     return [_always_eventually(_sys(mem_prop)), 
@@ -263,10 +285,13 @@ def _prop_actuator_done(actuator):
     return "_".join((actuator, DONE))
 
 
-# PARS have to be defined after all handlers have been defined
-PARS = {'patrol': (_gen_patrol, (LOCATION,)), 'go': (_gen_go, (LOCATION,)), 
-            'avoid': (_gen_avoid, (LOCATION,)), 'search': (_gen_search, (LOCATION,)),
-            'begin': (_gen_begin, (THEME,)), 'follow': (_gen_follow, ())}
+def format_command(command):
+    """Format a command nicely for display."""
+    # Structure: ('follow', {'Theme': 'Commander'})
+    action, arg_dict = command
+    action = action.lower()
+    return (", ".join(["Action: {0}".format(action)] + 
+                      ["{0}: {1}".format(key, val) for key, val in sorted(arg_dict.items())]))
 
 
 def _space(text):
@@ -338,4 +363,7 @@ def _implies(prop1, prop2):
 
 if __name__ == "__main__":
     s = SpecGenerator()
-    s.generate(sys.argv[1], (), ("r1", "r2", "r3", "r4"), ())
+    s.generate(sys.argv[1], ("bomb", "hostage", "badguy"), ("r1", "r2", "r3", "r4"),
+               ("defuse", "call"))
+    s.generate(sys.argv[1], ("bomb", "hostage", "badguy"), ("r1", "r2", "r3", "r4"),
+               ("defuse", "call"))

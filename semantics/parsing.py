@@ -1,24 +1,44 @@
-"""Ian Perera
+"""
+Takes a parse tree string and creates semantic structures to be read by Knowledge.
+"""
 
-Takes a parse tree string and creates semantic structures to be read by
-Knowledge."""
+# Copyright (C) 2011=2012 Ian Perera and Constantine Lignos
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# -*- coding: iso-8859-1 -*-
 import re
 import frames
 import string
 from tree import Tree
 from wntools import morphy
 from collections import defaultdict
-from structures import Predicate, Quantifier, EntityClass, \
-                                     Command, Assertion, YNQuery, WhQuery, Event
+from structures import (Predicate, Quantifier, EntityClass, Command, Assertion, YNQuery, 
+                           WhQuery, Event)
+from util import text2int
 
 
 def get_semantics_from_parse_tree(parse_tree_string):
     """Take a string representing the parse tree as input, and print the
     semantic parse. The result list consists of a list of tuples, with each
     tuple containing the VerbNet frame and its associated tree."""
-    parse_tree = Tree.parse(parse_tree_string)
+    result_list = []
+    
+    # In case we're handed an bad string, bail somewhat gracefully
+    try:
+        parse_tree = Tree.parse(parse_tree_string)
+    except ValueError:
+        print "Warning: semantics could not parse tree", repr(parse_tree_string)
+        return result_list
 
     # Split clauses to handle them separately
     split_clause_dict = frames.split_clauses(parse_tree)
@@ -27,8 +47,6 @@ def get_semantics_from_parse_tree(parse_tree_string):
     for key, (clause, conjunction) in split_clause_dict.items():
         activized_clause = frames.activize_clause(clause)
         split_clause_dict[key] = (activized_clause, conjunction)
-
-    result_list = []
         
     for (clause, conjunction) in split_clause_dict.values():
         # Split conjunctions and duplicate arguments if necessary
@@ -53,7 +71,7 @@ def get_semantics_from_parse_tree(parse_tree_string):
                 tree = frames.invert_clause(tree)
                 tree = frames.wh_movement(tree)
 
-# TODO: Negation support should go somewhere in here
+                # TODO: Negation support should go somewhere in here
 
                 # Regex for finding verbs 
                 verb_finder = re.compile(r'(?<=VB[ DGNPZ]) *\w*(?=\))')
@@ -82,43 +100,6 @@ def get_semantics_from_parse_tree(parse_tree_string):
 
     return result_list
 
-def text2int(textnum):
-    """From recursive at
-    http://stackoverflow.com/questions/493174/is-there-a-way-to-convert-number-words-to-integers-python
-
-    Converts number words to integers.
-    """
-    numwords = {}
-    units = [
-    "zero", "one", "two", "three", "four", "five", "six", "seven", "eight",
-    "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen",
-    "sixteen", "seventeen", "eighteen", "nineteen",
-    ]
-
-    tens = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"]
-
-    scales = ["hundred", "thousand", "million", "billion", "trillion"]
-
-    numwords["and"] = (1, 0)
-    for idx, word in enumerate(units):
-        numwords[word] = (1, idx)
-    for idx, word in enumerate(tens):
-        numwords[word] = (1, idx * 10)
-    for idx, word in enumerate(scales):
-        numwords[word] = (10 ** (idx * 3 or 2), 0)
-
-    current = result = 0
-    for word in textnum.split():
-        if word not in numwords:
-            raise Exception("Illegal word: " + word)
-
-        scale, increment = numwords[word]
-        current = current * scale + increment
-        if scale > 100:
-            result += current
-            current = 0
-
-    return result + current
 
 def extract_entity_class(parse_tree, semantic_role = ''):
     """Creates an entity_class object given a snippet of a parse tree."""
@@ -178,7 +159,7 @@ def extract_entity_class(parse_tree, semantic_role = ''):
                 quantifier.exhaustive = True
                 quantifier.fulfilled = False
 
-            predicates[semantic_role].append(Predicate(semantic_role,obj))
+            predicates[semantic_role].append(Predicate(semantic_role, obj))
         # Prepositional phrase generates a location predicate
         elif node == 'PP-LOC':
             for subposition in subtree.treepositions():
@@ -238,12 +219,12 @@ def extract_entity_class(parse_tree, semantic_role = ''):
 
         # If it's just a noun, add it as a predicate
         elif 'N' in node and 'SBJ' not in node:
-            predicates[semantic_role].append(Predicate(semantic_role,' '.join(subtree.leaves())))
+            predicates[semantic_role].append(Predicate(semantic_role, ' '.join(subtree.leaves())))
             quantifier.definite = True
         elif 'ADV' in node:
-            predicates[semantic_role].append(Predicate(semantic_role,' '.join(subtree.leaves())))
+            predicates[semantic_role].append(Predicate(semantic_role, ' '.join(subtree.leaves())))
             
-    entity_class = EntityClass(quantifier,predicates)
+    entity_class = EntityClass(quantifier, predicates)
 
     return entity_class
 
@@ -261,7 +242,7 @@ def create_semantic_structures(frame_semantic_list):
         # Check that this is a VerbNet frame and not a conjunction
         try:
             frame_items = frame[0].items()
-        except:
+        except AttributeError:
             if 'if' in str(frame):
                 conditional = True
             frame_items = None
@@ -324,32 +305,3 @@ def create_semantic_structures(frame_semantic_list):
                           ('ex' in frame[2])))
 
     return semantic_representation_list
-    
-
-if __name__ == '__main__':
-    # Take stdin as input
-    #parse_tree_string = """(S  (NP-SBJ-A (-NONE- *)) (VP (VB Defuse) (NP-A  (NP (DT any) (NNS bombs)) (SBAR (IN that) (S-A  (NP-SBJ-A (PRP you)) (VP  (VP-A (VBP see))(CC and) (VP-A (VBP notify) (NP-A (PRP me))))))))(. .))"""
-    #parse_tree_string = """(S (CC And) (SBAR-ADV (IN if) (S-A  (NP-SBJ-A-0 (PRP you)) (VP (VBP get) (VP-A (VBN flipped) (NP-A-0 (-NONE- *))))))(, ,) (NP-SBJ-A (-NONE- *)) (VP (VB call) (NP-A (PRP me)))(. .))"""
-    #parse_tree_string = """(S  (NP-SBJ-A (-NONE- *)) (VP (VB Tell) (NP-A (PRP me)) (SBAR-ADV (IN if) (S-A  (NP-SBJ-A (PRP you)) (VP (VBP see) (NP-A  (NP (DT a) (JJ bad) (NN guy))(CC or) (NP (DT a) (NN hostage)))))))(. .))"""
-    #parse_tree_string = """(S (NP-SBJ-A (-NONE- *)) (VP (VB Tell) (NP-A (PRP me))) (. .))"""
-    #parse_tree_string = """((S (NP-SBJ-A (-NONE- *)) (VP(VB Tell) (NP-A (PRP me)) (SBAR-A(WHNP-0 (WDT what)) (S-A(NP-SBJ-0 (-NONE- *T*)) (VP (VBZ 's) (PP-LOC-PRD (IN in) (NP-A (NN room) (CD 3)))))))                                                 (. ?)))"""
-    parse_tree_string = """((S (NP-SBJ-A (-NONE- *)) (VP (VP-A (VB Go) (PP-CLR (TO to) (NP-A (NN room) (CD 3)))) (CC and) (VP-A (VB defuse) (NP-A (DT the) (NN bomb)))) (. .)))"""
-    #parse_tree_string = """((S (NP-SBJ-A (-NONE- *)) (VP (VB Go) (PP-CLR (TO to) (NP-A (NN room) (CD 3)))) (. .))) """
-    
-    result = get_semantics_from_parse_tree(parse_tree_string)
-    print result
-    
-    semantic_structures = create_semantic_structures(result)
-
-    for structure in semantic_structures:
-        print structure
-
-
-##    if is_question(parse_tree_string):
-##        print get_question_semantics_from_parse_tree(parse_tree_string)
-##    else:
-##        print get_stupid_semantics_from_parse_tree(parse_tree_string)
-            
-
-            
-
