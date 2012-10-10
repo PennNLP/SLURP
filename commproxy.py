@@ -18,7 +18,7 @@ class CallbackSocket(object):
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._sock.bind(('' if not local else 'localhost', port))
-        self._sock.listen(1)
+        self._sock.listen(5)
         self._conn = None
         self.client_addr = None
         self._callback_lock = threading.Lock()
@@ -34,6 +34,7 @@ class CallbackSocket(object):
         callback_thread.daemon = True
         callback_thread.start()
 
+    # TODO: Change to accept multiple simultaneous clients
     def _accept(self):
         """Accept connections on the listening port."""
         waiting = False # Use this flag to avoid printing when we timeout
