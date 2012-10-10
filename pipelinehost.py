@@ -61,7 +61,11 @@ class PipelineHost(CallbackSocket):
 
     def parse_text(self, message):
         """Send a parse request to the pipline."""
-        data = json.loads(message)
+        try:
+            data = json.loads(message)
+        except ValueError:
+            # Make a default set of arguments
+            data = {'text': message}
         print "Message:", repr(data)
         print "Parsing..."
         response = parse_text(**data)
