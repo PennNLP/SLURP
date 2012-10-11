@@ -109,10 +109,14 @@ def process_pipe_filter(text, process, line_filter=""):
     return text
 
 
-def parse_text(text, force_nouns=set(), force_verbs=set()):
+def parse_text(text, force_nouns=set(), force_verbs=set(), correct_punc=True):
     """Run the text through the pipelines."""
     if not all((token_proc, tag_proc, parse_proc, ecrestore_proc)):
         raise ValueError("You must call init_pipes before parsing.")
+
+    # Add in final punctuation if it's missing
+    if correct_punc and text[-1] not in ('.', '?', '!'):
+        text += '.'
 
     token_sent = process_pipe_filter(text, token_proc)
     tagged_sent = process_pipe_filter(token_sent, tag_proc)
