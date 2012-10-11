@@ -121,7 +121,8 @@ class ServiceSocket:
 
     def _process_text(self, msg):
         """Run a string through the NLP pipeline."""
-        text = msg.strip()
+        # Remove backlashes since they are sometimes in the input for no good reason
+        text = msg.strip().replace('\\', '')
 
         if text.startswith(SECRET_CODE):
             knowledge_demo = True
