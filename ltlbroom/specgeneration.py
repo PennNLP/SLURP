@@ -48,9 +48,10 @@ SOURCE = "Source"
 UNDERSPECIFIED = "*"
 
 # Generation constants
-MEM = "m"
+MEM = "mem"
 DONE = "done"
 VISIT = "visit"
+REACT = "react"
 FOLLOW_STATIONARY = "env_stationary"
 FOLLOW_SENSORS = "FOLLOW_SENSOR_CONSTRAINTS"
 
@@ -72,14 +73,18 @@ class SpecGenerator(object):
                             (hostname, DEFAULT_PORT))
             
         # Handlers
-        self.PARS = {'patrol': (_gen_patrol, (LOCATION,)), 'go': (_gen_go, (LOCATION,)), 
+        self.GOALS = {'patrol': (_gen_patrol, (LOCATION,)), 'go': (_gen_go, (LOCATION,)), 
                      'avoid': (_gen_avoid, (LOCATION,)), 'search': (_gen_search, (LOCATION,)),
-                     'begin': (_gen_begin, (THEME,)), 'follow': (self._gen_follow, ())}
+                     'begin': (_gen_begin, (THEME,)), 'follow': (self._gen_follow, ()),
+                     'stay': (self._gen_stay, ())}
+        
+        self.REACTIONS = {'go': (_frag_react_go, (LOCATION,)), 'stay': (self._frag_stay, ())}
         
         # Information about the scenario will be updated at generation time
         self.sensors = None
         self.regions = None
         self.props = None
+        self.react_props = set()
 
     def generate(self, text, sensors, regions, props):
         """Generate a logical specification from natural language and propositions."""
@@ -98,7 +103,7 @@ class SpecGenerator(object):
         
         # Make lists for POS conversions, including the metapar keywords
         force_nouns = list(self.regions) + list(self.sensors)
-        force_verbs = list(self.props) + self.PARS.keys()
+        force_verbs = list(self.props) + self.GOALS.keys()
         
         responses = []
         system_lines = []
@@ -142,7 +147,7 @@ class SpecGenerator(object):
                     new_sys_lines, new_env_lines, new_custom_props, new_custom_sensors = \
                         self._apply_metapar(command)
                 except KeyError as err:
-                    print "Could not understand command {0} due to error: {1}".format(command, err)
+                    print "Could not understand command {0} due to error {1}".format(command, err)
                     failure = True
                     continue
                 
@@ -165,6 +170,24 @@ class SpecGenerator(object):
             generation_trees.append(generation_tree)
             
             print
+            
+        
+        # We need to modify non-reaction goals to be or'd with the reactions
+        if self.react_props:
+            # Dedupe and make an or over all the reaction properties
+            reaction_or_frag = _or([_sys(prop) for prop in self.react_props])
+            # HACK: Rewrite all the goals!
+            system_lines = [insert_or_before_goal(reaction_or_frag, line) for line in system_lines]
+            new_generation_trees = []
+            for (text, output) in generation_trees:
+                new_generation_tree = [text, []]
+                for command, (env_lines, sys_lines) in output:
+                    new_sys_lines = \
+                        [insert_or_before_goal(reaction_or_frag, line) for line in sys_lines]
+                    new_generation_tree[1].append([command, [env_lines, new_sys_lines]])
+                new_generation_trees.append(new_generation_tree)
+            generation_trees = new_generation_trees
+
 
         # Convert sets to lists for the caller
         custom_props = list(custom_props)
@@ -183,13 +206,17 @@ class SpecGenerator(object):
         """Generate a metapar for a command."""
         # ('go', {'Location': 'porch'})
         name, arg_dict = command
-        handler, targets = self.PARS[name]
-        # Extract the targets from args and pass them as arguments
-        args = [arg_dict[target] for target in targets]
+        try:
+            handler, targets = self.GOALS[name]
+        except KeyError:
+            raise KeyError('Unknown action {0}'.format(name))
+
         
         if CONDITION_ARGUMENT in arg_dict:
-            return self._gen_conditional(name, args, arg_dict[CONDITION_ARGUMENT])
+            return self._gen_conditional(name, arg_dict, arg_dict[CONDITION_ARGUMENT])
         else:
+            # Extract the targets from args and pass them as arguments
+            args = [arg_dict[target] for target in targets]
             return handler(*args)
     
     def _gen_follow(self):
@@ -205,28 +232,63 @@ class SpecGenerator(object):
              for region in self.regions]
         return ([env_stationary_safeties] + follow_goals, [FOLLOW_SENSORS], [FOLLOW_STATIONARY], [])
 
-    def _gen_conditional(self, action, args, condition):
+    def _gen_conditional(self, action, arg_dict, condition):
         """Generate a conditional action"""
         # Validate the condition
-        if condition in self.sensors:
-            condition_stmt = _env(condition)
-        else:
+        if condition not in self.sensors:
             raise KeyError("Unknown condition {0}".format(condition))
         
+        condition_stmt = _env(condition)
+        sys_statements = [_not(condition_stmt)]
+        new_props = []
+        
         # Validate the action
+        if action not in self.props and action not in self.REACTIONS:
+            raise KeyError("Unknown reaction or actuator {0}".format(action))
+        
+        # Create the right type of reaction
         if action in self.props:
-            action_stmt = _sys(action)
-        elif action == "go":
-            action_stmt = _sys(args[0])
+            # Simple actuator
+            reaction_prop = action
         else:
-            raise KeyError("Unknown action {0}".format(action))
+            # Reaction proposition
+            reaction_prop_name = REACT + "_" + condition
+            reaction_prop = _sys(reaction_prop_name)
+            self.react_props.add(reaction_prop_name)
+            new_props.append(reaction_prop_name)
+            
+        # Generate the response
+        if action == "go":
+            # Go is unusual because the outcome is not immediately satisfiable
+            destination_stmt = _sys(arg_dict[LOCATION])
+            # New goal for where we should go
+            go_goal = _always_eventually(_implies(reaction_prop, destination_stmt))
+            # Safety that persists
+            # TODO: Consider having this self-deactivate
+            go_safety = \
+                _always(_iff(_next(reaction_prop), 
+                             _or([reaction_prop, _next(condition_stmt)])))
+            sys_statements.extend([go_goal, go_safety])
+        else:
+            # Otherwise we are always creating reaction safety
+            sys_statements.append(_always(_iff(_next(condition_stmt), _next(reaction_prop))))
+            
+            # Create a reaction fragment if needed
+            if action in self.REACTIONS:
+                handler, targets = self.REACTIONS[action]
+                args = [arg_dict[target] for target in targets]
+                reaction_frag = handler(*args)
+                sys_statements.append(_always(_implies(_next(reaction_prop), reaction_frag)))
 
-        safety = _always(_iff(_next(condition_stmt), _next(action_stmt)))
-        # To ensure satisfiability, require that the condition eventually go away
-        assumption = _always_eventually(_not(condition_stmt))
-        # Similarly, require that the condition not be true at the start
-        init_condition = _not(condition_stmt)
-        return ([init_condition, safety], [assumption], [], [])
+        return (sys_statements, [], new_props, [])
+
+    def _gen_stay(self):
+        """Generate statements to stay exactly where you are."""
+        return ([_always_eventually(self._frag_stay())], [], [], [])
+    
+    def _frag_stay(self):
+        """Generate fragments to reactively go somewhere."""
+        return (_and([_iff(_sys(region), _next(_sys(region))) for region in self.regions]))
 
 
 # The return signature of the statement generators is:
@@ -249,6 +311,11 @@ def _gen_go(region):
     return (alo_sys, [], [mem_prop], [])
 
 
+def _frag_react_go(region):
+    """Generate a fragment to reactively go somewhere."""
+    return (_sys(region))
+
+
 def _gen_avoid(region):
     """Generate statements for avoiding a location, adding that the robot does not start there."""
     return ([_always(_not(_sys(region))), _not(_sys(region))], [], [], [])
@@ -263,13 +330,13 @@ def _gen_search(region):
 
 
 def _frag_atleastonce(mem_prop, fragment):
-    """Generate statements for performing an action at least once by using a memory proposition."""
+    """Generate fragments for performing an action at least once by using a memory proposition."""
     return [_always_eventually(_sys(mem_prop)), 
             _always(_iff(_next(_sys(mem_prop)), _or((_sys(mem_prop), fragment))))]
 
 
 def _frag_complete_context(actuator, context_prop):
-    """Generate a fragment for completing an action in context."""
+    """Generate fragments for completing an action in context."""
     actuator_done = _prop_actuator_done(actuator)
     eventually_actuator = _always_eventually(_env(actuator_done))
     return [_and((_sys(actuator), _next(_env(actuator_done)), context_prop)), [eventually_actuator]]
@@ -292,6 +359,16 @@ def format_command(command):
     action = action.lower()
     return (", ".join(["Action: {0}".format(action)] + 
                       ["{0}: {1}".format(key, val) for key, val in sorted(arg_dict.items())]))
+
+
+def insert_or_before_goal(or_clause, statement):
+    """Inserts a statement to be OR'd against what is already in the goal."""
+    # Your hack is bad and you should feel bad.
+    if ALWAYS + EVENTUALLY in statement and REACT not in statement:
+        return statement.replace(ALWAYS + EVENTUALLY + '(', 
+                                 ALWAYS + EVENTUALLY + '(' + or_clause + _space(OR))
+    else:
+        return statement
 
 
 def _space(text):
@@ -363,7 +440,5 @@ def _implies(prop1, prop2):
 
 if __name__ == "__main__":
     s = SpecGenerator()
-    s.generate(sys.argv[1], ("bomb", "hostage", "badguy"), ("r1", "r2", "r3", "r4"),
-               ("defuse", "call"))
-    s.generate(sys.argv[1], ("bomb", "hostage", "badguy"), ("r1", "r2", "r3", "r4"),
+    s.generate('\n'.join(sys.argv[1:]), ("bomb", "hostage", "badguy"), ("r1", "r2", "r3", "r4"),
                ("defuse", "call"))
