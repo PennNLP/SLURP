@@ -264,11 +264,14 @@ class SpecGenerator(object):
             # New goal for where we should go
             go_goal = _always_eventually(_implies(reaction_prop, destination_stmt))
             # Safety that persists
-            # TODO: Consider having this self-deactivate
             go_safety = \
                 _always(_iff(_next(reaction_prop), 
                              _or([reaction_prop, _next(condition_stmt)])))
-            sys_statements.extend([go_goal, go_safety])
+            # Make sure we act immediately: []((!react & next(react) )-> stay_there)
+            stay_there = _always(_implies(_and((_not(reaction_prop), _next(reaction_prop))),
+                                          self._frag_stay()))
+                
+            sys_statements.extend([go_goal, go_safety, stay_there])
         else:
             # Otherwise we are always creating reaction safety
             sys_statements.append(_always(_iff(_next(condition_stmt), _next(reaction_prop))))
