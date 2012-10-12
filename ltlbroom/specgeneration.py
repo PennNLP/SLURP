@@ -52,7 +52,7 @@ MEM = "m"
 DONE = "done"
 VISIT = "visit"
 FOLLOW_STATIONARY = "env_stationary"
-FOLLOW_SENSORS = "ENVIRONMENT TOPOLOGY"
+FOLLOW_SENSORS = "FOLLOW_SENSOR_CONSTRAINTS"
 
 # Actuators
 SWEEP = "sweep"
