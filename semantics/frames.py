@@ -36,7 +36,10 @@ def load_word_sense_mapping():
         for dirname, _, files in os.walk(VERBNET_DIRECTORY):
             for filename in files:
                 full_path = os.path.join(dirname, filename)
-                mtime = os.stat(full_path).st_mtime
+                try:
+                    mtime = os.stat(full_path).st_mtime
+                except (OSError, IOError):
+                    continue
                 if mtime > max_mtime:
                     max_mtime = mtime
                     max_file = filename
@@ -58,20 +61,23 @@ def generate_mapping(result_filename):
     temp_word_sense_mapping = defaultdict(set)
 
     for filename in file_list:
-        if (filename[-4:] == '.xml'): 
-            with open(os.path.join(VERBNET_DIRECTORY, filename), 'r') as f:
-                tree = parse(f)
-                root_element = tree.getroot()
-                class_id = root_element.attrib['ID']
-                for member in tree.getroot().findall('MEMBERS/MEMBER'):
-                    temp_word_sense_mapping[member.attrib['name']].\
-                                                add((filename,class_id))
-
-                for subclass in tree.getroot().findall('SUBCLASSES/VNSUBCLASS'):
-                    class_id = subclass.attrib['ID']
-                    for member in subclass.findall('MEMBERS/MEMBER'):
+        if (filename[-4:] == '.xml'):
+            try:
+                with open(os.path.join(VERBNET_DIRECTORY, filename), 'r') as f:
+                    tree = parse(f)
+                    root_element = tree.getroot()
+                    class_id = root_element.attrib['ID']
+                    for member in tree.getroot().findall('MEMBERS/MEMBER'):
                         temp_word_sense_mapping[member.attrib['name']].\
-                                                add((filename,class_id))
+                                                    add((filename,class_id))
+    
+                    for subclass in tree.getroot().findall('SUBCLASSES/VNSUBCLASS'):
+                        class_id = subclass.attrib['ID']
+                        for member in subclass.findall('MEMBERS/MEMBER'):
+                            temp_word_sense_mapping[member.attrib['name']].\
+                                                    add((filename,class_id))
+            except IOError:
+                continue
                     
 
     with open(result_filename, 'w') as f:
