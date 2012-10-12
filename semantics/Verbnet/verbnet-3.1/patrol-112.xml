@@ -40,7 +40,7 @@
                 </NP>
             </SYNTAX>
             <SEMANTICS>
-                <PRED value="search">
+                <PRED value="patrol">
                     <ARGS>
                         <ARG type="Event" value="during(E)"/>
                         <ARG type="ThemRole" value="Agent"/>
@@ -76,7 +76,7 @@
                 </NP>
             </SYNTAX>
             <SEMANTICS>
-                <PRED value="search">
+                <PRED value="patrol">
                     <ARGS>
                         <ARG type="Event" value="during(E)"/>
                         <ARG type="ThemRole" value="Agent"/>
@@ -112,7 +112,7 @@
                 </NP>
             </SYNTAX>
             <SEMANTICS>
-                <PRED value="search">
+                <PRED value="patrol">
                     <ARGS>
                         <ARG type="Event" value="during(E)"/>
                         <ARG type="ThemRole" value="Agent"/>
@@ -137,7 +137,7 @@
                 </NP>
             </SYNTAX>
             <SEMANTICS>
-                <PRED value="search">
+                <PRED value="patrol">
                     <ARGS>
                         <ARG type="Event" value="during(E)"/>
                         <ARG type="ThemRole" value="Agent"/>

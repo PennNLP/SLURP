@@ -13,3 +13,5 @@ Additions made to this Verbnet directory are numbered 110 and higher.
 word_sense_mapping is a pickled python dictionary mapping words to their class filename and class id.
 10/9/2012:
 - Created patrol-112 and moved some items from search-35.2 to it
+10/12/2012:
+- Created stay-113 and moved some items from exist-47.1.xml
