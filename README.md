@@ -10,13 +10,18 @@ SLURP consists of a number of modules:
 
 - Penn Pipeline: The UPenn natural language processing pipeline
 - Semantics: Natural language understanding tools
-- JR: Interfact to the UMass Lowell Robotics Lab ATRV Jr. platform
+- JR: Interface to the UMass Lowell Robotics Lab ATRV Jr. platform
 - LTLBroom: Interface to the Cornell Autonomous Systems Lab LTLMoP platform
 
 SLURP has been tested on OS X, Linux, and Windows.
 
 Getting started
 ===============
+
+## Downloading the code:
+- If you use git, clone the repository URL above, i.e.,
+`git clone https://github.com/PennNLP/SLURP.git`
+- If you cannot use git, click "Downloads" above and download a .zip/.tar.gz.
 
 ## Dependencies:
 - Java SDK 1.6 (newer versions will almost certainly work but have
@@ -27,7 +32,9 @@ never been tested)
 ## Setup
 
 - You need to download the Penn Pipeline by running `python
-download.py`.  
+download.py`.  If you can't run that script on a machine with internet access,
+download `http://www.seas.upenn.edu/~lignos/data/nlpipeline.zip` and unzip it
+in the root of the repository.
 - You will need to configure all the dependencies so
 that the executable are on your PATH (i.e., java, sed, python).
 
