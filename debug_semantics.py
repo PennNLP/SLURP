@@ -1,30 +1,36 @@
 #!/usr/bin/env python
-"""An interactive test client for the pipelin host."""
+"""An interactive test client for the pipeline host."""
 
 import socket
 import sys
-from semantics import knowledge
+from semantics.processing import process_parse_tree
 from pipelinehost import socket_parse, DEFAULT_PORT
 
 
-def test(semantics = False):
-    """Test by parsing some text."""
-    # Connect to the local socket and send
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect(('localhost', DEFAULT_PORT))
+def from_stdin(sock):
+    """Test by parsing some text with semantics"""
     while True:
         try:
             text = raw_input('> ')
         except KeyboardInterrupt:
             break
-        msg = socket_parse(asocket=sock, text=text)
-        if not msg:
-            print "Connection to server closed."
+        if not process_input(text, sock):
             break
+def process_input(text, sock):
+    msg = socket_parse(asocket=sock, text=text)
+    if msg:
         print msg
-        world_knowledge = knowledge.Knowledge()
-        results = world_knowledge.process_parse_tree(msg, text)
-
+        user_response, semantics_result, semantics_response, new_commands = process_parse_tree(msg, text)
+        return True
+    else:
+        print "Connection to server closed."
+        return False
 if __name__ == "__main__":
-    semantics =  len(sys.argv) == 1 and sys.argv[1] == '-s'
-    test(semantics)
+    # Connect to the local socket and send
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect(('localhost', DEFAULT_PORT))
+
+    if len(sys.argv) <= 1:
+        from_stdin(sock)
+    else:
+        process_input(" ".join(sys.argv[1:]), sock)
