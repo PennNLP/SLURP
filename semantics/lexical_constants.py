@@ -11,6 +11,9 @@ FOLLOW_ACTION = "follow"
 SEE_ACTION = "see"
 TELL_ACTION = "tell"
 
+# Set of known actions
+KNOWN_ACTIONS = set([SEARCH_ACTION, GO_ACTION, GET_ACTION, FOLLOW_ACTION, SEE_ACTION, TELL_ACTION])
+
 # Mapping of other verbnet senses to the same actions.
 # We include the identity entries just to make things easier on the talkback side
 ACTION_ALIASES = {

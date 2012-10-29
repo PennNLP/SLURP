@@ -25,7 +25,7 @@ from collections import defaultdict
 from structures import (Predicate, Quantifier, EntityClass, Command, Assertion, YNQuery, 
                            WhQuery, Event)
 from util import text2int
-
+from lexical_constants import *
 
 def get_semantics_from_parse_tree(parse_tree_string):
     """Take a string representing the parse tree as input, and print the
@@ -248,9 +248,17 @@ def create_semantic_structures(frame_semantic_list):
             frame_items = None
             semantic_representation_list.append(frame)
             continue
-
-        verb = frame[3].split('-')[0]
-
+        
+        possible_verbs = frames.sense_word_mapping[frame[3]]
+        matching_actions = possible_verbs.intersection(KNOWN_ACTIONS)
+        if len(matching_actions) > 0:
+            # Most efficient way to get an arbitrary element from a set
+            for ma in matching_actions:
+                verb = ma
+                break
+        else:
+            verb = frame[3].split('-')[0]
+        
         location_predicates = defaultdict(list)
         location_resolved = False
 

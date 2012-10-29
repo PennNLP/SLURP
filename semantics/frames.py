@@ -80,13 +80,18 @@ def generate_mapping(result_filename):
                 continue
                     
 
+    # Invert the word-sense mapping    
+    temp_sense_word_mapping = defaultdict(set)
+    for word, senses in temp_word_sense_mapping.items():
+        for filename,sense in senses:
+            temp_sense_word_mapping[sense].add(word)
+
     with open(result_filename, 'w') as f:
-        pickle.dump(temp_word_sense_mapping, f)
+        pickle.dump((temp_word_sense_mapping,temp_sense_word_mapping), f)
 
-    return temp_word_sense_mapping
+    return (temp_word_sense_mapping,temp_sense_word_mapping)
 
-
-word_sense_mapping = load_word_sense_mapping()
+word_sense_mapping,sense_word_mapping = load_word_sense_mapping()
 
 # Mapping from Verbnet tags to Treebank tags
 tag_mapping = {'NP' : ['NP'],
