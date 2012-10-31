@@ -125,8 +125,7 @@ def _add_command_to_queue(queue, command):
     """Converts Commands to a <(action,[arguments])> structure to add to the queue, and 
     performs aliasing for entity and action names.
     Hack: Last element in predicate list is usually most accurate."""
-    #action = get_aliased_action(command.action)
-    action = command.action
+    action = get_aliased_action(command.action)
     arguments = {}
     
     # Add all predicates to arguments and add the command

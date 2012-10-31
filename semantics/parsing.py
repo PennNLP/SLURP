@@ -92,7 +92,6 @@ def get_semantics_from_parse_tree(parse_tree_string):
                         
                         if match:
                             match_list.append((match, vfo.classid))
-
                     (best_match, sense) = frames.pick_best_match(match_list)
                     if not best_match is None:
                         result_list.append((best_match, tree, tag_list, sense))
@@ -249,15 +248,7 @@ def create_semantic_structures(frame_semantic_list):
             semantic_representation_list.append(frame)
             continue
         
-        possible_verbs = frames.sense_word_mapping[frame[3]]
-        matching_actions = possible_verbs.intersection(KNOWN_ACTIONS)
-        if len(matching_actions) > 0:
-            # Most efficient way to get an arbitrary element from a set
-            for ma in matching_actions:
-                verb = ma
-                break
-        else:
-            verb = frame[3].split('-')[0]
+        verb = frame[3].split('-')[0]
         
         location_predicates = defaultdict(list)
         location_resolved = False

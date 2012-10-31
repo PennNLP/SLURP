@@ -13,7 +13,7 @@ from tree import Tree
 from xml.etree.ElementTree import parse
 from copy import deepcopy
 from collections import defaultdict
-
+from lexical_constants import *
 
 WORD_SENSE_FILENAME = 'word_sense_mapping.pkl'
 MODULE_PATH = os.path.dirname(os.path.abspath(__file__))
@@ -79,12 +79,12 @@ def generate_mapping(result_filename):
             except IOError:
                 continue
                     
-
     # Invert the word-sense mapping    
     temp_sense_word_mapping = defaultdict(set)
     for word, senses in temp_word_sense_mapping.items():
         for filename,sense in senses:
-            temp_sense_word_mapping[sense].add(word)
+            sense_clean = sense.split('-')[0]
+            temp_sense_word_mapping[sense_clean].add(word)
 
     with open(result_filename, 'w') as f:
         pickle.dump((temp_word_sense_mapping,temp_sense_word_mapping), f)
@@ -545,19 +545,11 @@ def get_vnclass_elements(word):
 
 def pick_best_match(match_list):
     """From the list of tuples, with the first element being the dict containing role assignments,
-    and the second element being the verb class, pick the match that has the most unique matches."""
-    max_unique_matches = 0
-    best_match = None
-    best_match_sense = None
-    for (match, sense) in match_list:
-        unique_matches = len(set([' '.join(tree.leaves()) for tree in \
-                                            match.values()]))
-        if unique_matches > max_unique_matches:
-            max_unique_matches = unique_matches
-            best_match = match
-            best_match_sense = sense
-
-    return (best_match, best_match_sense)
+    and the second element being the verb class, pick the match that maps to an action if it exists."""
+    if len(match_list) == 0:
+        return None
+    understood_matches = [(match,sense) for match,sense in match_list if sense.split('-')[0] in UNDERSTOOD_SENSES]
+    return understood_matches[0] if len(understood_matches) > 0 else match_list[0]
 
 def split_sentences(parse_tree_string):
     """Split the parse tree string into a separate tree string for each sentence."""
