@@ -94,7 +94,7 @@ def get_semantics_from_parse_tree(parse_tree_string):
                             match_list.append((match, vfo.classid))
                     (best_match, sense) = frames.pick_best_match(match_list)
                     if not best_match is None:
-                        result_list.append((best_match, tree, tag_list, sense))
+                        result_list.append((best_match, tree, tag_list, sense, verb))
                     
 
     return result_list
@@ -235,7 +235,8 @@ def create_semantic_structures(frame_semantic_list):
     conditional = False
     # Frame semantic list is a list of conjunction strings and tuples, where the
     # first element of the tuple is the frame semantics, the second element is
-    # the original tree branch it came from, and the third is a list of tags.
+    # the original tree branch it came from, the third is a list of tags, and
+    # the fourth is the sense.
 
     for frame in frame_semantic_list:
         # Check that this is a VerbNet frame and not a conjunction
@@ -248,8 +249,11 @@ def create_semantic_structures(frame_semantic_list):
             semantic_representation_list.append(frame)
             continue
         
-        verb = frame[3].split('-')[0]
-        
+        sense = frame[3].split('-')[0]
+        # Get the action associated with the sense
+        # If such a mapping does not exist, use the original verb
+        action = ACTION_ALIASES.get(sense, frame[4])
+
         location_predicates = defaultdict(list)
         location_resolved = False
 
@@ -282,7 +286,7 @@ def create_semantic_structures(frame_semantic_list):
         elif conditional is True and 'Theme' in entity_class_dict:
             semantic_representation_list.append(Event(entity_class_dict['Theme'], verb))
         # It's a regular command
-        elif verb is not None and verb != 'be':
+        elif action is not None and action != 'be':
             command_predicate_dict = {}
             for key, value in entity_class_dict.items():  
                 # Only add semantic roles, not prepositions and verbs
@@ -295,7 +299,7 @@ def create_semantic_structures(frame_semantic_list):
                                                             EntityClass(
                                                                 value.quantifier,
                                                                 command_predicate_dict),
-                                                            verb))
+                                                            action))
                     break
         # It's an assertion
         else:

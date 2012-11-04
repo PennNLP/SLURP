@@ -547,7 +547,7 @@ def pick_best_match(match_list):
     """From the list of tuples, with the first element being the dict containing role assignments,
     and the second element being the verb class, pick the match that maps to an action if it exists."""
     if len(match_list) == 0:
-        return None
+        return (None,None)
     understood_matches = [(match,sense) for match,sense in match_list if sense.split('-')[0] in UNDERSTOOD_SENSES]
     return understood_matches[0] if len(understood_matches) > 0 else match_list[0]
 

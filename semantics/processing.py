@@ -125,7 +125,6 @@ def _add_command_to_queue(queue, command):
     """Converts Commands to a <(action,[arguments])> structure to add to the queue, and 
     performs aliasing for entity and action names.
     Hack: Last element in predicate list is usually most accurate."""
-    action = get_aliased_action(command.action)
     arguments = {}
     
     # Add all predicates to arguments and add the command
@@ -138,16 +137,7 @@ def _add_command_to_queue(queue, command):
         arguments[CONDITION_ARGUMENT] = \
             str(command.condition.entity_class.predicates['Theme'][0].value)
                   
-    queue.append((action, arguments))
-
-
-def get_aliased_action(action_name):
-    """Checks the action alias dict for a replacement name."""
-    if action_name in ACTION_ALIASES:
-        return ACTION_ALIASES[action_name]
-    else:
-        return action_name
-
+    queue.append((command.action, arguments))
 
 def get_aliased_entity(entity_name):
     """Checks the entity dict for a replacement name."""

@@ -13,11 +13,13 @@ TELL_ACTION = "tell"
 
 # Mapping of other verbnet senses to the same actions.
 # We include the identity entries just to make things easier on the talkback side
+# TODO remove inputs that aren't senses.
 ACTION_ALIASES = {
-                  'find': SEARCH_ACTION,
-                  'look': SEARCH_ACTION,
+                  'find': SEARCH_ACTION, # Not a sense
+                  'look': SEARCH_ACTION, # Not a sense
                   'appear': GO_ACTION,
                   'get': GET_ACTION,
+                  'obtain': GET_ACTION,
                   'meander': GO_ACTION,
                   'nonvehicle': GO_ACTION,
                   'escape': GO_ACTION,
@@ -32,20 +34,4 @@ ACTION_ALIASES = {
                   TELL_ACTION: TELL_ACTION,
                   }
 
-# Inputs to this mapping are senses
-SENSE_TO_ACTION = {
-                  'appear': GO_ACTION,
-                  'get': GET_ACTION,
-                  'obtain': GET_ACTION,
-                  'meander': GO_ACTION,
-                  'nonvehicle': GO_ACTION,
-                  'escape': GO_ACTION,
-                  'rummage': SEARCH_ACTION,
-                  'characterize': SEE_ACTION,
-                  'chase': FOLLOW_ACTION,
-                  'search': SEARCH_ACTION,
-                  'see': SEE_ACTION,
-                  'tell': TELL_ACTION,
-                  }
-
-UNDERSTOOD_SENSES = set(SENSE_TO_ACTION.keys())
+UNDERSTOOD_SENSES = set(ACTION_ALIASES.keys())
