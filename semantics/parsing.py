@@ -70,7 +70,9 @@ def get_semantics_from_parse_tree(parse_tree_string):
                 tree = frames.existential_there_insertion(tree)
                 tree = frames.invert_clause(tree)
                 tree = frames.wh_movement(tree)
-                #TODO: invert negation for imperatives
+                tree = frames.negation_inversion(tree)
+                
+                print 'TREE:',str(tree)
 
                 verbs, tree = frames.find_verbs(tree)
                 
@@ -277,7 +279,7 @@ def create_semantic_structures(frame_semantic_list):
             conditional = False
         # If it's a conditional statement, the first statement is an event
         elif conditional is True and 'Theme' in entity_class_dict:
-            semantic_representation_list.append(Event(entity_class_dict['Theme'], verb))
+            semantic_representation_list.append(Event(entity_class_dict['Theme'], action))
         # It's a regular command
         elif action is not None and action != 'be':
             command_predicate_dict = {}
