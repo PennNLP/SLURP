@@ -70,18 +70,12 @@ def get_semantics_from_parse_tree(parse_tree_string):
                 tree = frames.existential_there_insertion(tree)
                 tree = frames.invert_clause(tree)
                 tree = frames.wh_movement(tree)
+                #TODO: invert negation for imperatives
 
-                # TODO: Negation support should go somewhere in here
-
-                # Regex for finding verbs 
-                verb_finder = re.compile(r'(?<=VB[ DGNPZ]) *\w*(?=\))')
-
-                # Get the lemma of the verb for searching verbnet
-                verbs = (word.strip().lower() for word in
-                         verb_finder.findall(str(tree)))
-
+                verbs, tree = frames.find_verbs(tree)
+                
                 # Create VFOs for each verb, then match them to the parse tree
-                for verb in verbs:
+                for verb,negation in verbs:
                     lemmatized_verb = morphy(verb,'v')
                     vfo_list = frames.create_VerbFrameObjects(lemmatized_verb)
 
@@ -94,9 +88,8 @@ def get_semantics_from_parse_tree(parse_tree_string):
                             match_list.append((match, vfo.classid))
                     (best_match, sense) = frames.pick_best_match(match_list)
                     if not best_match is None:
-                        result_list.append((best_match, tree, tag_list, sense, verb))
+                        result_list.append((best_match, tree, tag_list, sense, verb, negation))
                     
-
     return result_list
 
 
@@ -299,7 +292,7 @@ def create_semantic_structures(frame_semantic_list):
                                                             EntityClass(
                                                                 value.quantifier,
                                                                 command_predicate_dict),
-                                                            action))
+                                                            action,negation=frame[5]))
                     break
         # It's an assertion
         else:

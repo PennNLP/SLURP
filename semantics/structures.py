@@ -192,17 +192,18 @@ class WhQuery:
 
 class Command:
     """A Command for Junior to do something."""
-    def __init__(self, entity_class, action, condition=None):
+    def __init__(self, entity_class, action, condition=None, negation = False):
         self.entity_class = entity_class
         self.action = action
         self.condition = condition
+        self.negation = negation
 
     def __str__(self):
         return 'Command: \n' + \
                '\tEntityClass: ' + str(self.entity_class) + '\n' + \
                '\tAction: ' + str(self.action) + '\n' + \
-               '\tCondition: ' + str(self.condition)
-
+               '\tCondition: ' + str(self.condition) + '\n' + \
+               '\tNegation: ' + str(self.negation)
     def __repr__(self):
         return self.__str__()
 

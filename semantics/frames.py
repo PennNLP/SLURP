@@ -305,6 +305,39 @@ def activize_clause(parse_tree_clause):
 
     return parse_tree_clause
 
+def find_verbs(parse_tree):
+    """Returns the list of tuples: (verb, negation) and removes negations from the tree"""
+    results = []
+    is_negated = False
+    skip_verb = False
+    negation_position = None
+    vp_replacement = None
+
+    # Depth-first traversal
+    for position in parse_tree.treepositions():
+        if not isinstance(parse_tree[position], Tree) or position == ():
+            continue
+        if len(parse_tree[position]) >= 2 and isinstance(parse_tree[position][0], Tree) and isinstance(parse_tree[position][1], Tree):
+            if not isinstance(parse_tree[position][0][0], Tree) and not isinstance(parse_tree[position][1][0],Tree):
+                if parse_tree[position][0][0].lower() == 'do' and parse_tree[position][1][0].lower() in ('not',"n't"):
+                    is_negated = True
+                    skip_verb = True
+                    negation_position = position
+                    vp_replacement = parse_tree[position][2]
+        # Pad tag to prevent out-of-bounds
+        tag = parse_tree[position].node + '   '
+        if tag[:2] == 'VB' and tag[2] in (' ','D','G','N','P','Z'):
+            # This is a verb
+            if skip_verb:
+                skip_verb = False
+            else:
+                results.append((parse_tree[position][0], is_negated))
+                is_negated = False
+
+    # Replace negation subtree with the associated VP
+    vp_replacement.node = 'VP'
+    parse_tree[negation_position] = vp_replacement
+    return results, parse_tree
 def wh_movement(parse_tree):
     """Moves the WH cluase to the null element. Where are the hostages -> The hostages are where?"""
     wh_position = None
