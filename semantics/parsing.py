@@ -22,8 +22,7 @@ import string
 from tree import Tree
 from wntools import morphy
 from collections import defaultdict
-from structures import (Predicate, Quantifier, EntityClass, Command, Assertion, YNQuery, 
-                           WhQuery, Event)
+from new_structures import *
 from util import text2int
 from lexical_constants import *
 
@@ -71,8 +70,6 @@ def get_semantics_from_parse_tree(parse_tree_string):
                 tree = frames.invert_clause(tree)
                 tree = frames.wh_movement(tree)
                 tree = frames.negation_inversion(tree)
-                
-                print 'TREE:',str(tree)
 
                 verbs, tree = frames.find_verbs(tree)
                 
@@ -94,15 +91,27 @@ def get_semantics_from_parse_tree(parse_tree_string):
                     
     return result_list
 
+def fill_quantifier(determiner, quantifier):
+    if determiner == 'any':
+        quantifier.definite = False
+        quantifier.exhaustive = True
+        quantifier.proportionality = 'at least'
+        quantifier.number = 1
+    if determiner == 'a' or determiner == 'an':
+        quantifier.plural = False
+        quantifier.number = 1
+        quantifier.definite = False
+        quantifier.exhaustive = False
+        quantifier.proportionality = 'at least'
+    if determiner == 'the':
+        quantifier.definite = True
+        quantifier.exhaustive = False
+    
 
-def extract_entity_class(parse_tree, semantic_role = ''):
-    """Creates an entity_class object given a snippet of a parse tree."""
-    quantifier = Quantifier()
-    quantifier.number = 1
-    quantifier.definite = True
-
-    predicates = defaultdict(list)
-
+def extract_entity(parse_tree, semantic_role = ''):
+    """Creates an entity object given a snippet of a parse tree."""
+    entity = None
+    quantifier = NewQuantifier()
     for position in parse_tree.treepositions():
         if not isinstance(parse_tree[position], Tree):
             continue
@@ -113,20 +122,7 @@ def extract_entity_class(parse_tree, semantic_role = ''):
         # A determiner node adds some information for the quantifier
         if node == 'DT':
             determiner = ' '.join(subtree.leaves()).lower()
-            if determiner == 'any':
-                quantifier.definite = False
-                quantifier.exhaustive = True
-                quantifier.proportionality = 'at least'
-                quantifier.number = 1
-            if determiner == 'a' or determiner == 'an':
-                quantifier.plural = False
-                quantifier.number = 1
-                quantifier.definite = False
-                quantifier.exhaustive = False
-                quantifier.proportionality = 'at least'
-            if determiner == 'the':
-                quantifier.definite = True
-                quantifier.exhaustive = False
+            fill_quantifier(determiner, quantifier)
         # A personal pronoun adds some information for the quantifier
         elif node == 'PRP':
             pronoun = ' '.join(subtree.leaves()).lower()
@@ -153,21 +149,10 @@ def extract_entity_class(parse_tree, semantic_role = ''):
                 quantifier.exhaustive = True
                 quantifier.fulfilled = False
 
-            predicates[semantic_role].append(Predicate(semantic_role, obj))
+            entity = Object(obj)
         # Prepositional phrase generates a location predicate
         elif node == 'PP-LOC':
-            for subposition in subtree.treepositions():
-                predicate_type = 'Location'
-                if not isinstance(subtree[subposition], Tree):
-                    continue
-                if subtree[subposition].node == 'IN':
-                    predicate_type = 'Location'
-                elif 'NP' in subtree[subposition].node and \
-                     'NP' not in subtree[subposition][0]:
-                    predicates[predicate_type].append(
-                        Predicate(predicate_type,
-                                  ' '.join(
-                                      subtree[subposition].leaves())))
+            entity = Location(' '.join(subtree.leaves()))
         # Cardinal number sets the quantifier number
         elif node == 'CD':
             number_text = ' '.join(subtree.leaves()).lower()
@@ -196,6 +181,11 @@ def extract_entity_class(parse_tree, semantic_role = ''):
                         m_word = theme_word
                     obj_word_list.append(m_word)
 
+                subsubtree = subtree[subposition]
+                if subsubtree.node == 'DT':
+                    determiner = ' '.join(subsubtree.leaves()).lower()
+                    fill_quantifier(determiner, quantifier)
+
                 # Get the quantifier info
                 if len(obj_word_list) > 0 and quantifier.plural is not None:
                     if obj_word_list[0] != theme_word:
@@ -208,19 +198,19 @@ def extract_entity_class(parse_tree, semantic_role = ''):
             # Compile object reference into lower_case_with_underscores name
             if len(obj_word_list) > 0:
                 obj_name = "_".join(word.lower() for word in obj_word_list)
-                predicates[semantic_role].append(Predicate(semantic_role, obj_name))
+                entity = Object(obj_name)
                 break
-
         # If it's just a noun, add it as a predicate
         elif 'N' in node and 'SBJ' not in node:
-            predicates[semantic_role].append(Predicate(semantic_role, ' '.join(subtree.leaves())))
+            entity = Object(' '.join(subtree.leaves()))
             quantifier.definite = True
         elif 'ADV' in node:
-            predicates[semantic_role].append(Predicate(semantic_role, ' '.join(subtree.leaves())))
+            entity = Object(' '.join(subtree.leaves()))
             
-    entity_class = EntityClass(quantifier, predicates)
+    if entity != None:
+        entity.quantifier = quantifier
 
-    return entity_class
+    return entity
 
 
 def create_semantic_structures(frame_semantic_list):
@@ -249,57 +239,41 @@ def create_semantic_structures(frame_semantic_list):
         # If such a mapping does not exist, use the original verb
         action = ACTION_ALIASES.get(sense, frame[4])
 
-        location_predicates = defaultdict(list)
-        location_resolved = False
-
-        entity_class_dict = {}
-
-        for key, value in frame_items:
-            entity_class_dict[key] = extract_entity_class(value, key)        
+        print 'FRAME_ITEMS:'
+        print frame_items
+        item_to_entity = {key:extract_entity(value, key) for key,value in frame_items}
         
+        print 'ITEM_TO_ENTITY:'
+        for item,entity in item_to_entity.items():
+            print 'ITEM:'
+            print item
+            print 'ENTITY:'
+            print entity
+
         wh_question_type = frames.get_wh_question_type(str(frame[1]))
         
         # If it's a WH-question, find the type of question it is and add the object
-        if wh_question_type is not None and 'Theme' in entity_class_dict:
+        if wh_question_type is not None and 'Theme' in item_to_entity:
             semantic_representation_list.append(\
-                WhQuery(entity_class_dict['Theme'], wh_question_type))
+                NewWhQuery(item_to_entity['Theme'], wh_question_type))
         # If it's a yes-no question, add the theme of the question
         elif frames.is_yn_question(str(frame[1])):
-            if 'Theme' in entity_class_dict and 'Location' in entity_class_dict:
-                entity_class_dict['Theme'].predicates = \
-                                        dict(entity_class_dict['Theme'].predicates.items() +
-                                                entity_class_dict['Location'].predicates.items() )
-                semantic_representation_list.append(\
-                    YNQuery(entity_class_dict['Theme']))
-        # If there is a specific location involved, it's a command (this may need to be changed)
-        elif location_resolved is True:
-            semantic_representation_list.append(
-                Command(str(location_predicates['Location'][0]),'go'))
-            # If there was a conditional statement, this command ends it
-            conditional = False
+            if 'Theme' in entity_dict and 'Location' in item_to_entity:
+                semantic_representation_list.append(NewYNQuery(item_to_entity['Theme'],item_to_entity['Location']))
         # If it's a conditional statement, the first statement is an event
         elif conditional is True and 'Theme' in entity_class_dict:
-            semantic_representation_list.append(Event(entity_class_dict['Theme'], action))
+            semantic_representation_list.append(NewEvent(item_to_entity['Theme'], action))
         # It's a regular command
-        elif action is not None and action != 'be':
-            command_predicate_dict = {}
-            for key, value in entity_class_dict.items():  
-                # Only add semantic roles, not prepositions and verbs
-                if key == string.capitalize(key):
-                    command_predicate_dict[key] = value.predicates[key]
-            
-            for key, value in entity_class_dict.items():
-                if key == 'Theme' or key == 'Agent' or key == 'Patient':
-                    semantic_representation_list.append(Command(
-                                                            EntityClass(
-                                                                value.quantifier,
-                                                                command_predicate_dict),
-                                                            action,negation=frame[5]))
-                    break
+        elif action is not None and action not in  ('is', 'are', 'be'):
+            theme = item_to_entity.get('Theme',None)
+            agent = item_to_entity.get('Agent',None)
+            patient = item_to_entity.get('Patient',None)
+            semantic_representation_list.append(NewCommand(agent,theme,patient,action,negation=frame[5]))
+            break
         # It's an assertion
         else:
-            semantic_representation_list.append(\
-                Assertion(entity_class_dict['Theme'], entity_class_dict['Location'].predicates,\
-                          ('ex' in frame[2])))
+            semantic_representation_list.append(NewAssertion(item_to_entity.get('Theme',None), \
+                                                          item_to_entity.get('Location',None),\
+                                                          'ex' in frame[2]))
 
     return semantic_representation_list
