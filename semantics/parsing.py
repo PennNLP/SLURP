@@ -110,7 +110,7 @@ def fill_quantifier(determiner, quantifier):
 
 def extract_entity(parse_tree, semantic_role = ''):
     """Creates an entity object given a snippet of a parse tree."""
-    entity = None
+    entity = Location() if semantic_role == 'Location' else Object()
     quantifier = NewQuantifier()
     for position in parse_tree.treepositions():
         if not isinstance(parse_tree[position], Tree):
@@ -128,7 +128,7 @@ def extract_entity(parse_tree, semantic_role = ''):
             pronoun = ' '.join(subtree.leaves()).lower()
             if pronoun == 'him' or pronoun == 'he' or \
                pronoun == 'her' or pronoun == 'she':
-                obj = pronoun
+                entity.name = pronoun
                 quantifier.definite = True
                 quantifier.number = 1
                 quantifier.proportionality = 'exact'
@@ -136,23 +136,22 @@ def extract_entity(parse_tree, semantic_role = ''):
                 quantifier.fulfilled = False
             # The object is Commander
             elif pronoun == 'i' or pronoun == 'me':
-                obj = 'Commander'
+                entity.name = 'Commander'
                 quantifier.definite = True
                 quantifier.number = 1
                 quantifier.proportionality = 'exact'
                 quantifier.exhaustive = True
             else:
-                obj = pronoun
+                entity.name = pronoun
                 quantifier.definite = True
                 quantifier.number = 1
                 quantifier.proportionality = 'exact'
                 quantifier.exhaustive = True
                 quantifier.fulfilled = False
 
-            entity = Object(obj)
         # Prepositional phrase generates a location predicate
         elif node == 'PP-LOC':
-            entity = Location(' '.join(subtree.leaves()))
+            entity.name = ' '.join(subtree.leaves())
         # Cardinal number sets the quantifier number
         elif node == 'CD':
             number_text = ' '.join(subtree.leaves()).lower()
@@ -197,15 +196,14 @@ def extract_entity(parse_tree, semantic_role = ''):
 
             # Compile object reference into lower_case_with_underscores name
             if len(obj_word_list) > 0:
-                obj_name = "_".join(word.lower() for word in obj_word_list)
-                entity = Object(obj_name)
+                entity.name = "_".join(word.lower() for word in obj_word_list)
                 break
         # If it's just a noun, add it as a predicate
         elif 'N' in node and 'SBJ' not in node:
-            entity = Object(' '.join(subtree.leaves()))
+            entity.name = ' '.join(subtree.leaves())
             quantifier.definite = True
         elif 'ADV' in node:
-            entity = Object(' '.join(subtree.leaves()))
+            entity.name =' '.join(subtree.leaves())
             
     if entity != None:
         entity.quantifier = quantifier
@@ -261,14 +259,15 @@ def create_semantic_structures(frame_semantic_list):
             if 'Theme' in entity_dict and 'Location' in item_to_entity:
                 semantic_representation_list.append(NewYNQuery(item_to_entity['Theme'],item_to_entity['Location']))
         # If it's a conditional statement, the first statement is an event
-        elif conditional is True and 'Theme' in entity_class_dict:
+        elif conditional is True and 'Theme' in item_to_entity:
             semantic_representation_list.append(NewEvent(item_to_entity['Theme'], action))
         # It's a regular command
         elif action is not None and action not in  ('is', 'are', 'be'):
             theme = item_to_entity.get('Theme',None)
             agent = item_to_entity.get('Agent',None)
             patient = item_to_entity.get('Patient',None)
-            semantic_representation_list.append(NewCommand(agent,theme,patient,action,negation=frame[5]))
+            location = item_to_entity.get('Location',None)
+            semantic_representation_list.append(NewCommand(agent,theme,patient,location,action,negation=frame[5]))
             break
         # It's an assertion
         else:

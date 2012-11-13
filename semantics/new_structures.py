@@ -90,10 +90,11 @@ class NewWhQuery:
 
 class NewCommand:
     """A Command for Junior to do something."""
-    def __init__(self, agent, theme, patient, action, condition=None, negation = False):
+    def __init__(self, agent, theme, patient, location, action, condition=None, negation = False):
         self.agent = agent
         self.theme = theme
         self.patient = patient
+        self.location = location
         self.action = action
         self.condition = condition
         self.negation = negation
@@ -103,6 +104,7 @@ class NewCommand:
                '\tAgent:\t' + str(self.agent) + '\n' + \
                '\tTheme:\t' + str(self.theme) + '\n' + \
                '\tPatient:\t' + str(self.patient) + '\n' + \
+               '\tLocation:\t' + str(self.location) + '\n' + \
                '\tAction:' + str(self.action) + '\n' + \
                '\tCondition:' + str(self.condition) + '\n' + \
                '\tNegation:' + str(self.negation)
