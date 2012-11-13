@@ -23,7 +23,6 @@ from tree import Tree
 from wntools import morphy
 from collections import defaultdict
 from new_structures import *
-from util import text2int
 from lexical_constants import *
 
 def get_semantics_from_parse_tree(parse_tree_string):
@@ -77,7 +76,6 @@ def get_semantics_from_parse_tree(parse_tree_string):
                 for verb,negation in verbs:
                     lemmatized_verb = morphy(verb,'v')
                     vfo_list = frames.create_VerbFrameObjects(lemmatized_verb)
-
                     match_list = []
                     
                     for vfo in vfo_list:
@@ -90,124 +88,45 @@ def get_semantics_from_parse_tree(parse_tree_string):
                         result_list.append((best_match, tree, tag_list, sense, verb, negation))
                     
     return result_list
-
-def fill_quantifier(determiner, quantifier):
-    if determiner == 'any':
-        quantifier.definite = False
-        quantifier.exhaustive = True
-        quantifier.proportionality = 'at least'
-        quantifier.number = 1
-    if determiner == 'a' or determiner == 'an':
-        quantifier.plural = False
-        quantifier.number = 1
-        quantifier.definite = False
-        quantifier.exhaustive = False
-        quantifier.proportionality = 'at least'
-    if determiner == 'the':
-        quantifier.definite = True
-        quantifier.exhaustive = False
     
 
 def extract_entity(parse_tree, semantic_role = ''):
     """Creates an entity object given a snippet of a parse tree."""
     entity = Location() if semantic_role == 'Location' else Object()
-    quantifier = NewQuantifier()
+    # Ignore rescursed trees and added info
+    ignore_positions = []
     for position in parse_tree.treepositions():
         if not isinstance(parse_tree[position], Tree):
             continue
-        
+        if position in ignore_positions:
+            continue
         subtree = parse_tree[position]
         node = subtree.node
-
-        # A determiner node adds some information for the quantifier
-        if node == 'DT':
-            determiner = ' '.join(subtree.leaves()).lower()
-            fill_quantifier(determiner, quantifier)
-        # A personal pronoun adds some information for the quantifier
-        elif node == 'PRP':
-            pronoun = ' '.join(subtree.leaves()).lower()
-            if pronoun == 'him' or pronoun == 'he' or \
-               pronoun == 'her' or pronoun == 'she':
-                entity.name = pronoun
-                quantifier.definite = True
-                quantifier.number = 1
-                quantifier.proportionality = 'exact'
-                quantifier.exhaustive = True
-                quantifier.fulfilled = False
-            # The object is Commander
-            elif pronoun == 'i' or pronoun == 'me':
-                entity.name = 'Commander'
-                quantifier.definite = True
-                quantifier.number = 1
-                quantifier.proportionality = 'exact'
-                quantifier.exhaustive = True
-            else:
-                entity.name = pronoun
-                quantifier.definite = True
-                quantifier.number = 1
-                quantifier.proportionality = 'exact'
-                quantifier.exhaustive = True
-                quantifier.fulfilled = False
-
-        # Prepositional phrase generates a location predicate
-        elif node == 'PP-LOC':
-            entity.name = ' '.join(subtree.leaves())
+        leaves = ' '.join(subtree.leaves()).lower()
+        # A noun phrase might have sub-parts that we need to parse recursively
+        # Recurse while there are NP's below the current node
+        if subtree is not parse_tree and node == 'NP':
+            entity.merge(extract_entity(subtree))
+            # Ignore positions should be relative to parse_tree
+            ignore_positions.extend(position + subposition for subposition in subtree.treepositions())
+        # A determiner cardinal node adds some information for the quantifier
+        if 'DT' in node:
+            entity.quantifier.fill_determiner(leaves)
         # Cardinal number sets the quantifier number
         elif node == 'CD':
-            number_text = ' '.join(subtree.leaves()).lower()
-            if not number_text.isdigit():
-                number = text2int(number_text)
-                quantifier.number = number
+            entity.quantifier.fill_cardinal(leaves)
+        
+        elif node == 'PRP':
+            entity.name = 'Commander' if leaves in ('i','me') else leaves
+        elif 'NN' in node or node == '-NONE-':
+            entity.name = morphy(leaves, 'n')
+            if entity.name is None:
+                entity.name = leaves
 
-        # A noun phrase might have sub-parts that we need to parse separately
-        elif ('NP' in node) or node == 'NP-PRD-A':
-            obj_word_list = []
-            for subposition in subtree.treepositions():
-                # Don't check leaves or parents of leaves
-                if (not isinstance(subtree[subposition], Tree) or
-                        isinstance(subtree[subposition][0], Tree)):
-                    continue
-
-                theme_word = ' '.join(subtree[subposition].leaves()).lower()
-                if theme_word is None:
-                    continue
-
-                # Get the actual object in question
-                if ('NN' in subtree[subposition].node or 'CD' in subtree[subposition].node or 
-                    'JJ' in subtree[subposition].node and theme_word not in obj_word_list):
-                    m_word = morphy(theme_word, 'n')
-                    if m_word is None:
-                        m_word = theme_word
-                    obj_word_list.append(m_word)
-
-                subsubtree = subtree[subposition]
-                if subsubtree.node == 'DT':
-                    determiner = ' '.join(subsubtree.leaves()).lower()
-                    fill_quantifier(determiner, quantifier)
-
-                # Get the quantifier info
-                if len(obj_word_list) > 0 and quantifier.plural is not None:
-                    if obj_word_list[0] != theme_word:
-                        quantifier.proportionality = 'at least'
-                        quantifier.number = 1
-                    else:
-                        quantifier.proportionality = 'exact'
-                        quantifier.number = 1
-
-            # Compile object reference into lower_case_with_underscores name
-            if len(obj_word_list) > 0:
-                entity.name = "_".join(word.lower() for word in obj_word_list)
-                break
-        # If it's just a noun, add it as a predicate
-        elif 'N' in node and 'SBJ' not in node:
-            entity.name = ' '.join(subtree.leaves())
-            quantifier.definite = True
-        elif 'ADV' in node:
-            entity.name =' '.join(subtree.leaves())
-            
-    if entity != None:
-        entity.quantifier = quantifier
-
+        elif 'PP' in node or node in ('SBAR','JJ'):
+            entity.info.append(leaves)
+            # Ignore positions should be relative to parse_tree
+            ignore_positions.extend(position + subposition for subposition in subtree.treepositions())
     return entity
 
 
@@ -237,16 +156,7 @@ def create_semantic_structures(frame_semantic_list):
         # If such a mapping does not exist, use the original verb
         action = ACTION_ALIASES.get(sense, frame[4])
 
-        print 'FRAME_ITEMS:'
-        print frame_items
         item_to_entity = {key:extract_entity(value, key) for key,value in frame_items}
-        
-        print 'ITEM_TO_ENTITY:'
-        for item,entity in item_to_entity.items():
-            print 'ITEM:'
-            print item
-            print 'ENTITY:'
-            print entity
 
         wh_question_type = frames.get_wh_question_type(str(frame[1]))
         
@@ -266,9 +176,10 @@ def create_semantic_structures(frame_semantic_list):
             theme = item_to_entity.get('Theme',None)
             agent = item_to_entity.get('Agent',None)
             patient = item_to_entity.get('Patient',None)
+            if patient is None:
+                patient = item_to_entity.get('Recipient',None)
             location = item_to_entity.get('Location',None)
             semantic_representation_list.append(NewCommand(agent,theme,patient,location,action,negation=frame[5]))
-            break
         # It's an assertion
         else:
             semantic_representation_list.append(NewAssertion(item_to_entity.get('Theme',None), \

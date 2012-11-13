@@ -598,8 +598,14 @@ def pick_best_match(match_list):
     if len(match_list) == 0:
         return (None,None)
     understood_matches = [(match,sense) for match,sense in match_list if sense.split('-')[0] in UNDERSTOOD_SENSES]
-    return understood_matches[0] if len(understood_matches) > 0 else match_list[0]
-
+    if len(understood_matches) > 0:
+        return pick_most_complete_match(understood_matches)
+    # Otherwise use the all matches
+    return pick_most_complete_match(match_list)
+def num_total_leaves(match):
+    return sum(len(tree.leaves()) for tree in match.values())
+def pick_most_complete_match(match_list):
+    return max(match_list, key=lambda x:num_total_leaves(x[0]))
 def split_sentences(parse_tree_string):
     """Split the parse tree string into a separate tree string for each sentence."""
     open_brackets = 0

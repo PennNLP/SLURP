@@ -1,10 +1,20 @@
+from util import text2int
+
 class NewEntity:
     TYPES = ['Object', 'Location']
     TYPE_ID = -1 # Subclasses should override TYPE_ID
     def __init__(self, name = None, info = None):
         self.name = name
         self.quantifier = NewQuantifier()
-        self.info = info
+        # Using mutable object as default argument causes
+        # it to be aliased across instances o.O
+        self.info = info if info is not None else []
+    def merge(self, other):
+        # Merge this entity with another entity
+        if other.name is not None:
+            self.name = other.name
+        self.quantifier.merge(other.quantifier)
+        self.info.extend(other.info)
     def __str__(self):
         return '%s:\n'%str(self.TYPES[self.TYPE_ID]) + \
             '\t\tName:%s\n'%str(self.name) + \
@@ -18,23 +28,53 @@ class Location (NewEntity):
     TYPE_ID = 1
 
 class NewQuantifier:
-    """A generalized quantifier class used to pick out the correct number of                                                                                                     
-    entities from a universe."""
-    def __init__(self, plural = None, definite = None, exhaustive = None, \
-                 proportionality = 'exact', number = None):
-        self.plural = plural
-        self.definite = definite
-        self.exhaustive = exhaustive
-        self.proportionality = proportionality
-        self.number = number
-        self.fulfilled = True
+    # Exactly one parameter should be specified at a time
+    def __init__(self, dt = None, cd = None):
+        if dt in ('any','some'):
+            self.definite = False
+            self.type = 'any'
+            self.number = None
+        elif dt in ('a', 'an'):
+            self.definite = False
+            self.type = 'exact'
+            self.number = 1
+        elif dt in ('none','no'):
+            self.definite = True
+            self.type = 'none'
+            self.number = 0
+        elif dt == 'all':
+            self.definite = True
+            self.type = 'all'
+            self.number = None
+        else: # When dt is 'the', None, or unknown
+            # Lowest priority when merging
+            self.definite = True
+            self.type = 'exact'
+            self.number = 1
+        if cd != None:
+            self.number = cd if cd.isdigit() else text2int(cd)
     def __str__(self):
-        return '\t\t\tPlural:%s\n'%str(self.plural) +\
-               '\t\t\tDefinite:%s\n'%str(self.definite) +\
-               '\t\t\tExhaustive:%s\n'%str(self.exhaustive) +\
-               '\t\t\tProportionality:%s\n'%str(self.proportionality) +\
+        return '\t\t\tDefinite:%s\n'%str(self.definite) +\
+               '\t\t\tType:%s\n'%str(self.type) +\
                '\t\t\tNumber:%s'%str(self.number)
+    def fill_determiner(self, dt):
+        self.merge(NewQuantifier(dt = dt))
+    def fill_cardinal(self, cd):
+        self.merge(NewQuantifier(cd = cd))
+    def merge(self, other):
+        # Merge quantifier with other quantifer
 
+        # Assume combination of definite and indefinite is definite
+        # e.g. some of the rooms
+        self.definite = self.definite and other.definite
+
+        # Non-exact types and numbers should take precedence
+        if other.type in ('any','none','all'):
+            self.type = other.type
+
+        if other.number != 1:
+            self.number = other.number
+        
     def __repr__(self):
         return str(self)
 
