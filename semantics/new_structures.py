@@ -3,23 +3,23 @@ from util import text2int
 class NewEntity:
     TYPES = ['Object', 'Location']
     TYPE_ID = -1 # Subclasses should override TYPE_ID
-    def __init__(self, name = None, info = None):
+    def __init__(self, name = None, description = None):
         self.name = name
         self.quantifier = NewQuantifier()
         # Using mutable object as default argument causes
         # it to be aliased across instances o.O
-        self.info = info if info is not None else []
+        self.description = description if description is not None else []
     def merge(self, other):
         # Merge this entity with another entity
         if other.name is not None:
             self.name = other.name
         self.quantifier.merge(other.quantifier)
-        self.info.extend(other.info)
+        self.description.extend(other.description)
     def __str__(self):
         return '%s:\n'%str(self.TYPES[self.TYPE_ID]) + \
             '\t\tName:%s\n'%str(self.name) + \
             '\t\tQuantifier:\n%s\n'%str(self.quantifier) + \
-            '\t\tInfo:%s'%str(self.info)
+            '\t\tDescription:%s'%str(self.description)
     def __repr__(self):
         return str(self)
 class Object (NewEntity):
@@ -142,10 +142,10 @@ class NewCommand:
     def __str__(self):
         return '\nCommand: \n' + \
                '\tAgent:\t' + str(self.agent) + '\n' + \
+               '\tAction:' + str(self.action) + '\n' + \
                '\tTheme:\t' + str(self.theme) + '\n' + \
                '\tPatient:\t' + str(self.patient) + '\n' + \
                '\tLocation:\t' + str(self.location) + '\n' + \
-               '\tAction:' + str(self.action) + '\n' + \
                '\tCondition:' + str(self.condition) + '\n' + \
                '\tNegation:' + str(self.negation)
     def __repr__(self):

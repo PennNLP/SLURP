@@ -83,6 +83,12 @@ def get_semantics_from_parse_tree(parse_tree_string):
                         
                         if match:
                             match_list.append((match, vfo.classid))
+                    
+                    for m in match_list:
+                        for a,b in m[0].items():
+                            print a,str(b)
+                        print '\n\n'
+                    
                     (best_match, sense) = frames.pick_best_match(match_list)
                     if not best_match is None:
                         result_list.append((best_match, tree, tag_list, sense, verb, negation))
@@ -93,7 +99,11 @@ def get_semantics_from_parse_tree(parse_tree_string):
 def extract_entity(parse_tree, semantic_role = ''):
     """Creates an entity object given a snippet of a parse tree."""
     entity = Location() if semantic_role == 'Location' else Object()
-    # Ignore rescursed trees and added info
+    '''
+    print 'Extracting from:'
+    print str(parse_tree)
+    '''
+    # Ignore rescursed trees and added descriptions
     ignore_positions = []
     for position in parse_tree.treepositions():
         if not isinstance(parse_tree[position], Tree):
@@ -105,7 +115,7 @@ def extract_entity(parse_tree, semantic_role = ''):
         leaves = ' '.join(subtree.leaves()).lower()
         # A noun phrase might have sub-parts that we need to parse recursively
         # Recurse while there are NP's below the current node
-        if subtree is not parse_tree and node == 'NP':
+        if subtree is not parse_tree and 'NP' in node:
             entity.merge(extract_entity(subtree))
             # Ignore positions should be relative to parse_tree
             ignore_positions.extend(position + subposition for subposition in subtree.treepositions())
@@ -124,7 +134,7 @@ def extract_entity(parse_tree, semantic_role = ''):
                 entity.name = leaves
 
         elif 'PP' in node or node in ('SBAR','JJ'):
-            entity.info.append(leaves)
+            entity.description.append(leaves)
             # Ignore positions should be relative to parse_tree
             ignore_positions.extend(position + subposition for subposition in subtree.treepositions())
     return entity
