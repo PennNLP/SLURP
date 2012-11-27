@@ -23,25 +23,18 @@ from structures import Entity, Assertion, Event, Command, WhQuery
 CONDITION_ARGUMENT = 'Condition'
 
 
-def process_parse_tree(parse_tree_input, text_input):
+def process_parse_tree(parse_tree_input, text_input, knowledge_base=None):
     """Produces semantic interpretations of parse trees."""
 
     print "Processing:", repr(text_input)
     semantics_result = parsing.get_semantics_from_parse_tree(parse_tree_input)
     print "Semantics result:", semantics_result
     semantic_structures = parsing.create_semantic_structures(semantics_result)
-    semantics_response = parse_semantic_structures(semantic_structures)
-    print "Answer from semantics:", semantics_response
-    try:
-        new_commands = semantics_response[0]
-        user_response = semantics_response[3]
-        # Get the diff between the new and old command queue
-        print "New commands:", new_commands
-    except (TypeError, IndexError):
-        user_response = ""
-        new_commands = []
-    return (user_response, semantics_result, semantics_response, new_commands)
-
+    print "Semantics structures:", semantic_structures
+    if knowledge_base is not None:
+        response = knowledge_base.process_semantic_structures(semantic_structures)
+        print "Reponse from semantics:", response
+    return semantics_result
 
 def parse_semantic_structures(semantic_structure_list):
     """Update belief maps based on Commander's utterance, and (TODO) answer

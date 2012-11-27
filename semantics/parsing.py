@@ -78,17 +78,21 @@ def get_semantics_from_parse_tree(parse_tree_string):
                     vfo_list = frames.create_VerbFrameObjects(lemmatized_verb)
                     match_list = []
                     
+                    #print 'VFO list:'
+                    #print '\n'.join(str(vfo.frame_list) for vfo in vfo_list)
+
                     for vfo in vfo_list:
                         match = vfo.match_parse(tree)
                         
                         if match:
                             match_list.append((match, vfo.classid))
                     
+                    print 'Match list:'
                     for m in match_list:
                         for a,b in m[0].items():
                             print a,str(b)
                         print '\n\n'
-                    
+                        
                     (best_match, sense) = frames.pick_best_match(match_list)
                     if not best_match is None:
                         result_list.append((best_match, tree, tag_list, sense, verb, negation))
@@ -172,11 +176,16 @@ def create_semantic_structures(frame_semantic_list):
         
         # If it's a WH-question, find the type of question it is and add the object
         if wh_question_type is not None and 'Theme' in item_to_entity:
-            semantic_representation_list.append(\
-                NewWhQuery(item_to_entity['Theme'], wh_question_type))
-        # If it's a yes-no question, add the theme of the question
+            if wh_question_type == 'Location':
+                semantic_representation_list.append(NewLocationQuery(item_to_entity['Theme']))
+            elif wh_question_type == 'Status':
+                semantic_representation_list.append(NewStatusQuery(item_to_entity['Theme']))
+            elif wh_question_type in ('People','Entity'):
+                semantic_representation_list.append(NewEntityQuery(item_to_entity['Theme']))
+                
+        # If it's a yes-no question, add the theme and location of the question
         elif frames.is_yn_question(str(frame[1])):
-            if 'Theme' in entity_dict and 'Location' in item_to_entity:
+            if 'Theme' in item_to_entity and 'Location' in item_to_entity:
                 semantic_representation_list.append(NewYNQuery(item_to_entity['Theme'],item_to_entity['Location']))
         # If it's a conditional statement, the first statement is an event
         elif conditional is True and 'Theme' in item_to_entity:
