@@ -96,7 +96,7 @@ word_sense_mapping,sense_word_mapping = load_word_sense_mapping()
 # Mapping from Verbnet tags to Treebank tags
 tag_mapping = {'NP' : ['NP'],
                ('NP', 'Location') : ['PP-LOC', 'PP-DIR', 'PP-CLR', 'NN', \
-                                     'NP-A', 'WHADVP','ADVP-TMP'],
+                                     'NP-A', 'WHADVP','ADVP-TMP', 'PP-PRD'],
                ('NP', 'Destination') : ['PP-LOC', 'PP-DIR', 'NN', 'NP-A',\
                                         'ADVP', 'PP-CLR', 'WHADVP'],
                ('NP', 'Asset') : ['NP-A'],
@@ -107,7 +107,7 @@ tag_mapping = {'NP' : ['NP'],
                ('NP', 'Instrument') : ['NP-A'],
                ('NP', 'Topic') : ['S-A', 'NP-A', 'WHNP'],
                ('NP', 'Theme') : ['NP-A', 'NP-SBJ-A', 'NP', 'NP-SBJ', \
-                                  'WHNP'],
+                                  'WHNP', 'WP'],
                ('PREP', ) : ['exact'],
                'PREP' : ['IN','TO','ADVP-DIR'],
                'VERB' : ['VB']
@@ -181,7 +181,7 @@ class VerbFrameObject:
         # We need a list of subtrees, not a generator
         for subtree in subtrees:
             subtree_list.append(subtree)
-            
+
         current_subtree = 0
         matches = 0
 
@@ -225,7 +225,6 @@ class VerbFrameObject:
         tag_match = re.compile(r'(?<=\()[A-Z][A-Z-]*')
         
         tags = tag_match.findall(str(subtree))
-
 
         # Check for special mapping/matching restrictions
         if frame_tag[2] == '':
@@ -359,6 +358,12 @@ def wh_movement(parse_tree):
     wh_position = None
     null_position = None
     
+    tag_match = re.compile(r'(?<=\()[A-Z][A-Z-]*')
+    tags = tag_match.findall(str(parse_tree))
+    if 'NP-PRD-A' not in tags:
+        # Only do WH movement if an NP predicate exists:
+        return parse_tree
+
     for position in parse_tree.treepositions():
         if not isinstance(parse_tree[position], Tree) or position == ():
             continue

@@ -78,13 +78,17 @@ def get_semantics_from_parse_tree(parse_tree_string):
                     vfo_list = frames.create_VerbFrameObjects(lemmatized_verb)
                     match_list = []
                     
-                    #print 'VFO list:'
-                    #print '\n'.join(str(vfo.frame_list) for vfo in vfo_list)
+                    print 'VFO list:'
+                    print '\n'.join(str(vfo.frame_list) for vfo in vfo_list)
 
                     for vfo in vfo_list:
                         match = vfo.match_parse(tree)
                         
                         if match:
+                            print 'Matched:'
+                            print '\t',str(vfo.frame_list)
+                            print 'with'
+                            print '\t',str(tree)
                             match_list.append((match, vfo.classid))
                     
                     print 'Match list:'
@@ -181,7 +185,7 @@ def create_semantic_structures(frame_semantic_list):
             elif wh_question_type == 'Status':
                 semantic_representation_list.append(NewStatusQuery(item_to_entity['Theme']))
             elif wh_question_type in ('People','Entity'):
-                semantic_representation_list.append(NewEntityQuery(item_to_entity['Theme']))
+                semantic_representation_list.append(NewEntityQuery(item_to_entity['Location']))
                 
         # If it's a yes-no question, add the theme and location of the question
         elif frames.is_yn_question(str(frame[1])):

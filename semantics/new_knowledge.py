@@ -19,12 +19,13 @@ class KnowledgeBase:
 
     def query(self, query):
         """Reponds to a given query"""
-        for fact in self.facts:
-            response = fact.query(query)
-            if response is not None:
-                return response
-        if isinstance(query, NewLocationQuery) or isinstance(query, NewYNQuery):
+        responses = [r for r in (fact.query(query) for fact in self.facts) if r is not None]
+        if len(responses) > 0:
+            return '\n'.join(responses)
+        elif isinstance(query, NewLocationQuery) or isinstance(query, NewYNQuery):
             return "I don't know about %s"% query.theme.readable()
+        elif isinstance(query, NewEntityQuery):
+            return "I don't know about %s"% query.location.readable()
     def readable(self):
         return '\n'.join(f.readable() for f in self.facts)
 
@@ -54,4 +55,7 @@ class LocationFact(Fact):
                     return 'Yes.', self.readable()
                 else:
                     return 'No.', self.readable()
+        elif isinstance(query, NewEntityQuery):
+            if query.location.name == self.location.name:
+                return self.readable()
         return None
