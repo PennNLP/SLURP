@@ -51,10 +51,10 @@ class LocationFact(Fact):
                 return self.readable()
         elif isinstance(query, NewYNQuery):
             if query.theme.name == self.theme.name:
-                if query.location.name == self.theme.name:
-                    return 'Yes.', self.readable()
+                if query.location.name == self.location.name:
+                    return 'Yes, %s'% self.readable()
                 else:
-                    return 'No.', self.readable()
+                    return 'No, %s'% self.readable()
         elif isinstance(query, NewEntityQuery):
             if query.location.name == self.location.name:
                 return self.readable()

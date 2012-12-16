@@ -447,7 +447,6 @@ def invert_clause(parse_tree):
             vp_position = temp_vp_position
             np_position = temp_np_position
             break
-
     if position is not None:
         # Invert the NP-V ordering
         if inverted is True and vp_position is not None and np_position is not None:

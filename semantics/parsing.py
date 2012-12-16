@@ -66,7 +66,11 @@ def get_semantics_from_parse_tree(parse_tree_string):
 
                 # Transformational grammar stuff
                 tree = frames.existential_there_insertion(tree)
+                print 'Before inversion:'
+                print str(tree)
                 tree = frames.invert_clause(tree)
+                print 'After inversion:'
+                print str(tree)
                 tree = frames.wh_movement(tree)
                 tree = frames.negation_inversion(tree)
 
