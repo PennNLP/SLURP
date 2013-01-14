@@ -40,6 +40,9 @@ def load_word_sense_mapping(force_generate=False):
         max_mtime = 0
         for dirname, _, files in os.walk(VERBNET_DIRECTORY):
             for filename in files:
+                # We only care about the XML and pickle files
+                if not (filename.endswith('.xml') or filename.endswith('.pkl')):
+                    continue
                 full_path = os.path.join(dirname, filename)
                 try:
                     mtime = os.stat(full_path).st_mtime
