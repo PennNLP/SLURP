@@ -25,20 +25,11 @@ import sys
 
 from semantics.processing import process_parse_tree, CONDITION_ARGUMENT
 from pipelinehost import socket_parse, DEFAULT_PORT
+from semantics.new_knowledge import KnowledgeBase
+from ltlbroom.ltl import *
 
 # Debug constants
-SEMANTICS_DEBUG = False
-
-# LTL Constants
-ALWAYS = "[]"
-EVENTUALLY = "<>"
-TO = "->"
-IFF = "<->"
-NOT = "!"
-AND = "&"
-OR = "|"
-ROBOT_STATE = "s."
-ENV_STATE = "e."
+SEMANTICS_DEBUG = True
 
 # Semantics constants
 THEME = "Theme"
@@ -85,6 +76,10 @@ class SpecGenerator(object):
         self.regions = None
         self.props = None
         self.react_props = set()
+        
+        # Knowledge base
+        self.kbase = KnowledgeBase()
+        
 
     def generate(self, text, sensors, regions, props):
         """Generate a logical specification from natural language and propositions."""
@@ -175,7 +170,7 @@ class SpecGenerator(object):
         # We need to modify non-reaction goals to be or'd with the reactions
         if self.react_props:
             # Dedupe and make an or over all the reaction properties
-            reaction_or_frag = _or([_sys(prop) for prop in self.react_props])
+            reaction_or_frag = or_([sys_(prop) for prop in self.react_props])
             # HACK: Rewrite all the goals!
             system_lines = [insert_or_before_goal(reaction_or_frag, line) for line in system_lines]
             new_generation_trees = []
@@ -223,12 +218,12 @@ class SpecGenerator(object):
         """Generate statements for following."""
         # Env is stationary iff in the last state change our region and the env's region were stable
         env_stationary_safeties = \
-            _always(_iff(_next(_sys(FOLLOW_STATIONARY)), 
-                         _and([_iff(_env(region), _next(_env(region)))
+            always(iff(next_(sys_(FOLLOW_STATIONARY)), 
+                         and_([iff(env(region), next_(env(region)))
                                for region in self.regions])))
         # Match the sensor location to ours
         follow_goals = \
-            [_always_eventually(_implies(_and((_sys(FOLLOW_STATIONARY), _env(region))), _sys(region)))
+            [always_eventually(implies(and_((sys_(FOLLOW_STATIONARY), env(region))), sys_(region)))
              for region in self.regions]
         return ([env_stationary_safeties] + follow_goals, [FOLLOW_SENSORS], [FOLLOW_STATIONARY], [])
 
@@ -238,8 +233,8 @@ class SpecGenerator(object):
         if condition not in self.sensors:
             raise KeyError("Unknown condition {0}".format(condition))
         
-        condition_stmt = _env(condition)
-        sys_statements = [_not(condition_stmt)]
+        condition_stmt = env(condition)
+        sys_statements = [not_(condition_stmt)]
         new_props = []
         
         # Validate the action
@@ -253,45 +248,45 @@ class SpecGenerator(object):
         else:
             # Reaction proposition
             reaction_prop_name = REACT + "_" + condition
-            reaction_prop = _sys(reaction_prop_name)
+            reaction_prop = sys_(reaction_prop_name)
             self.react_props.add(reaction_prop_name)
             new_props.append(reaction_prop_name)
             
         # Generate the response
         if action == "go":
             # Go is unusual because the outcome is not immediately satisfiable
-            destination_stmt = _sys(arg_dict[LOCATION])
+            destination_stmt = sys_(arg_dict[LOCATION])
             # New goal for where we should go
-            go_goal = _always_eventually(_implies(reaction_prop, destination_stmt))
+            go_goal = always_eventually(implies(reaction_prop, destination_stmt))
             # Safety that persists
             go_safety = \
-                _always(_iff(_next(reaction_prop), 
-                             _or([reaction_prop, _next(condition_stmt)])))
+                always(iff(next_(reaction_prop), 
+                             or_([reaction_prop, next_(condition_stmt)])))
             # Make sure we act immediately: []((!react & next(react) )-> stay_there)
-            stay_there = _always(_implies(_and((_not(reaction_prop), _next(reaction_prop))),
+            stay_there = always(implies(and_((not_(reaction_prop), next_(reaction_prop))),
                                           self._frag_stay()))
                 
             sys_statements.extend([go_goal, go_safety, stay_there])
         else:
             # Otherwise we are always creating reaction safety
-            sys_statements.append(_always(_iff(_next(condition_stmt), _next(reaction_prop))))
+            sys_statements.append(always(iff(next_(condition_stmt), next_(reaction_prop))))
             
             # Create a reaction fragment if needed
             if action in self.REACTIONS:
                 handler, targets = self.REACTIONS[action]
                 args = [arg_dict[target] for target in targets]
                 reaction_frag = handler(*args)
-                sys_statements.append(_always(_implies(_next(reaction_prop), reaction_frag)))
+                sys_statements.append(always(implies(next_(reaction_prop), reaction_frag)))
 
         return (sys_statements, [], new_props, [])
 
     def _gen_stay(self):
         """Generate statements to stay exactly where you are."""
-        return ([_always_eventually(self._frag_stay())], [], [], [])
+        return ([always_eventually(self._frag_stay())], [], [], [])
     
     def _frag_stay(self):
         """Generate fragments to reactively go somewhere."""
-        return (_and([_iff(_sys(region), _next(_sys(region))) for region in self.regions]))
+        return (and_([iff(sys_(region), next_(sys_(region))) for region in self.regions]))
 
 
 # The return signature of the statement generators is:
@@ -299,50 +294,50 @@ class SpecGenerator(object):
 
 def _gen_begin(region):
     """Generate statements to begin in a location."""
-    return ([_sys(region)], [], [], [])
+    return ([sys_(region)], [], [], [])
 
 
 def _gen_patrol(region):
     """Generate statements to always eventually be in a location."""
-    return ([_always_eventually(_sys(region))], [], [], [])
+    return ([always_eventually(sys_(region))], [], [], [])
 
 
 def _gen_go(region):
     """Generate statements to go to a location once."""
     mem_prop = _prop_mem(region, VISIT)
-    alo_sys = _frag_atleastonce(mem_prop, _next(_sys(region)))
+    alo_sys = _frag_atleastonce(mem_prop, next_(sys_(region)))
     return (alo_sys, [], [mem_prop], [])
 
 
 def _frag_react_go(region):
     """Generate a fragment to reactively go somewhere."""
-    return (_sys(region))
+    return (sys_(region))
 
 
 def _gen_avoid(region):
     """Generate statements for avoiding a location, adding that the robot does not start there."""
-    return ([_always(_not(_sys(region))), _not(_sys(region))], [], [], [])
+    return ([always(not_(sys_(region))), not_(sys_(region))], [], [], [])
 
 
 def _gen_search(region):
     """Generate statements for searching a region."""
     mem_prop = _prop_mem(region, SWEEP)
-    cic_frag, cic_env = _frag_complete_context(SWEEP, _sys(region))
+    cic_frag, cic_env = _frag_complete_context(SWEEP, sys_(region))
     alo_sys = _frag_atleastonce(mem_prop, cic_frag)
     return (alo_sys, cic_env, [mem_prop], [_prop_actuator_done(SWEEP)])
 
 
 def _frag_atleastonce(mem_prop, fragment):
     """Generate fragments for performing an action at least once by using a memory proposition."""
-    return [_always_eventually(_sys(mem_prop)), 
-            _always(_iff(_next(_sys(mem_prop)), _or((_sys(mem_prop), fragment))))]
+    return [always_eventually(sys_(mem_prop)), 
+            always(iff(next_(sys_(mem_prop)), or_((sys_(mem_prop), fragment))))]
 
 
 def _frag_complete_context(actuator, context_prop):
     """Generate fragments for completing an action in context."""
     actuator_done = _prop_actuator_done(actuator)
-    eventually_actuator = _always_eventually(_env(actuator_done))
-    return [_and((_sys(actuator), _next(_env(actuator_done)), context_prop)), [eventually_actuator]]
+    eventually_actuator = always_eventually(env(actuator_done))
+    return [and_((sys_(actuator), next_(env(actuator_done)), context_prop)), [eventually_actuator]]
 
 
 def _prop_mem(region, event):
@@ -369,79 +364,12 @@ def insert_or_before_goal(or_clause, statement):
     # Your hack is bad and you should feel bad.
     if ALWAYS + EVENTUALLY in statement and REACT not in statement:
         return statement.replace(ALWAYS + EVENTUALLY + '(', 
-                                 ALWAYS + EVENTUALLY + '(' + or_clause + _space(OR))
+                                 ALWAYS + EVENTUALLY + '(' + or_clause + space(OR))
     else:
         return statement
 
 
-def _space(text):
-    """Wrap text in spaces."""
-    return " " + text + " "
-
-
-def _and(propostions, delim=''):
-    """Add logical and to the arguments"""
-    return _parens((_space(AND) + delim).join(propostions))
-
-
-def _or(propostions, delim=''):
-    """Add logical or to the arguments"""
-    return _parens((_space(OR) + delim).join(propostions))
-
-
-def _parens(text):
-    """Wrap text in parens."""
-    return "(" + text + ")"
-
-
-def _always(text):
-    """Wrap text in always."""
-    return _parens(ALWAYS + _parens(text))
-
-
-def _always_eventually(text):
-    """Wrap text in always."""
-    return _parens(ALWAYS + EVENTUALLY + _parens(text))
-
-
-def _not(text):
-    """Add a not operator in front of a string."""
-    return NOT + text
-
-
-def _sys(text):
-    """Add a robot state marker in front of a string."""
-    return ROBOT_STATE + text
-
-
-def _env(text):
-    """Add an environment state marker in front of a string."""
-    return ENV_STATE + text
-
-
-def _next(text):
-    """Wrap text in next()."""
-    return "next" + _parens(text)
-
-
-def _mutex(items):
-    """Create a system proposition mutex over the given items."""
-    return _always(_or([_and([_next(item1)] +
-                             [_not(_next(item2)) for item2 in items if item2 != item1])
-                    for item1 in items], "\n    "))
-
-
-def _iff(prop1, prop2):
-    """Connect two propositions with if and only if."""
-    return _parens(prop1 + _space(IFF) + prop2)
-
-
-def _implies(prop1, prop2):
-    """Connect two propositions with implies."""
-    return _parens(prop1 + _space(TO) + prop2)
-
-
 if __name__ == "__main__":
-    s = SpecGenerator()
-    s.generate('\n'.join(sys.argv[1:]), ("bomb", "hostage", "badguy"), ("r1", "r2", "r3", "r4"),
+    specgen = SpecGenerator()
+    specgen.generate('\n'.join(sys.argv[1:]), ("bomb", "hostage", "badguy"), ("r1", "r2", "r3", "r4"),
                ("defuse", "call"))
