@@ -9,7 +9,7 @@ frames, and then returns the matching frames and their corresponding trees.
 import re
 import pickle
 import os
-from tree import Tree
+from semantics.tree import Tree
 from xml.etree.ElementTree import parse
 from copy import deepcopy
 from collections import defaultdict
@@ -20,12 +20,17 @@ MODULE_PATH = os.path.dirname(os.path.abspath(__file__))
 VERBNET_DIRECTORY = os.path.join(MODULE_PATH, 'Verbnet', 'verbnet-3.1')
 
 
-def load_word_sense_mapping():
+def load_word_sense_mapping(force_generate=False):
     """Loads the pickle file for mapping words to VerbNet frames. *Required*
     for other functions to work."""
     
     word_sense_path = os.path.join(VERBNET_DIRECTORY, WORD_SENSE_FILENAME)
     try:
+        # We use the existing exception handling (designed to handle a missing file) for cases
+        # where the caller wants to require that things be generated from scratch.
+        if force_generate:
+            raise IOError("Forcing generation of new pickle file")
+        
         # Try to open the pickled file, allowing us to fail fast if 
         # there's no pickle file
         word_sense_file = open(word_sense_path, 'r')
@@ -49,6 +54,7 @@ def load_word_sense_mapping():
         
         # Load the file if all is well
         result = pickle.load(word_sense_file)
+        word_sense_file.close()
     except IOError:
         print "Word sense pickle file is missing or out of date, creating it..."
         result = generate_mapping(word_sense_path)
@@ -56,7 +62,7 @@ def load_word_sense_mapping():
     return result
 
 def generate_mapping(result_filename):
-    
+    """Create and store the mappings between senses and words."""
     file_list = os.listdir(VERBNET_DIRECTORY)
     temp_word_sense_mapping = defaultdict(set)
 
@@ -91,7 +97,10 @@ def generate_mapping(result_filename):
 
     return (temp_word_sense_mapping,temp_sense_word_mapping)
 
-word_sense_mapping,sense_word_mapping = load_word_sense_mapping()
+try:
+    word_sense_mapping, sense_word_mapping = load_word_sense_mapping()
+except ValueError:
+    word_sense_mapping, sense_word_mapping = load_word_sense_mapping(True)
 
 # Mapping from Verbnet tags to Treebank tags
 tag_mapping = {'NP' : ['NP'],
