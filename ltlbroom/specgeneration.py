@@ -18,6 +18,7 @@ Generates a logical specification from natural language.
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys
+import re
 
 from semantics.processing import process_parse_tree
 from pipelinehost import PipelineClient
@@ -105,6 +106,10 @@ class SpecGenerator(object):
 
             # Lowercase and strip the text before using it
             line = line.strip().lower()
+            
+            # Ignore any comments in the line
+            line = _remove_comments(line)
+            print "Clean:", line
 
             print "Sending to remote parser:", repr(line)
             parse = parse_client.parse(text, force_nouns, force_verbs=force_verbs)
@@ -353,6 +358,11 @@ def insert_or_before_goal(or_clause, statement):
                                  ALWAYS + EVENTUALLY + '(' + or_clause + space(OR))
     else:
         return statement
+
+
+def _remove_comments(text):
+    """Remove from the comment character to the end of the line."""
+    return re.sub('#.*$', '', text).strip()
 
 
 if __name__ == "__main__":
