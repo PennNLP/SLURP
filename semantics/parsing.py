@@ -160,7 +160,7 @@ def extract_entity(parse_tree, semantic_role=''):
             entity.description.append(leaves)
             # ignore_positions should be relative to parse_tree
             ignore_positions.extend(position + subposition for subposition in subtree.treepositions())
-        elif 'NN' in node and 'NN' in previous_node and entity.name == previous_leaves:
+        elif 'NN' in node and previous_node and 'NN' in previous_node and entity.name == previous_leaves:
             entity.description.append(previous_leaves)
             entity.name = leaves
         elif 'NN' in node or node == '-NONE-':
