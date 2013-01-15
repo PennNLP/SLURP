@@ -128,6 +128,8 @@ def extract_entity(parse_tree, semantic_role=''):
 
     # Ignore rescursed trees and added descriptions
     ignore_positions = []
+    previous_node = None
+    previous_leaves = None
     for position in parse_tree.treepositions():
         if not isinstance(parse_tree[position], Tree):
             continue
@@ -135,6 +137,7 @@ def extract_entity(parse_tree, semantic_role=''):
             continue
         subtree = parse_tree[position]
         node = subtree.node
+
         leaves = ' '.join(subtree.leaves()).lower()
         # A noun phrase might have sub-parts that we need to parse recursively
         # Recurse while there are NP's below the current node
@@ -153,15 +156,19 @@ def extract_entity(parse_tree, semantic_role=''):
                 entity.name = leaves
         elif node == 'PRP':
             entity.name = 'Commander' if leaves in ('i', 'me') else leaves
+        elif ('PP' in node and entity.name) or node in ('SBAR', 'JJ'):
+            entity.description.append(leaves)
+            # ignore_positions should be relative to parse_tree
+            ignore_positions.extend(position + subposition for subposition in subtree.treepositions())
+        elif 'NN' in node and 'NN' in previous_node and entity.name == previous_leaves:
+            entity.description.append(previous_leaves)
+            entity.name = leaves
         elif 'NN' in node or node == '-NONE-':
             entity.name = morphy(leaves, 'n')
             if entity.name is None:
                 entity.name = leaves
-
-        elif ('PP' in node and entity.name) or node in ('SBAR', 'JJ'):
-            entity.description.append(leaves)
-            # Ignore positions should be relative to parse_tree
-            ignore_positions.extend(position + subposition for subposition in subtree.treepositions())
+        previous_node = node
+        previous_leaves = leaves
     return entity
 
 
@@ -231,5 +238,5 @@ def create_semantic_structures(frame_semantic_list):
             semantic_representation_list.append(Assertion(item_to_entity.get('Theme', None),
                                                           item_to_entity.get('Location', None),
                                                           'ex' in frame[2]))
-
+        
     return semantic_representation_list
