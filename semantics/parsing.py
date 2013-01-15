@@ -174,6 +174,7 @@ def create_semantic_structures(frame_semantic_list):
     # the fourth is the sense.
 
     for frame in frame_semantic_list:
+        print 'Frame: ', frame
         # Check that this is a VerbNet frame and not a conjunction
         try:
             frame_items = frame[0].items()
@@ -181,7 +182,7 @@ def create_semantic_structures(frame_semantic_list):
             if 'if' in str(frame):
                 conditional = True
             frame_items = None
-            semantic_representation_list.append(frame)
+            #semantic_representation_list.append(frame)
             continue
 
         sense = frame[3].split('-')[0]
@@ -207,8 +208,14 @@ def create_semantic_structures(frame_semantic_list):
             if 'Theme' in item_to_entity and 'Location' in item_to_entity:
                 semantic_representation_list.append(YNQuery(item_to_entity['Theme'], item_to_entity['Location']))
         # If it's a conditional statement, the first statement is an event
-        elif conditional is True and 'Theme' in item_to_entity:
-            semantic_representation_list.append(Event(item_to_entity['Theme'], action))
+        elif conditional:
+            print 'Found conditional'
+            event = Event(item_to_entity.get('Stimulus', None), action)
+            if len(semantic_representation_list) > 0 and isinstance(semantic_representation_list[-1], Command):
+                semantic_representation_list[-1].condition = event
+            else:
+                # Dangling event (shouldn't happen)
+                semantic_representation_list.append(event)
         # It's a regular command
         elif action is not None and action not in  ('is', 'are', 'be'):
             theme = item_to_entity.get('Theme', None)
@@ -217,7 +224,8 @@ def create_semantic_structures(frame_semantic_list):
             if patient is None:
                 patient = item_to_entity.get('Recipient', None)
             location = item_to_entity.get('Location', None)
-            semantic_representation_list.append(Command(agent, theme, patient, location, action, negation=frame[5]))
+            current_command = Command(agent, theme, patient, location, action, negation=frame[5])
+            semantic_representation_list.append(current_command)
         # It's an assertion
         else:
             semantic_representation_list.append(Assertion(item_to_entity.get('Theme', None),

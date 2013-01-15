@@ -239,18 +239,16 @@ class Command(object):
 
 
 class Event(object):
-    """An event in the environment that can trigger a command."""
+    """An event in the environment."""
 
     def __init__(self, entity, sensor):
         self.entity = entity
         self.sensor = sensor
-        self.command = None
 
     def __str__(self):
         return 'Event:\n' + \
                '\tEntity: ' + str(self.entity) + '\n' +\
-               '\tSensor: ' + str(self.sensor) + '\n' +\
-               '\tCommand: ' + str(self.command)
+               '\tSensor: ' + str(self.sensor)
 
     def __repr__(self):
         return str(self)
