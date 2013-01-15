@@ -48,7 +48,7 @@ class Entity(object):
             return self.name
         indent = '\t'*(lvl)
         return str(self.TYPES[self.TYPE_ID]) + '\n'+ \
-            indent + '\tName: ' + self.name + '\n' + \
+            indent + '\tName: ' + str(self.name) + '\n' + \
             indent + '\tQuantifier: ' + (self.quantifier.__str__(lvl + 1) if self.quantifier else '') + '\n' + \
             indent + '\tDescription: ' + str(self.description)
 
@@ -233,7 +233,6 @@ class Command(object):
 
     def __str__(self, lvl=0):
         indent = '\t'*(lvl)
-        
         return '\nCommand: \n' + \
                (indent + '\tAgent: ' + self.agent.__str__(lvl + 1) + '\n' if self.agent else '') + \
                indent + '\tAction: ' + str(self.action)  + '\n' + \

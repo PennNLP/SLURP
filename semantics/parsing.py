@@ -158,7 +158,7 @@ def extract_entity(parse_tree, semantic_role=''):
             if entity.name is None:
                 entity.name = leaves
 
-        elif 'PP' in node or node in ('SBAR', 'JJ'):
+        elif ('PP' in node and entity.name) or node in ('SBAR', 'JJ'):
             entity.description.append(leaves)
             # Ignore positions should be relative to parse_tree
             ignore_positions.extend(position + subposition for subposition in subtree.treepositions())
