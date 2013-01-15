@@ -1,25 +1,24 @@
 #!/usr/bin/env python
 """An interactive test client for the pipeline host."""
 
-import socket
 import sys
 from semantics.processing import process_parse_tree
-from semantics.new_knowledge import *
-from pipelinehost import socket_parse, DEFAULT_PORT
+from semantics.new_knowledge import KnowledgeBase
+from pipelinehost import PipelineClient
 
-def from_stdin(sock, kb):
+def from_stdin(kb):
     """Test semantics by processing text from stdin"""
     while True:
         try:
             text = raw_input('> ')
         except KeyboardInterrupt:
             break
-        if not process_input(text, sock, kb):
+        if not process_input(text, kb):
             break
 
-def process_input(text, sock, kb):
+def process_input(text, kb):
     """Send given text to the semantics component"""
-    msg = socket_parse(asocket=sock, text=text)
+    msg = PipelineClient().parse(text)
     if msg:
         print msg
         process_parse_tree(msg, text, kb)
@@ -31,13 +30,9 @@ def process_input(text, sock, kb):
         return False
 
 if __name__ == "__main__":
-    # Connect to the local socket and send
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect(('localhost', DEFAULT_PORT))
-
-    kb = KnowledgeBase()
+    KB = KnowledgeBase()
 
     if len(sys.argv) <= 1:
-        from_stdin(sock, kb)
+        from_stdin(KB)
     else:
-        process_input(" ".join(sys.argv[1:]), sock, kb)
+        process_input(" ".join(sys.argv[1:]), KB)
