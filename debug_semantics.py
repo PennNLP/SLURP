@@ -22,7 +22,7 @@ def process_input(text, sock, kb):
     msg = socket_parse(asocket=sock, text=text)
     if msg:
         print msg
-        semantics_result = process_parse_tree(msg, text, kb)
+        process_parse_tree(msg, text, kb)
         print 'World knowledge:'
         print kb.readable()
         return True

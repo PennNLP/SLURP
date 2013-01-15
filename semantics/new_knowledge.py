@@ -1,6 +1,6 @@
 """Contains class that build a knowledge base"""
 
-# Copyright (C) 2011-2013 Ian Perera, Kenton Lee, and Constantine Lignos
+# Copyright (C) 2011-2013 Kenton Lee, Constantine Lignos, and Ian Perera
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by

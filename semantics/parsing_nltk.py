@@ -480,7 +480,7 @@ def get_vnclass_elements(word):
     return vnclass_elements
             
 
-def get_semantics_from_parse_tree(parse_tree_string):
+def extract_frames_from_parse(parse_tree_string):
     """Take a string representing the parse tree as input, and print the
     semantic parse. The result list consists of a list of tuples, with each
     tuple containing the VerbNet frame and its associated tree."""
@@ -762,7 +762,7 @@ def process_parse(parse_string_list):
         if is_question(parse_tree_string):
             answer_list.append(get_question_semantics_from_parse_tree(parse_tree_string))
         else:
-            par_list.extend(get_semantics_from_parse_tree(parse_tree_string))
+            par_list.extend(extract_frames_from_parse(parse_tree_string))
             commanded = True
     
     if commanded:
@@ -857,7 +857,7 @@ if __name__ == '__main__':
     parse_tree_string = """(S (NP-SBJ-A (EX There)) (VP (VBP are) (NP-PRD-A (NP (CD 2) (NNS hostages)) (PP-LOC (IN in) (NP-A (NN room) (CD 3))))) (. .))"""
     parse_tree_string = """((SBARQ (WHADVP-0 (WRB Where)) (SQ (VP (VBP are) (NP-PRD-A (DT the) (NNS hostages)) (ADVP-0 (-NONE- *T*)))) (. ?)))"""
     
-    result = get_semantics_from_parse_tree(parse_tree_string)
+    result = extract_frames_from_parse(parse_tree_string)
     print result
     
     semantic_structures = create_semantic_structures(result)
