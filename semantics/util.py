@@ -43,7 +43,7 @@ def text2int(textnum):
     current = result = 0
     for word in textnum.split():
         if word not in numwords:
-            raise Exception("Illegal word: " + word)
+            return None
 
         scale, increment = numwords[word]
         current = current * scale + increment

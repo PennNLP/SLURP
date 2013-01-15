@@ -140,7 +140,7 @@ def extract_entity(parse_tree, semantic_role=''):
         # Recurse while there are NP's below the current node
         if subtree is not parse_tree and 'NP' in node:
             entity.merge(extract_entity(subtree))
-            # Ignore positions should be relative to parse_tree
+            # ignore_positions should be relative to parse_tree
             ignore_positions.extend(position + subposition for subposition in subtree.treepositions())
         # A determiner cardinal node adds some information for the quantifier
         if 'DT' in node:
@@ -148,7 +148,9 @@ def extract_entity(parse_tree, semantic_role=''):
         # Cardinal number sets the quantifier number
         elif node == 'CD':
             entity.quantifier.fill_cardinal(leaves)
-
+            if entity.quantifier.number == None:
+                # Not actually a number
+                entity.name = leaves
         elif node == 'PRP':
             entity.name = 'Commander' if leaves in ('i', 'me') else leaves
         elif 'NN' in node or node == '-NONE-':
@@ -174,7 +176,6 @@ def create_semantic_structures(frame_semantic_list):
     # the fourth is the sense.
 
     for frame in frame_semantic_list:
-        print 'Frame: ', frame
         # Check that this is a VerbNet frame and not a conjunction
         try:
             frame_items = frame[0].items()

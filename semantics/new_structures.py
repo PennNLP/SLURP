@@ -43,11 +43,14 @@ class Entity(object):
     def readable(self):
         return '%s %s' % (self.quantifier.readable(), self.name)
 
-    def __str__(self):
-        return '%s:\n' % str(self.TYPES[self.TYPE_ID]) + \
-            '\t\tName:%s\n' % str(self.name) + \
-            '\t\tQuantifier:\n%s\n' % str(self.quantifier) + \
-            '\t\tDescription:%s' % str(self.description)
+    def __str__(self, lvl=0):
+        if self.name == '*':
+            return self.name
+        indent = '\t'*(lvl)
+        return str(self.TYPES[self.TYPE_ID]) + '\n'+ \
+            indent + '\tName: ' + self.name + '\n' + \
+            indent + '\tQuantifier: ' + (self.quantifier.__str__(lvl + 1) if self.quantifier else '') + '\n' + \
+            indent + '\tDescription: ' + str(self.description)
 
     def __repr__(self):
         return str(self)
@@ -110,10 +113,11 @@ class Quantifier(object):
             else:
                 return 'any'
 
-    def __str__(self):
-        return '\t\t\tDefinite:%s\n' % str(self.definite) +\
-               '\t\t\tType:%s\n' % str(self.type) +\
-               '\t\t\tNumber:%s' % str(self.number)
+    def __str__(self, lvl=0):
+        indent = '\t'*(lvl)
+        return '\n' + indent + '\tDefinite:%s\n' % str(self.definite) + \
+               indent + '\tType:%s\n' % str(self.type) +\
+               indent + '\tNumber:%s' % str(self.number)
 
     def fill_determiner(self, dt):
         """Fills self with a determiner by merging it with
@@ -151,11 +155,11 @@ class Assertion(object):
         self.location = location
         self.existential = existential
 
-    def __str__(self):
-        return 'Assertion: \n' + \
-               '\tTheme: %s\n' % str(self.theme) + \
-               '\tLocation: %s\n' % str(self.location) + \
-               '\tExistential: %s\n' % str(self.existential)
+    def __str__(self, lvl=0):
+        indent = '\t'*(lvl)
+        return '\n' + indent + '\tTheme: %s\n' % str(self.theme, lvl + 1) + \
+               indent + '\tLocation: %s\n' % str(self.location, lvl + 1) + \
+               indent + '\tExistential: %s\n' % str(self.existential)
 
     def __repr__(self):
         return str(self)
@@ -174,9 +178,10 @@ class Query(object):
     def __repr__(self):
         return str(self)
 
-    def __str__(self):
-        return 'LocationQuery: \n' + \
-               '\tTheme:%s\n' % str(self.theme)
+    def __str__(self, lvl=0):
+        indent = '\t'*(lvl)
+        return '\n' + indent + 'LocationQuery: \n' + \
+               indent + '\tTheme:%s\n' % str(self.theme, lvl + 1)
 
 
 class YNQuery(Query):
@@ -185,10 +190,11 @@ class YNQuery(Query):
         self.theme = theme
         self.location = location
 
-    def __str__(self):
+    def __str__(self, lvl=0):
+        indent = '\t'*(lvl)
         return 'YNQuery: \n' + \
-               '\tTheme: %s\n' % str(self.theme) + \
-               '\tLocation: %s' % str(self.location)
+               indent + '\tTheme: %s\n' % str(self.theme, lvl + 1) + \
+               indent + '\tLocation: %s' % str(self.location, lvl + 1)
 
 
 class LocationQuery(Query):
@@ -206,9 +212,10 @@ class EntityQuery(Query):
     def __init__(self, location):
         self.location = location
 
-    def __str__(self):
+    def __str__(self, lvl=0):
+        indent = '\t'*(lvl)
         return 'EntityQuery: \n' + \
-               '\tLocation:%s\n' % str(self.location)
+               indent + '\tLocation:%s\n' % str(self.location, lvl + 1)
 
 
 class Command(object):
@@ -224,15 +231,17 @@ class Command(object):
         self.condition = condition
         self.negation = negation
 
-    def __str__(self):
+    def __str__(self, lvl=0):
+        indent = '\t'*(lvl)
+        
         return '\nCommand: \n' + \
-               '\tAgent:\t' + str(self.agent) + '\n' + \
-               '\tAction: ' + str(self.action) + '\n' + \
-               '\tTheme:\t' + str(self.theme) + '\n' + \
-               '\tPatient:\t' + str(self.patient) + '\n' + \
-               '\tLocation:\t' + str(self.location) + '\n' + \
-               '\tCondition: ' + str(self.condition) + '\n' + \
-               '\tNegation: ' + str(self.negation)
+               indent + '\tAgent: ' + (self.agent.__str__(lvl + 1) if self.agent else '') + '\n' + \
+               indent + '\tAction: ' + str(self.action)  + '\n' + \
+               indent + '\tTheme:' + (self.theme.__str__(lvl + 1) if self.theme else '') + '\n' + \
+               indent + '\tPatient:' + (self.patient.__str__(lvl + 1) if self.patient else '') + '\n' + \
+               indent + '\tLocation: ' + (self.location.__str__(lvl + 1) if self.location else '') + '\n' + \
+               indent + '\tCondition: ' + (self.condition.__str__(lvl + 1) if self.condition else '') + '\n' + \
+               indent + '\tNegation: ' + str(self.negation)
 
     def __repr__(self):
         return str(self)
@@ -245,10 +254,11 @@ class Event(object):
         self.entity = entity
         self.sensor = sensor
 
-    def __str__(self):
+    def __str__(self, lvl=0):
+        indent = '\t'*(lvl)
         return 'Event:\n' + \
-               '\tEntity: ' + str(self.entity) + '\n' +\
-               '\tSensor: ' + str(self.sensor)
+               indent + '\tSensor: ' + str(self.sensor) + '\n' + \
+               indent + '\tEntity: ' + (self.entity.__str__(lvl + 1) if self.entity else '')
 
     def __repr__(self):
         return str(self)
