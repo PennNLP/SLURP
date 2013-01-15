@@ -2,7 +2,7 @@
 Takes a parse tree string and creates semantic structures to be read by Knowledge.
 """
 
-# Copyright (C) 2011=2012 Ian Perera and Constantine Lignos
+# Copyright (C) 2011-2013 Ian Perera, Constantine Lignos, and Kentone Lee
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -110,11 +110,11 @@ def get_semantics_from_parse_tree(parse_tree_string):
 
 def extract_entity(parse_tree, semantic_role = ''):
     """Creates an entity object given a snippet of a parse tree."""
-    entity = Location() if semantic_role == 'Location' else Object()
-    '''
-    print 'Extracting from:'
-    print str(parse_tree)
-    '''
+    entity = Location() if semantic_role == 'Location' else ObjectEntity()
+    
+    # print 'Extracting from:'
+    # print str(parse_tree)
+    
     # Ignore rescursed trees and added descriptions
     ignore_positions = []
     for position in parse_tree.treepositions():
@@ -185,19 +185,19 @@ def create_semantic_structures(frame_semantic_list):
         # If it's a WH-question, find the type of question it is and add the object
         if wh_question_type is not None and 'Theme' in item_to_entity:
             if wh_question_type == 'Location':
-                semantic_representation_list.append(NewLocationQuery(item_to_entity['Theme']))
+                semantic_representation_list.append(LocationQuery(item_to_entity['Theme']))
             elif wh_question_type == 'Status':
-                semantic_representation_list.append(NewStatusQuery(item_to_entity['Theme']))
+                semantic_representation_list.append(StatusQuery(item_to_entity['Theme']))
             elif wh_question_type in ('People','Entity'):
-                semantic_representation_list.append(NewEntityQuery(item_to_entity['Location']))
+                semantic_representation_list.append(EntityQuery(item_to_entity['Location']))
                 
         # If it's a yes-no question, add the theme and location of the question
         elif frames.is_yn_question(str(frame[1])):
             if 'Theme' in item_to_entity and 'Location' in item_to_entity:
-                semantic_representation_list.append(NewYNQuery(item_to_entity['Theme'],item_to_entity['Location']))
+                semantic_representation_list.append(YNQuery(item_to_entity['Theme'],item_to_entity['Location']))
         # If it's a conditional statement, the first statement is an event
         elif conditional is True and 'Theme' in item_to_entity:
-            semantic_representation_list.append(NewEvent(item_to_entity['Theme'], action))
+            semantic_representation_list.append(Event(item_to_entity['Theme'], action))
         # It's a regular command
         elif action is not None and action not in  ('is', 'are', 'be'):
             theme = item_to_entity.get('Theme',None)
@@ -206,11 +206,11 @@ def create_semantic_structures(frame_semantic_list):
             if patient is None:
                 patient = item_to_entity.get('Recipient',None)
             location = item_to_entity.get('Location',None)
-            semantic_representation_list.append(NewCommand(agent,theme,patient,location,action,negation=frame[5]))
+            semantic_representation_list.append(Command(agent,theme,patient,location,action,negation=frame[5]))
         # It's an assertion
         else:
-            semantic_representation_list.append(NewAssertion(item_to_entity.get('Theme',None), \
-                                                          item_to_entity.get('Location',None),\
+            semantic_representation_list.append(Assertion(item_to_entity.get('Theme',None),
+                                                          item_to_entity.get('Location',None),
                                                           'ex' in frame[2]))
 
     return semantic_representation_list

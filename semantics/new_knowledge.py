@@ -14,7 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from semantics.new_structures import *
+from semantics.new_structures import Assertion, Query, YNQuery, \
+    LocationQuery, EntityQuery
 
 
 class KnowledgeBase:
@@ -24,9 +25,9 @@ class KnowledgeBase:
     def process_semantic_structures(self, semantic_structures):
         response = ''
         for structure in semantic_structures:
-            if isinstance(structure, NewAssertion):
+            if isinstance(structure, Assertion):
                 self.assimilate(structure)
-            elif isinstance(structure, NewQuery):
+            elif isinstance(structure, Query):
                 response = self.query(structure)
         return response
 
@@ -39,9 +40,9 @@ class KnowledgeBase:
             fact.query(query) for fact in self.facts) if r is not None]
         if len(responses) > 0:
             return '\n'.join(responses)
-        elif isinstance(query, NewLocationQuery) or isinstance(query, NewYNQuery):
+        elif isinstance(query, LocationQuery) or isinstance(query, YNQuery):
             return "I don't know about %s" % query.theme.readable()
-        elif isinstance(query, NewEntityQuery):
+        elif isinstance(query, EntityQuery):
             return "I don't know about %s" % query.location.readable()
 
     def readable(self):
@@ -66,16 +67,16 @@ class LocationFact(Fact):
         return '%s @ %s' % (self.theme.readable(), self.location.readable())
 
     def query(self, query):
-        if isinstance(query, NewLocationQuery):
+        if isinstance(query, LocationQuery):
             if query.theme.name == self.theme.name:
                 return self.readable()
-        elif isinstance(query, NewYNQuery):
+        elif isinstance(query, YNQuery):
             if query.theme.name == self.theme.name:
                 if query.location.name == self.location.name:
                     return 'Yes, %s' % self.readable()
                 else:
                     return 'No, %s' % self.readable()
-        elif isinstance(query, NewEntityQuery):
+        elif isinstance(query, EntityQuery):
             if query.location.name == self.location.name:
                 return self.readable()
         return None
