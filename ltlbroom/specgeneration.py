@@ -17,11 +17,10 @@ Generates a logical specification from natural language.
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import socket
 import sys
 
-from semantics.processing import process_parse_tree, CONDITION_ARGUMENT
-from pipelinehost import socket_parse, DEFAULT_PORT
+from semantics.processing import process_parse_tree
+from pipelinehost import PipelineClient
 from semantics.new_knowledge import KnowledgeBase
 from ltlbroom.ltl import env, and_, or_, sys_, not_, iff, next_, \
     always, always_eventually, implies, space, ALWAYS, EVENTUALLY, OR
@@ -48,16 +47,7 @@ SWEEP = "sweep"
 class SpecGenerator(object):
     """Enables specification generation using natural language."""
 
-    def __init__(self, hostname='localhost'):
-        # Start knowledge and connect to the NLP pipeline
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            self.sock.connect((hostname, DEFAULT_PORT))
-        except socket.error:
-            raise IOError("Could not connect to pipelinehost on %s:%d. "
-                          "Make sure that pipelinehost is running." %
-                            (hostname, DEFAULT_PORT))
-
+    def __init__(self):
         # Handlers
         # TODO: Start and begin should be the same action.
         self.GOALS = {'patrol': _gen_patrol, 'go': _gen_go,
@@ -96,6 +86,7 @@ class SpecGenerator(object):
         force_nouns = list(self.regions) + list(self.sensors)
         force_verbs = list(self.props) + self.GOALS.keys()
 
+        parse_client = PipelineClient()
         responses = []
         system_lines = []
         env_lines = []
@@ -116,8 +107,7 @@ class SpecGenerator(object):
             line = line.strip().lower()
 
             print "Sending to remote parser:", repr(line)
-            parse = socket_parse(asocket=self.sock, text=line, force_nouns=force_nouns,
-                                 force_verbs=force_verbs)
+            parse = parse_client.parse(text, force_nouns, force_verbs=force_verbs)
             print "Response from parser:", parse
             user_response, semantics_result, semantics_response, new_commands = \
                 process_parse_tree(parse, line)
