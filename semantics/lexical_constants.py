@@ -10,6 +10,7 @@ GET_ACTION = "retrieve"
 FOLLOW_ACTION = "follow"
 SEE_ACTION = "see"
 TELL_ACTION = "tell"
+BEGIN_ACTION = "begin"
 
 # Mapping of other verbnet senses to the same actions.
 # We include the identity entries just to make things easier on the talkback side
@@ -21,6 +22,7 @@ ACTION_ALIASES = {
                   'get': GET_ACTION,
                   'obtain': GET_ACTION,
                   'meander': GO_ACTION,
+                  'slide': GO_ACTION,
                   'nonvehicle': GO_ACTION,
                   'escape': GO_ACTION,
                   'rummage': SEARCH_ACTION,
@@ -32,6 +34,7 @@ ACTION_ALIASES = {
                   FOLLOW_ACTION: FOLLOW_ACTION,
                   SEE_ACTION: SEE_ACTION,
                   TELL_ACTION: TELL_ACTION,
+                  BEGIN_ACTION: BEGIN_ACTION
                   }
 
 UNDERSTOOD_SENSES = set(ACTION_ALIASES.keys())
