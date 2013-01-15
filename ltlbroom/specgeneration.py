@@ -26,7 +26,8 @@ import sys
 from semantics.processing import process_parse_tree, CONDITION_ARGUMENT
 from pipelinehost import socket_parse, DEFAULT_PORT
 from semantics.new_knowledge import KnowledgeBase
-from ltlbroom.ltl import *
+from ltlbroom.ltl import env, and_, or_, sys_, not_, iff, next_, \
+    always, always_eventually, implies, space, ALWAYS, EVENTUALLY, OR
 
 # Debug constants
 SEMANTICS_DEBUG = True
