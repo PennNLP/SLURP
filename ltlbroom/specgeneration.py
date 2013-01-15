@@ -208,7 +208,7 @@ class SpecGenerator(object):
             # Extract the targets from args and pass them as arguments
             return handler(command)
 
-    def _gen_follow(self):
+    def _gen_follow(self, _):
         """Generate statements for following."""
         # Env is stationary iff in the last state change our region and the env's region were stable
         env_stationary_safeties = \
@@ -274,7 +274,7 @@ class SpecGenerator(object):
 
         return (sys_statements, [], new_props, [])
 
-    def _gen_stay(self):
+    def _gen_stay(self, _):
         """Generate statements to stay exactly where you are."""
         return ([always_eventually(self._frag_stay())], [], [], [])
 
