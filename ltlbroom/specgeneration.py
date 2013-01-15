@@ -104,12 +104,9 @@ class SpecGenerator(object):
             # Init the generation tree to the empty result
             generation_tree = [line.strip(), []]
 
-            # Lowercase and strip the text before using it
-            line = line.strip().lower()
-            
-            # Ignore any comments in the line
+            # Strip the text before using it and ignore any comments
+            line = line.strip()
             line = _remove_comments(line)
-            print "Clean:", line
 
             print "Sending to remote parser:", repr(line)
             parse = parse_client.parse(text, force_nouns, force_verbs=force_verbs)
