@@ -210,7 +210,6 @@ def create_semantic_structures(frame_semantic_list):
                 semantic_representation_list.append(YNQuery(item_to_entity['Theme'], item_to_entity['Location']))
         # If it's a conditional statement, the first statement is an event
         elif conditional:
-            print 'Found conditional'
             event = Event(item_to_entity.get('Stimulus', None), action)
             if len(semantic_representation_list) > 0 and isinstance(semantic_representation_list[-1], Command):
                 semantic_representation_list[-1].condition = event
