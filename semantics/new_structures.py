@@ -235,12 +235,12 @@ class Command(object):
         indent = '\t'*(lvl)
         
         return '\nCommand: \n' + \
-               indent + '\tAgent: ' + (self.agent.__str__(lvl + 1) if self.agent else '') + '\n' + \
+               (indent + '\tAgent: ' + self.agent.__str__(lvl + 1) + '\n' if self.agent else '') + \
                indent + '\tAction: ' + str(self.action)  + '\n' + \
-               indent + '\tTheme:' + (self.theme.__str__(lvl + 1) if self.theme else '') + '\n' + \
-               indent + '\tPatient:' + (self.patient.__str__(lvl + 1) if self.patient else '') + '\n' + \
-               indent + '\tLocation: ' + (self.location.__str__(lvl + 1) if self.location else '') + '\n' + \
-               indent + '\tCondition: ' + (self.condition.__str__(lvl + 1) if self.condition else '') + '\n' + \
+               (indent + '\tTheme:' + self.theme.__str__(lvl + 1) + '\n' if self.theme else '') + \
+               (indent + '\tPatient:' + self.patient.__str__(lvl + 1) + '\n' if self.patient else '') + \
+               (indent + '\tLocation: ' + self.location.__str__(lvl + 1) + '\n' if self.location else '') + \
+               (indent + '\tCondition: ' + self.condition.__str__(lvl + 1) + '\n' if self.condition else '') + \
                indent + '\tNegation: ' + str(self.negation)
 
     def __repr__(self):
@@ -258,7 +258,7 @@ class Event(object):
         indent = '\t'*(lvl)
         return 'Event:\n' + \
                indent + '\tSensor: ' + str(self.sensor) + '\n' + \
-               indent + '\tEntity: ' + (self.entity.__str__(lvl + 1) if self.entity else '')
+               (indent + '\tEntity: ' + self.entity.__str__(lvl + 1) if self.entity else '')
 
     def __repr__(self):
         return str(self)
