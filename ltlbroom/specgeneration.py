@@ -425,4 +425,4 @@ def _remove_comments(text):
 if __name__ == "__main__":
     specgen = SpecGenerator()
     specgen.generate('\n'.join(sys.argv[1:]), ("bomb", "hostage", "badguy"), ("r1", "r2", "r3", "r4"),
-               ("defuse", "call"))
+               ("defuse", "call"), {})
