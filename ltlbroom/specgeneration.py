@@ -90,23 +90,28 @@ class SpecGenerator(object):
         self.regions = None
         self.props = None
         self.react_props = set()
+        self.tag_dict = None
 
         # Knowledge base
         self.kbase = KnowledgeBase()
 
 
-    def generate(self, text, sensors, regions, props):
+    def generate(self, text, sensors, regions, props, tag_dict):
         """Generate a logical specification from natural language and propositions."""
         # Clean unicode out of everything
         text = text.encode('ascii', 'ignore')
         self.sensors = [astr.encode('ascii', 'ignore') for astr in sensors]
         self.regions = [astr.encode('ascii', 'ignore') for astr in regions]
         self.props = [astr.encode('ascii', 'ignore') for astr in props]
+        self.tag_dict = {key.encode('ascii', 'ignore'): 
+                             [value.encode('ascii', 'ignore') for value in values]
+                         for key, values in tag_dict.items()}
 
         print "NL->LTL Generation called on:"
         print "Sensors:", self.sensors
         print "Props:", self.props
         print "Regions:", self.regions
+        print "Tag dict:", self.tag_dict
         print "Text:", repr(text)
         print
 
