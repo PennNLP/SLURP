@@ -290,6 +290,10 @@ def _gen_patrol(command):
 
 def _gen_go(command):
     """Generate statements to go to a location once."""
+    # Avoid if it's negated
+    if command.negation:
+        return _gen_avoid(command)
+    
     region = command.location.name
     mem_prop = _prop_mem(region, VISIT)
     alo_sys = _frag_atleastonce(mem_prop, next_(sys_(region)))
