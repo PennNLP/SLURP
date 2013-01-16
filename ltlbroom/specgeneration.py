@@ -50,11 +50,10 @@ class SpecGenerator(object):
 
     def __init__(self):
         # Handlers
-        # TODO: Start and begin should be the same action.
         self.GOALS = {'patrol': _gen_patrol, 'go': _gen_go,
                      'avoid': _gen_avoid, 'search': _gen_search,
                      'begin': _gen_begin, 'follow': self._gen_follow,
-                     'stay': self._gen_stay, 'start': _gen_begin}
+                     'stay': self._gen_stay}
 
         self.REACTIONS = {'go': _frag_react_go, 'stay': self._frag_stay}
 
