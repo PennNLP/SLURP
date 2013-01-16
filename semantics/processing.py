@@ -33,7 +33,6 @@ def process_parse_tree(parse_tree_input, text_input, knowledge_base=None):
 
     # Extract meaning
     semantic_structures = parsing.create_semantic_structures(frames)
-    print "Semantic structures:", semantic_structures
 
     # Extract commands from meaning
     semantics_response = parse_semantic_structures(semantic_structures)

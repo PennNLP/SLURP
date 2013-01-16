@@ -183,7 +183,6 @@ class SpecGenerator(object):
                         [_insert_or_before_goal(reaction_or_frag, line) for line in spec_lines.lines]
 
         # Aggregate all the propositions
-        print "Generation tree:", generation_trees
         sys_lines = [line for command_spec_lines in generation_trees.values()
                           for spec_lines_list in command_spec_lines.values()
                           for spec_lines in spec_lines_list
