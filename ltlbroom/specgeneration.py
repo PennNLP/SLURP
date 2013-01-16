@@ -109,7 +109,7 @@ class SpecGenerator(object):
             line = _remove_comments(line)
 
             print "Sending to remote parser:", repr(line)
-            parse = parse_client.parse(text, force_nouns, force_verbs=force_verbs)
+            parse = parse_client.parse(line, force_nouns, force_verbs=force_verbs)
             print "Response from parser:", parse
             user_response, semantics_result, semantics_response, new_commands = \
                 process_parse_tree(parse, line)
