@@ -95,6 +95,10 @@ class SpecGenerator(object):
         custom_sensors = set()
         generation_trees = []
         for line in text.split('\n'):
+            # Strip the text before using it and ignore any comments
+            line = line.strip()
+            line = _remove_comments(line)
+            
             if not line:
                 # Blank lines are counted as being processed correctly but are skipped
                 responses.append(True)
@@ -102,10 +106,6 @@ class SpecGenerator(object):
 
             # Init the generation tree to the empty result
             generation_tree = [line.strip(), []]
-
-            # Strip the text before using it and ignore any comments
-            line = line.strip()
-            line = _remove_comments(line)
 
             print "Sending to remote parser:", repr(line)
             parse = parse_client.parse(line, force_nouns, force_verbs=force_verbs)
