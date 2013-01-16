@@ -19,6 +19,7 @@ Generates a logical specification from natural language.
 
 import sys
 import re
+from collections import OrderedDict, defaultdict
 
 from semantics.processing import process_parse_tree
 from pipelinehost import PipelineClient
@@ -43,6 +44,33 @@ FOLLOW_SENSORS = "FOLLOW_SENSOR_CONSTRAINTS"
 
 # Actuators
 SWEEP = "sweep"
+
+
+class SpecLines(object):
+    """Class for holding system and environment lines for a specification."""
+    SYS = "System"
+    ENV = "Environment"
+    VALID_TYPES = (SYS, ENV)
+    
+    def __init__(self, explanation, lines, line_type):
+        if not isinstance(explanation, basestring):
+            raise ValueError("Explanation must be a string/Unicode.")
+        
+        if not hasattr(lines, '__iter__'):
+            raise ValueError("Lines must be an iterable.")
+        
+        if line_type not in SpecLines.VALID_TYPES:
+            raise ValueError("Spec line_type must be one of {}".format(SpecLines.VALID_TYPES))
+
+        self.explanation = explanation
+        self.lines = lines
+        self.type = line_type
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return '<{} lines for {!r}: {}>'.format(self.type, self.explanation, self.lines)
 
 
 class SpecGenerator(object):
@@ -88,12 +116,9 @@ class SpecGenerator(object):
 
         parse_client = PipelineClient()
         responses = []
-        system_lines = []
-        env_lines = []
-        env_lines_set = set() # Used to track duplicates
         custom_props = set()
         custom_sensors = set()
-        generation_trees = []
+        generation_trees = OrderedDict()
         for line in text.split('\n'):
             # Strip the text before using it and ignore any comments
             line = line.strip()
@@ -105,11 +130,12 @@ class SpecGenerator(object):
                 continue
 
             # Init the generation tree to the empty result
-            generation_tree = [line.strip(), []]
+            generated_lines = defaultdict(list)
+            generation_trees[line] = generated_lines
 
             print "Sending to remote parser:", repr(line)
             parse = parse_client.parse(line, force_nouns, force_verbs=force_verbs)
-            print "Response from parser:", parse
+            print "Response from parser:", repr(parse)
             user_response, semantics_result, semantics_response, new_commands = \
                 process_parse_tree(parse, line)
 
@@ -132,44 +158,47 @@ class SpecGenerator(object):
                     print "Could not understand command {0} due to error {1}".format(command, err)
                     failure = True
                     continue
+                
+                # Add in the new lines
+                generated_lines[_format_command(command)].extend(new_sys_lines)
+                generated_lines[_format_command(command)].extend(new_env_lines)
 
-                system_lines.extend(new_sys_lines)
-                # We need to ensure no duplicates are inserted into env_lines, so we keep
-                # an redundant set. If we were requiring 2.7 we would use OrderedDict.
-                for env_line in new_env_lines:
-                    if env_line not in env_lines_set:
-                        env_lines.append(env_line)
-                        env_lines_set.add(env_line)
+                # Add custom props/sensors
                 custom_props.update(new_custom_props)
                 custom_sensors.update(new_custom_sensors)
-                # Add the statements as the children of the generation tree
-                generation_tree[1].append([format_command(command), [new_env_lines, new_sys_lines]])
 
             # Add a true response if there were commands and no failures
-            responses.append(new_commands and not failure)
-
-            # Add this line's stuff to the generation tree
-            generation_trees.append(generation_tree)
-
+            responses.append(bool(new_commands and not failure))
             print
-
 
         # We need to modify non-reaction goals to be or'd with the reactions
         if self.react_props:
             # Dedupe and make an or over all the reaction properties
             reaction_or_frag = or_([sys_(prop) for prop in self.react_props])
             # HACK: Rewrite all the goals!
-            system_lines = [insert_or_before_goal(reaction_or_frag, line) for line in system_lines]
-            new_generation_trees = []
-            for (text, output) in generation_trees:
-                new_generation_tree = [text, []]
-                for command, (env_lines, sys_lines) in output:
-                    new_sys_lines = \
-                        [insert_or_before_goal(reaction_or_frag, line) for line in sys_lines]
-                    new_generation_tree[1].append([command, [env_lines, new_sys_lines]])
-                new_generation_trees.append(new_generation_tree)
-            generation_trees = new_generation_trees
+            # TODO: Test again once we re-enable reaction propositions
+            for command_spec_lines in generation_trees.values():
+                for spec_lines in command_spec_lines.values():
+                    spec_lines.lines = \
+                        [_insert_or_before_goal(reaction_or_frag, line) for line in spec_lines.lines]
 
+        # Aggregate all the propositions
+        print "Generation tree:", generation_trees
+        sys_lines = [line for command_spec_lines in generation_trees.values()
+                          for spec_lines_list in command_spec_lines.values()
+                          for spec_lines in spec_lines_list
+                          for line in spec_lines.lines if spec_lines.type == SpecLines.SYS]
+        
+        # Filter out any duplicates from the env_lines
+        env_lines = OrderedDict()
+        for command_spec_lines in generation_trees.values():
+            for spec_lines_list in command_spec_lines.values():
+                for spec_lines in spec_lines_list:
+                    if spec_lines.type != SpecLines.ENV:
+                        continue
+                    for line in spec_lines.lines:
+                        env_lines[line] = None
+        env_lines = env_lines.keys()
 
         # Convert sets to lists for the caller
         custom_props = list(custom_props)
@@ -178,11 +207,11 @@ class SpecGenerator(object):
         print "Spec generation complete."
         print "Responses:", responses
         print "Environment lines:", env_lines
-        print "System lines:", system_lines
+        print "System lines:", sys_lines
         print "Custom props:", custom_props
         print "Custom sensors:", custom_sensors
         print "Generation tree:", generation_trees
-        return env_lines, system_lines, custom_props, custom_sensors, responses, generation_trees
+        return env_lines, sys_lines, custom_props, custom_sensors, responses, generation_trees
 
     def _apply_metapar(self, command):
         """Generate a metapar for a command."""
@@ -202,15 +231,21 @@ class SpecGenerator(object):
     def _gen_follow(self, _):
         """Generate statements for following."""
         # Env is stationary iff in the last state change our region and the env's region were stable
-        env_stationary_safeties = \
+        stationary_explanation = "Definition of when you're moving."
+        stationary_safeties = \
             always(iff(next_(sys_(FOLLOW_STATIONARY)),
                          and_([iff(env(region), next_(env(region)))
                                for region in self.regions])))
+        stationary_lines = SpecLines(stationary_explanation, [stationary_safeties], SpecLines.SYS)
+        
         # Match the sensor location to ours
         follow_goals = \
-            [always_eventually(implies(and_((sys_(FOLLOW_STATIONARY), env(region))), sys_(region)))
-             for region in self.regions]
-        return ([env_stationary_safeties] + follow_goals, [FOLLOW_SENSORS], [FOLLOW_STATIONARY], [])
+            [SpecLines("Follow you to {!r}.".format(region),
+              [always_eventually(implies(and_((sys_(FOLLOW_STATIONARY), env(region))), sys_(region)))],
+              SpecLines.SYS) for region in self.regions]
+        follow_env = SpecLines("Person being followed must obey map topology.",
+                               [FOLLOW_SENSORS], SpecLines.ENV)
+        return ([stationary_lines] + follow_goals, [follow_env], [FOLLOW_STATIONARY], [])
 
     def _gen_conditional(self, action, arg_dict, condition):
         """Generate a conditional action"""
@@ -267,7 +302,9 @@ class SpecGenerator(object):
 
     def _gen_stay(self, _):
         """Generate statements to stay exactly where you are."""
-        return ([always_eventually(self._frag_stay())], [], [], [])
+        sys_lines = SpecLines("Stay where you are.", [always_eventually(self._frag_stay())],
+                              SpecLines.SYS)
+        return ([sys_lines], [], [], [])
 
     def _frag_stay(self):
         """Generate fragments to reactively go somewhere."""
@@ -276,16 +313,21 @@ class SpecGenerator(object):
 
 # The return signature of the statement generators is:
 # ([system lines], [env lines], [custom propositions], [custom sensors])
-# TODO: These need to all be reviewed to support new command structure.
 
 def _gen_begin(command):
     """Generate statements to begin in a location."""
-    return ([sys_(command.theme.name)], [], [], [])
+    region = command.theme.name
+    explanation = "The robot begins in {!r}.".format(region)
+    sys_lines = SpecLines(explanation, [sys_(region)], SpecLines.SYS)
+    return ([sys_lines], [], [], [])
 
 
 def _gen_patrol(command):
     """Generate statements to always eventually be in a location."""
-    return ([always_eventually(sys_(command.location.name))], [], [], [])
+    region = command.location.name
+    explanation = "Continuously visit {!r}.".format(region)
+    sys_lines = SpecLines(explanation, [always_eventually(sys_(region))], SpecLines.SYS)
+    return ([sys_lines], [], [], [])
 
 
 def _gen_go(command):
@@ -295,9 +337,11 @@ def _gen_go(command):
         return _gen_avoid(command)
     
     region = command.location.name
+    explanation = "Have visited {!r} at least once.".format(region)
     mem_prop = _prop_mem(region, VISIT)
     alo_sys = _frag_atleastonce(mem_prop, next_(sys_(region)))
-    return (alo_sys, [], [mem_prop], [])
+    sys_lines = SpecLines(explanation, alo_sys, SpecLines.SYS)    
+    return ([sys_lines], [], [mem_prop], [])
 
 
 def _frag_react_go(region):
@@ -308,16 +352,24 @@ def _frag_react_go(region):
 def _gen_avoid(command):
     """Generate statements for avoiding a location, adding that the robot does not start there."""
     region = command.location.name
-    return ([always(not_(sys_(region))), not_(sys_(region))], [], [], [])
+    explanation1 = "Do not go to {!r}.".format(region)
+    sys_lines1 = SpecLines(explanation1, [always(not_(sys_(region)))], SpecLines.SYS)
+    explanation2 = "The robot does not begin in {!r}.".format(region)
+    sys_lines2 = SpecLines(explanation2, [not_(sys_(region))], SpecLines.SYS)
+    return ([sys_lines1, sys_lines2], [], [], [])
 
 
 def _gen_search(command):
     """Generate statements for searching a region."""
     region = command.location.name
+    explanation1 = "Have a memory of completing a search in {!r}.".format(region)
     mem_prop = _prop_mem(region, SWEEP)
     cic_frag, cic_env = _frag_complete_context(SWEEP, sys_(region))
     alo_sys = _frag_atleastonce(mem_prop, cic_frag)
-    return (alo_sys, cic_env, [mem_prop], [_prop_actuator_done(SWEEP)])
+    explanation2 = "Assume that searches eventually complete.".format(region)
+    sys_lines = SpecLines(explanation1, alo_sys, SpecLines.SYS)
+    env_lines = SpecLines(explanation2, cic_env, SpecLines.ENV)
+    return ([sys_lines], [env_lines], [mem_prop], [_prop_actuator_done(SWEEP)])
 
 
 def _frag_atleastonce(mem_prop, fragment):
@@ -343,14 +395,15 @@ def _prop_actuator_done(actuator):
     return "_".join((actuator, DONE))
 
 
-def format_command(command):
+def _format_command(command):
     """Format a command nicely for display."""
     # TODO: Should have a more general solution here.
     argument = command.location.name if command.location else \
         command.theme.name if command.theme else 'None'
-    return "Action: {}, Argument: {}".format(command.action, argument)
+    return "Action: {!r}, Argument: {!r}".format(command.action, argument)
 
-def insert_or_before_goal(or_clause, statement):
+
+def _insert_or_before_goal(or_clause, statement):
     """Inserts a statement to be OR'd against what is already in the goal."""
     # Your hack is bad and you should feel bad.
     if ALWAYS + EVENTUALLY in statement and REACT not in statement:
