@@ -59,8 +59,8 @@ ACTION_ARGS = {
     }
 
 
-class SpecLines(object):
-    """Class for holding system and environment lines for a specification."""
+class SpecChunk(object):
+    """Class for holding system or environment lines for a specification."""
     SYS = "System"
     ENV = "Environment"
     VALID_TYPES = (SYS, ENV)
@@ -72,8 +72,8 @@ class SpecLines(object):
         if not hasattr(lines, '__iter__'):
             raise ValueError("Lines must be an iterable.")
 
-        if line_type not in SpecLines.VALID_TYPES:
-            raise ValueError("Spec line_type must be one of {}".format(SpecLines.VALID_TYPES))
+        if line_type not in SpecChunk.VALID_TYPES:
+            raise ValueError("Spec line_type must be one of {}".format(SpecChunk.VALID_TYPES))
 
         self.explanation = explanation
         self.lines = lines
@@ -102,11 +102,11 @@ class SpecLines(object):
 
     def issys(self):
         """Returns whether this contains system lines."""
-        return self.type == SpecLines.SYS
+        return self.type == SpecChunk.SYS
 
     def isenv(self):
         """Returns whether this contains env lines."""
-        return self.type == SpecLines.ENV
+        return self.type == SpecChunk.ENV
 
 class SpecGenerator(object):
     """Enables specification generation using natural language."""
@@ -297,22 +297,22 @@ class SpecGenerator(object):
             always(iff(next_(sys_(FOLLOW_STATIONARY)),
                          and_([iff(env(region), next_(env(region)))
                                for region in self.regions])))
-        stationary_lines = SpecLines(stationary_explanation, [stationary_safeties], SpecLines.SYS,
+        stationary_lines = SpecChunk(stationary_explanation, [stationary_safeties], SpecChunk.SYS,
                                      command)
 
         # Stay there if environment is changing
         stay_there_explanation = "React immediately to the target moving."
         stay_there_safeties = always(implies(not_(next_(sys_(FOLLOW_STATIONARY))), self._frag_stay()))
-        stay_there_lines = SpecLines(stay_there_explanation, [stay_there_safeties], SpecLines.SYS,
+        stay_there_lines = SpecChunk(stay_there_explanation, [stay_there_safeties], SpecChunk.SYS,
                                      command)
 
         # Match the sensor location to ours
         follow_goals = \
-          [SpecLines("Follow the target to {!r}.".format(region),
+          [SpecChunk("Follow the target to {!r}.".format(region),
             [always_eventually(implies(and_((sys_(FOLLOW_STATIONARY), env(region))), sys_(region)))],
-            SpecLines.SYS, command) for region in self.regions]
-        follow_env = SpecLines("Target must obey map topology.",
-                               [FOLLOW_SENSORS], SpecLines.ENV, command)
+            SpecChunk.SYS, command) for region in self.regions]
+        follow_env = SpecChunk("Target must obey map topology.",
+                               [FOLLOW_SENSORS], SpecChunk.ENV, command)
         return ([stationary_lines, stay_there_lines] + follow_goals, [follow_env], [FOLLOW_STATIONARY], [])
 
     def _gen_conditional(self, action, arg_dict, condition):
@@ -370,8 +370,8 @@ class SpecGenerator(object):
 
     def _gen_stay(self, command):
         """Generate statements to stay exactly where you are."""
-        sys_lines = SpecLines("Stay in the same place.", [always_eventually(self._frag_stay())],
-                              SpecLines.SYS, command)
+        sys_lines = SpecChunk("Stay in the same place.", [always_eventually(self._frag_stay())],
+                              SpecChunk.SYS, command)
         return ([sys_lines], [], [], [])
 
     def _frag_stay(self):
@@ -386,7 +386,7 @@ def _gen_begin(command):
     """Generate statements to begin in a location."""
     region = command.theme.name
     explanation = "The robot begins in {!r}.".format(region)
-    sys_lines = SpecLines(explanation, [sys_(region)], SpecLines.SYS, command)
+    sys_lines = SpecChunk(explanation, [sys_(region)], SpecChunk.SYS, command)
     return ([sys_lines], [], [], [])
 
 
@@ -394,7 +394,7 @@ def _gen_patrol(command):
     """Generate statements to always eventually be in a location."""
     region = command.location.name
     explanation = "Continuously visit {!r}.".format(region)
-    sys_lines = SpecLines(explanation, [always_eventually(sys_(region))], SpecLines.SYS, command)
+    sys_lines = SpecChunk(explanation, [always_eventually(sys_(region))], SpecChunk.SYS, command)
     return ([sys_lines], [], [], [])
 
 
@@ -408,7 +408,7 @@ def _gen_go(command):
     explanation = "Have visited {!r} at least once.".format(region)
     mem_prop = _prop_mem(region, VISIT)
     alo_sys = _frag_atleastonce(mem_prop, next_(sys_(region)))
-    sys_lines = SpecLines(explanation, alo_sys, SpecLines.SYS, command)
+    sys_lines = SpecChunk(explanation, alo_sys, SpecChunk.SYS, command)
     return ([sys_lines], [], [mem_prop], [])
 
 
@@ -421,9 +421,9 @@ def _gen_avoid(command):
     """Generate statements for avoiding a location, adding that the robot does not start there."""
     region = command.location.name
     explanation1 = "Do not go to {!r}.".format(region)
-    sys_lines1 = SpecLines(explanation1, [always(not_(sys_(region)))], SpecLines.SYS, command)
+    sys_lines1 = SpecChunk(explanation1, [always(not_(sys_(region)))], SpecChunk.SYS, command)
     explanation2 = "The robot does not begin in {!r}.".format(region)
-    sys_lines2 = SpecLines(explanation2, [not_(sys_(region))], SpecLines.SYS, command)
+    sys_lines2 = SpecChunk(explanation2, [not_(sys_(region))], SpecChunk.SYS, command)
     return ([sys_lines1, sys_lines2], [], [], [])
 
 
@@ -435,8 +435,8 @@ def _gen_search(command):
     cic_frag, cic_env = _frag_complete_context(SWEEP, sys_(region))
     alo_sys = _frag_atleastonce(mem_prop, cic_frag)
     explanation2 = "Assume that searches eventually complete.".format(region)
-    sys_lines = SpecLines(explanation1, alo_sys, SpecLines.SYS, command)
-    env_lines = SpecLines(explanation2, cic_env, SpecLines.ENV, command)
+    sys_lines = SpecChunk(explanation1, alo_sys, SpecChunk.SYS, command)
+    env_lines = SpecChunk(explanation2, cic_env, SpecChunk.ENV, command)
     return ([sys_lines], [env_lines], [mem_prop], [_prop_actuator_done(SWEEP)])
 
 
@@ -530,13 +530,24 @@ def _expand_command(command, tag_dict):
         return [command]
 
 
-def goal_to_speclines(goal_idx, spec_lines):
-    """Return all SpecLines that contain a goal index."""
-    return [spec_line for spec_line in spec_lines if spec_line.contains_goal(goal_idx)]
+def goal_to_chunk(goal_idx, spec_chunks):
+    """Return the unique SpecChunk that contain a goal index."""
+    chunks = [spec_chunk for spec_chunk in spec_chunks if spec_chunk.contains_goal(goal_idx)]
+    if len(chunks) == 1:
+        return chunks[0]
+    elif len(chunks) > 1:
+        print "Error: Found multiple chunks for goal {}.".format(goal_idx)
+    # Zero length case returns None without printing an error
+    return None
 
 
-def speclines_from_gentree(gen_tree):
-    """Return all the SpecLines contained in a generation tree."""
+def line_to_chunks(line, spec_chunks):
+    """Return all spec chunks that contain a line."""
+    return [spec_chunk for spec_chunk in spec_chunks if line in spec_chunk.lines]
+
+
+def chunks_from_gentree(gen_tree):
+    """Return all the SpecChunk contained in a generation tree."""
     return [spec_lines for command_spec_lines in gen_tree.values()
             for spec_lines_list in command_spec_lines.values()
             for spec_lines in spec_lines_list]

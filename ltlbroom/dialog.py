@@ -16,7 +16,7 @@ Handle dialog with the natural language subsystem.
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from ltlbroom.specgeneration import speclines_from_gentree, goal_to_speclines
+from ltlbroom.specgeneration import chunks_from_gentree, goal_to_chunk
 
 
 class DialogManager(object):
@@ -25,7 +25,7 @@ class DialogManager(object):
     def __init__(self, generation_tree=None):
         # Store the logic generation tree if it is provided.
         self.gen_tree = generation_tree
-        self.spec_lists = speclines_from_gentree(self.gen_tree) if self.gen_tree else None
+        self.spec_lists = chunks_from_gentree(self.gen_tree) if self.gen_tree else None
         self.user_history = []
         self.system_history = []
 
@@ -34,10 +34,11 @@ class DialogManager(object):
         self.user_history.append(text)
         # Return the English of the current goal
         if self.gen_tree and current_goal:
-            goal_spec_lines = goal_to_speclines(current_goal, self.spec_lists)
-            explanation = " and ".join(repr(spec_lines.explanation)
-                                       for spec_lines in goal_spec_lines)
-            response = "I'm currently trying to {}".format(explanation)
+            goal_spec_chunk = goal_to_chunk(current_goal, self.spec_lists)
+            if goal_spec_chunk:
+                response = "I'm currently trying to {}".format(goal_spec_chunk.explanation)
+            else:
+                response = "Sorry, but I don't know anything about goal {}.".format(current_goal)
         else:
             response = "Thank you for sharing."
 
