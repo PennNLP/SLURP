@@ -513,11 +513,13 @@ def _expand_command(command, tag_dict):
             tag = arg.description[0]
         except (IndexError, TypeError):
             print "Error: Could not get description of argument {}.".format(arg)
+            return [command]
 
         try:
             members = tag_dict[tag]
         except KeyError:
             print "Error: Could not get members of quantifier {!r}.".format(arg.description)
+            return [command]
 
         # Unroll into copies of the command
         new_commands = []
@@ -569,5 +571,5 @@ def explain_conflict(stmt_problems, gen_tree):
 if __name__ == "__main__":
     specgen = SpecGenerator()
     specgen.generate('\n'.join(sys.argv[1:]), ("bomb", "hostage", "badguy"),
-                     ("r1", "r2", "r3", "r4"), ("defuse", "call"), {'patient': ['r1', 'r3']})
+                     ("r1", "r2", "r3", "r4"), ("defuse", "call"), {'odd': ['r1', 'r3']})
 
