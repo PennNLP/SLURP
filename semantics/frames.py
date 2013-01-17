@@ -598,12 +598,10 @@ def get_vnclass_elements(word):
     for (cif, cid) in class_id_filenames:
         with open(os.path.join(VERBNET_DIRECTORY, cif), 'r') as xml_file:
             verb_xml = parse(xml_file)
-            if verb_xml.getroot().attrib['ID'] == cid:
-                vnclass_elements.append(verb_xml.getroot())
+            vnclass_elements.append(verb_xml.getroot())
 
             for subclass in verb_xml.getroot().findall('SUBCLASSES/VNSUBCLASS'):
-                if subclass.attrib['ID'] == cid:
-                    vnclass_elements.append(subclass)
+                vnclass_elements.append(subclass)
 
     return vnclass_elements
 
@@ -613,6 +611,7 @@ def pick_best_match(match_list):
     and the second element being the verb class, pick the match that maps to an action if it exists."""
     if len(match_list) == 0:
         return (None,None)
+
     understood_matches = [(match,sense) for match,sense in match_list if sense.split('-')[0] in UNDERSTOOD_SENSES]
     if len(understood_matches) > 0:
         return pick_most_complete_match(understood_matches)

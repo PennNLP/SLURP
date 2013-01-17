@@ -221,26 +221,30 @@ class EntityQuery(Query):
 class Command(object):
     """A Command for Junior to do something."""
 
-    def __init__(self, agent, theme, patient, location, action,
+    def __init__(self, agent, theme, patient, location, source, destination, action,
                  condition=None, negation=False):
         self.agent = agent
         self.theme = theme
         self.patient = patient
         self.location = location
+        self.source = source
+        self.destination = destination
         self.action = action
         self.condition = condition
         self.negation = negation
 
     def __str__(self, lvl=0):
-        indent = '\t'*(lvl)
+        indent = '\t'*(lvl + 1)
         return '\nCommand: \n' + \
-               (indent + '\tAgent: ' + self.agent.__str__(lvl + 1) + '\n' if self.agent else '') + \
-               indent + '\tAction: ' + str(self.action)  + '\n' + \
-               (indent + '\tTheme:' + self.theme.__str__(lvl + 1) + '\n' if self.theme else '') + \
-               (indent + '\tPatient:' + self.patient.__str__(lvl + 1) + '\n' if self.patient else '') + \
-               (indent + '\tLocation: ' + self.location.__str__(lvl + 1) + '\n' if self.location else '') + \
-               (indent + '\tCondition: ' + self.condition.__str__(lvl + 1) + '\n' if self.condition else '') + \
-               indent + '\tNegation: ' + str(self.negation)
+               (indent + 'Agent: ' + self.agent.__str__(lvl + 1) + '\n' if self.agent else '') + \
+               indent + 'Action: ' + str(self.action)  + '\n' + \
+               (indent + 'Theme:' + self.theme.__str__(lvl + 1) + '\n' if self.theme else '') + \
+               (indent + 'Patient:' + self.patient.__str__(lvl + 1) + '\n' if self.patient else '') + \
+               (indent + 'Location: ' + self.location.__str__(lvl + 1) + '\n' if self.location else '') + \
+               (indent + 'Source: ' + self.source.__str__(lvl + 1) + '\n' if self.source else '') + \
+               (indent + 'Destination: ' + self.destination.__str__(lvl + 1) + '\n' if self.destination else '') + \
+               (indent + 'Condition: ' + self.condition.__str__(lvl + 1) + '\n' if self.condition else '') + \
+               indent + 'Negation: ' + str(self.negation)
 
     def __repr__(self):
         return str(self)

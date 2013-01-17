@@ -23,7 +23,7 @@ from new_structures import Location, ObjectEntity, YNQuery, StatusQuery, \
     EntityQuery, Command, LocationQuery, Assertion, Event
 from lexical_constants import ACTION_ALIASES
 
-EXTRACT_DEBUG = False
+EXTRACT_DEBUG = True
 
 
 def extract_frames_from_parse(parse_tree_string):
@@ -121,7 +121,7 @@ def extract_frames_from_parse(parse_tree_string):
 
 def extract_entity(parse_tree, semantic_role=''):
     """Creates an entity object given a snippet of a parse tree."""
-    entity = Location() if semantic_role == 'Location' else ObjectEntity()
+    entity = Location() if semantic_role in ('Location', 'Source', 'Destination') else ObjectEntity()
 
     # print 'Extracting from:'
     # print str(parse_tree)
@@ -231,7 +231,9 @@ def create_semantic_structures(frame_semantic_list):
             if patient is None:
                 patient = item_to_entity.get('Recipient', None)
             location = item_to_entity.get('Location', None)
-            current_command = Command(agent, theme, patient, location, action, negation=frame[5])
+            source = item_to_entity.get('Source', None)
+            destination = item_to_entity.get('Destination', None)
+            current_command = Command(agent, theme, patient, location, source, destination, action, negation=frame[5])
             semantic_representation_list.append(current_command)
         # It's an assertion
         else:
