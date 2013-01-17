@@ -23,7 +23,7 @@ from new_structures import Location, ObjectEntity, YNQuery, StatusQuery, \
     EntityQuery, Command, LocationQuery, Assertion, Event
 from lexical_constants import ACTION_ALIASES
 
-EXTRACT_DEBUG = True
+EXTRACT_DEBUG = False
 
 
 def extract_frames_from_parse(parse_tree_string):
