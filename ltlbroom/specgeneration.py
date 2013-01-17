@@ -24,8 +24,9 @@ from collections import OrderedDict, defaultdict
 from semantics.processing import process_parse_tree
 from pipelinehost import PipelineClient
 from semantics.new_knowledge import KnowledgeBase
-from ltlbroom.ltl import env, and_, or_, sys_, not_, iff, next_, \
-    always, always_eventually, implies, space, ALWAYS, EVENTUALLY, OR
+from ltlbroom.ltl import (env, and_, or_, sys_, not_, iff, next_,
+    always, always_eventually, implies, space, ALWAYS, EVENTUALLY, OR)
+
 
 # Debug constants
 SEMANTICS_DEBUG = False
@@ -51,27 +52,49 @@ class SpecLines(object):
     SYS = "System"
     ENV = "Environment"
     VALID_TYPES = (SYS, ENV)
-    
-    def __init__(self, explanation, lines, line_type):
+
+    def __init__(self, explanation, lines, line_type, command):
         if not isinstance(explanation, basestring):
             raise ValueError("Explanation must be a string/Unicode.")
-        
+
         if not hasattr(lines, '__iter__'):
             raise ValueError("Lines must be an iterable.")
-        
+
         if line_type not in SpecLines.VALID_TYPES:
             raise ValueError("Spec line_type must be one of {}".format(SpecLines.VALID_TYPES))
 
         self.explanation = explanation
         self.lines = lines
         self.type = line_type
+        self.command = command
+
+        # To be set later by consumer
+        self.input = None
+        self.goal_indices = set()
+        self.highlight = False
 
     def __repr__(self):
-        return self.__str__()
+        return '<{} lines for {!r}: {}, Command: {}, Goals: {}>'.format(self.type, self.explanation,
+            self.lines, _format_command(self.command), list(self.goal_indices))
 
     def __str__(self):
         return '<{} lines for {!r}: {}>'.format(self.type, self.explanation, self.lines)
 
+    def contains_goal(self, goal_index):
+        """Return whether this contains a goal with the specified index."""
+        return goal_index in self.goal_indices
+
+    def contains_line(self, line):
+        """Return whether this contains a given line."""
+        return line in self.lines
+
+    def issys(self):
+        """Returns whether this contains system lines."""
+        return self.type == SpecLines.SYS
+
+    def isenv(self):
+        """Returns whether this contains env lines."""
+        return self.type == SpecLines.ENV
 
 class SpecGenerator(object):
     """Enables specification generation using natural language."""
@@ -91,6 +114,7 @@ class SpecGenerator(object):
         self.props = None
         self.react_props = set()
         self.tag_dict = None
+        self.generation_trees = None
 
         # Knowledge base
         self.kbase = KnowledgeBase()
@@ -103,7 +127,7 @@ class SpecGenerator(object):
         self.sensors = [astr.encode('ascii', 'ignore') for astr in sensors]
         self.regions = [astr.encode('ascii', 'ignore') for astr in regions]
         self.props = [astr.encode('ascii', 'ignore') for astr in props]
-        self.tag_dict = {key.encode('ascii', 'ignore'): 
+        self.tag_dict = {key.encode('ascii', 'ignore'):
                              [value.encode('ascii', 'ignore') for value in values]
                          for key, values in tag_dict.items()}
 
@@ -123,12 +147,12 @@ class SpecGenerator(object):
         responses = []
         custom_props = set()
         custom_sensors = set()
-        generation_trees = OrderedDict()
+        self.generation_trees = OrderedDict()
         for line in text.split('\n'):
             # Strip the text before using it and ignore any comments
             line = line.strip()
             line = _remove_comments(line)
-            
+
             if not line:
                 # Blank lines are counted as being processed correctly but are skipped
                 responses.append(True)
@@ -136,7 +160,7 @@ class SpecGenerator(object):
 
             # Init the generation tree to the empty result
             generated_lines = defaultdict(list)
-            generation_trees[line] = generated_lines
+            self.generation_trees[line] = generated_lines
 
             print "Sending to remote parser:", repr(line)
             parse = parse_client.parse(line, force_nouns, force_verbs=force_verbs)
@@ -163,7 +187,7 @@ class SpecGenerator(object):
                     print "Could not understand command {0} due to error {1}".format(command, err)
                     failure = True
                     continue
-                
+
                 # Add in the new lines
                 generated_lines[_format_command(command)].extend(new_sys_lines)
                 generated_lines[_format_command(command)].extend(new_env_lines)
@@ -182,23 +206,34 @@ class SpecGenerator(object):
             reaction_or_frag = or_([sys_(prop) for prop in self.react_props])
             # HACK: Rewrite all the goals!
             # TODO: Test again once we re-enable reaction propositions
-            for command_spec_lines in generation_trees.values():
+            for command_spec_lines in self.generation_trees.values():
                 for spec_lines in command_spec_lines.values():
-                    spec_lines.lines = \
-                        [_insert_or_before_goal(reaction_or_frag, line) for line in spec_lines.lines]
+                    spec_lines.lines = [_insert_or_before_goal(reaction_or_frag, line)
+                                        for line in spec_lines.lines]
 
         # Aggregate all the propositions
-        sys_lines = [line for command_spec_lines in generation_trees.values()
-                          for spec_lines_list in command_spec_lines.values()
-                          for spec_lines in spec_lines_list
-                          for line in spec_lines.lines if spec_lines.type == SpecLines.SYS]
-        
+        # Identify goal numbers as we loop over sys lines
+        sys_lines = []
+        # The zeroth goal is always []<>(TRUE), so we skip it.
+        goal_idx = 1
+        for input_text, command_spec_lines in self.generation_trees.items():
+            for command, spec_lines_list in command_spec_lines.items():
+                for spec_lines in spec_lines_list:
+                    if not spec_lines.issys():
+                        continue
+                    for line in spec_lines.lines:
+                        sys_lines.append(line)
+                        if line.startswith('(' + ALWAYS + EVENTUALLY):
+                            spec_lines.goal_indices.add(goal_idx)
+                            spec_lines.input = input_text
+                            goal_idx += 1
+
         # Filter out any duplicates from the env_lines
         env_lines = OrderedDict()
-        for command_spec_lines in generation_trees.values():
+        for command_spec_lines in self.generation_trees.values():
             for spec_lines_list in command_spec_lines.values():
                 for spec_lines in spec_lines_list:
-                    if spec_lines.type != SpecLines.ENV:
+                    if not spec_lines.isenv():
                         continue
                     for line in spec_lines.lines:
                         env_lines[line] = None
@@ -214,8 +249,9 @@ class SpecGenerator(object):
         print "System lines:", sys_lines
         print "Custom props:", custom_props
         print "Custom sensors:", custom_sensors
-        print "Generation tree:", generation_trees
-        return env_lines, sys_lines, custom_props, custom_sensors, responses, generation_trees
+        print "Generation tree:", self.generation_trees
+        return (env_lines, sys_lines, custom_props, custom_sensors, responses,
+                self.generation_trees)
 
     def _apply_metapar(self, command):
         """Generate a metapar for a command."""
@@ -232,24 +268,31 @@ class SpecGenerator(object):
             # Extract the targets from args and pass them as arguments
             return handler(command)
 
-    def _gen_follow(self, _):
+    def _gen_follow(self, command):
         """Generate statements for following."""
         # Env is stationary iff in the last state change our region and the env's region were stable
-        stationary_explanation = "Definition of when you're moving."
+        stationary_explanation = "Definition of when the target is moving."
         stationary_safeties = \
             always(iff(next_(sys_(FOLLOW_STATIONARY)),
                          and_([iff(env(region), next_(env(region)))
                                for region in self.regions])))
-        stationary_lines = SpecLines(stationary_explanation, [stationary_safeties], SpecLines.SYS)
-        
+        stationary_lines = SpecLines(stationary_explanation, [stationary_safeties], SpecLines.SYS,
+                                     command)
+
+        # Stay there if environment is changing
+        stay_there_explanation = "React immediately to the target moving."
+        stay_there_safeties = always(implies(not_(next_(sys_(FOLLOW_STATIONARY))), self._frag_stay()))
+        stay_there_lines = SpecLines(stay_there_explanation, [stay_there_safeties], SpecLines.SYS,
+                                     command)
+
         # Match the sensor location to ours
         follow_goals = \
-            [SpecLines("Follow you to {!r}.".format(region),
-              [always_eventually(implies(and_((sys_(FOLLOW_STATIONARY), env(region))), sys_(region)))],
-              SpecLines.SYS) for region in self.regions]
-        follow_env = SpecLines("Person being followed must obey map topology.",
-                               [FOLLOW_SENSORS], SpecLines.ENV)
-        return ([stationary_lines] + follow_goals, [follow_env], [FOLLOW_STATIONARY], [])
+          [SpecLines("Follow the target to {!r}.".format(region),
+            [always_eventually(implies(and_((sys_(FOLLOW_STATIONARY), env(region))), sys_(region)))],
+            SpecLines.SYS, command) for region in self.regions]
+        follow_env = SpecLines("Target must obey map topology.",
+                               [FOLLOW_SENSORS], SpecLines.ENV, command)
+        return ([stationary_lines, stay_there_lines] + follow_goals, [follow_env], [FOLLOW_STATIONARY], [])
 
     def _gen_conditional(self, action, arg_dict, condition):
         """Generate a conditional action"""
@@ -304,10 +347,10 @@ class SpecGenerator(object):
 
         return (sys_statements, [], new_props, [])
 
-    def _gen_stay(self, _):
+    def _gen_stay(self, command):
         """Generate statements to stay exactly where you are."""
-        sys_lines = SpecLines("Stay where you are.", [always_eventually(self._frag_stay())],
-                              SpecLines.SYS)
+        sys_lines = SpecLines("Stay in the same place.", [always_eventually(self._frag_stay())],
+                              SpecLines.SYS, command)
         return ([sys_lines], [], [], [])
 
     def _frag_stay(self):
@@ -322,7 +365,7 @@ def _gen_begin(command):
     """Generate statements to begin in a location."""
     region = command.theme.name
     explanation = "The robot begins in {!r}.".format(region)
-    sys_lines = SpecLines(explanation, [sys_(region)], SpecLines.SYS)
+    sys_lines = SpecLines(explanation, [sys_(region)], SpecLines.SYS, command)
     return ([sys_lines], [], [], [])
 
 
@@ -330,7 +373,7 @@ def _gen_patrol(command):
     """Generate statements to always eventually be in a location."""
     region = command.location.name
     explanation = "Continuously visit {!r}.".format(region)
-    sys_lines = SpecLines(explanation, [always_eventually(sys_(region))], SpecLines.SYS)
+    sys_lines = SpecLines(explanation, [always_eventually(sys_(region))], SpecLines.SYS, command)
     return ([sys_lines], [], [], [])
 
 
@@ -339,12 +382,12 @@ def _gen_go(command):
     # Avoid if it's negated
     if command.negation:
         return _gen_avoid(command)
-    
+
     region = command.location.name
     explanation = "Have visited {!r} at least once.".format(region)
     mem_prop = _prop_mem(region, VISIT)
     alo_sys = _frag_atleastonce(mem_prop, next_(sys_(region)))
-    sys_lines = SpecLines(explanation, alo_sys, SpecLines.SYS)    
+    sys_lines = SpecLines(explanation, alo_sys, SpecLines.SYS, command)
     return ([sys_lines], [], [mem_prop], [])
 
 
@@ -357,9 +400,9 @@ def _gen_avoid(command):
     """Generate statements for avoiding a location, adding that the robot does not start there."""
     region = command.location.name
     explanation1 = "Do not go to {!r}.".format(region)
-    sys_lines1 = SpecLines(explanation1, [always(not_(sys_(region)))], SpecLines.SYS)
+    sys_lines1 = SpecLines(explanation1, [always(not_(sys_(region)))], SpecLines.SYS, command)
     explanation2 = "The robot does not begin in {!r}.".format(region)
-    sys_lines2 = SpecLines(explanation2, [not_(sys_(region))], SpecLines.SYS)
+    sys_lines2 = SpecLines(explanation2, [not_(sys_(region))], SpecLines.SYS, command)
     return ([sys_lines1, sys_lines2], [], [], [])
 
 
@@ -371,8 +414,8 @@ def _gen_search(command):
     cic_frag, cic_env = _frag_complete_context(SWEEP, sys_(region))
     alo_sys = _frag_atleastonce(mem_prop, cic_frag)
     explanation2 = "Assume that searches eventually complete.".format(region)
-    sys_lines = SpecLines(explanation1, alo_sys, SpecLines.SYS)
-    env_lines = SpecLines(explanation2, cic_env, SpecLines.ENV)
+    sys_lines = SpecLines(explanation1, alo_sys, SpecLines.SYS, command)
+    env_lines = SpecLines(explanation2, cic_env, SpecLines.ENV, command)
     return ([sys_lines], [env_lines], [mem_prop], [_prop_actuator_done(SWEEP)])
 
 
@@ -422,7 +465,20 @@ def _remove_comments(text):
     return re.sub('#.*$', '', text).strip()
 
 
+def goal_to_speclines(goal_idx, spec_lines):
+    """Return all SpecLines that contain a goal index."""
+    return [spec_line for spec_line in spec_lines if spec_line.contains_goal(goal_idx)]
+
+
+def speclines_from_gentree(gen_tree):
+    """Return all the SpecLines contained in a generation tree."""
+    return [spec_lines for command_spec_lines in gen_tree.values()
+            for spec_lines_list in command_spec_lines.values()
+            for spec_lines in spec_lines_list]
+
+
 if __name__ == "__main__":
     specgen = SpecGenerator()
-    specgen.generate('\n'.join(sys.argv[1:]), ("bomb", "hostage", "badguy"), ("r1", "r2", "r3", "r4"),
-               ("defuse", "call"), {})
+    specgen.generate('\n'.join(sys.argv[1:]), ("bomb", "hostage", "badguy"),
+                     ("r1", "r2", "r3", "r4"), ("defuse", "call"), {})
+
