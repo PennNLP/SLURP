@@ -407,9 +407,11 @@ def _gen_go(command):
     region = command.location.name
     explanation = "Have visited {!r} at least once.".format(region)
     mem_prop = _prop_mem(region, VISIT)
-    alo_sys = _frag_atleastonce(mem_prop, next_(sys_(region)))
-    sys_lines = SpecChunk(explanation, alo_sys, SpecChunk.SYS, command)
-    return ([sys_lines], [], [mem_prop], [])
+    sys_lines = _frag_atleastonce(mem_prop, next_(sys_(region)))
+    # Set memory false initially
+    sys_lines += [not_(sys_(mem_prop))]
+    sys_chunk = SpecChunk(explanation, sys_lines, SpecChunk.SYS, command)
+    return ([sys_chunk], [], [mem_prop], [])
 
 
 def _frag_react_go(region):
@@ -434,6 +436,8 @@ def _gen_search(command):
     mem_prop = _prop_mem(region, SWEEP)
     cic_frag, cic_env = _frag_complete_context(SWEEP, sys_(region))
     alo_sys = _frag_atleastonce(mem_prop, cic_frag)
+    # Set memory false initially
+    alo_sys += [not_(sys_(mem_prop))]
     explanation2 = "Assume that searches eventually complete.".format(region)
     sys_lines = SpecChunk(explanation1, alo_sys, SpecChunk.SYS, command)
     env_lines = SpecChunk(explanation2, cic_env, SpecChunk.ENV, command)
