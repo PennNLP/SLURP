@@ -11,6 +11,8 @@ FOLLOW_ACTION = "follow"
 SEE_ACTION = "see"
 TELL_ACTION = "tell"
 BEGIN_ACTION = "begin"
+ACTIVATE_ACTION = "activate"
+DEACTIVATE_ACTION = "deactivate"
 
 # Mapping of other verbnet senses to the same actions.
 # We include the identity entries just to make things easier on the talkback side
@@ -34,7 +36,9 @@ ACTION_ALIASES = {
                   FOLLOW_ACTION: FOLLOW_ACTION,
                   SEE_ACTION: SEE_ACTION,
                   TELL_ACTION: TELL_ACTION,
-                  BEGIN_ACTION: BEGIN_ACTION
+                  BEGIN_ACTION: BEGIN_ACTION,
+                  ACTIVATE_ACTION: ACTIVATE_ACTION,
+                  DEACTIVATE_ACTION: DEACTIVATE_ACTION
                   }
 
 UNDERSTOOD_SENSES = set(ACTION_ALIASES.keys())

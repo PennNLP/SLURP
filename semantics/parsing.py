@@ -67,17 +67,18 @@ def extract_frames_from_parse(parse_tree_string):
 
                 # Transformational grammar stuff
                 tree = frames.existential_there_insertion(tree)
+                tree = frames.invert_clause(tree)
+
+                tree = frames.wh_movement(tree)
                 if EXTRACT_DEBUG:
                     print 'Before inversion:'
                     print str(tree)
-                tree = frames.invert_clause(tree)
+
+                tree = frames.negation_inversion(tree)
 
                 if EXTRACT_DEBUG:
                     print 'After inversion:'
                     print str(tree)
-
-                tree = frames.wh_movement(tree)
-                tree = frames.negation_inversion(tree)
 
                 verbs, tree = frames.find_verbs(tree)
 

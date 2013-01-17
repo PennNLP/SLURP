@@ -617,10 +617,12 @@ def pick_best_match(match_list):
         return pick_most_complete_match(understood_matches)
     # Otherwise use the all matches
     return pick_most_complete_match(match_list)
-def num_total_leaves(match):
-    return sum(len(tree.leaves()) for tree in match.values())
 def pick_most_complete_match(match_list):
-    return max(match_list, key=lambda x:num_total_leaves(x[0]))
+    longest = max(match_list, key=lambda x:len(x))
+    if sum(int(len(x) == longest) for x in match_list) > 1:
+        return max(match_list, key=lambda x:int('Agent ' in x))
+    else:
+        return longest
 def split_sentences(parse_tree_string):
     """Split the parse tree string into a separate tree string for each sentence."""
     open_brackets = 0

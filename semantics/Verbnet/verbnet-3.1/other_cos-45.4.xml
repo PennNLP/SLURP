@@ -10,7 +10,6 @@
         <MEMBER name="accelerate" wn="accelerate%2:30:00 accelerate%2:30:01" grouping="accelerate.01"/>
         <MEMBER name="acetify" wn="acetify%2:39:00 acetify%2:30:00" grouping=""/>
         <MEMBER name="acidify" wn="acidify%2:39:00 acidify%2:30:00" grouping=""/>
-        <MEMBER name="activate" wn="" grouping=""/>
         <MEMBER name="advance" wn="advance%2:30:08 advance%2:30:00 advance%2:30:09 advance%2:30:01" grouping="advance.02 advance.03"/>
         <MEMBER name="africanize" wn="" grouping=""/>
         <MEMBER name="age" wn="age%2:30:01 age%2:30:00 age%2:30:02" grouping="age.01"/>
