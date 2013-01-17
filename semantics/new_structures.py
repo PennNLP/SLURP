@@ -115,9 +115,9 @@ class Quantifier(object):
 
     def __str__(self, lvl=0):
         indent = '\t'*(lvl)
-        return '\n' + indent + '\tDefinite:%s\n' % str(self.definite) + \
-               indent + '\tType:%s\n' % str(self.type) +\
-               indent + '\tNumber:%s' % str(self.number)
+        return '\n' + indent + '\tDefinite: %s\n' % str(self.definite) + \
+               indent + '\tType: %s\n' % str(self.type) +\
+               indent + '\tNumber: %s' % str(self.number)
 
     def fill_determiner(self, dt):
         """Fills self with a determiner by merging it with
@@ -181,7 +181,7 @@ class Query(object):
     def __str__(self, lvl=0):
         indent = '\t'*(lvl)
         return '\n' + indent + 'LocationQuery: \n' + \
-               indent + '\tTheme:%s\n' % str(self.theme, lvl + 1)
+               indent + '\tTheme: %s\n' % str(self.theme, lvl + 1)
 
 
 class YNQuery(Query):
@@ -215,7 +215,7 @@ class EntityQuery(Query):
     def __str__(self, lvl=0):
         indent = '\t'*(lvl)
         return 'EntityQuery: \n' + \
-               indent + '\tLocation:%s\n' % str(self.location, lvl + 1)
+               indent + '\tLocation: %s\n' % str(self.location, lvl + 1)
 
 
 class Command(object):
