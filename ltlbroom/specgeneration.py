@@ -20,6 +20,7 @@ Generates a logical specification from natural language.
 import sys
 import re
 from collections import OrderedDict, defaultdict
+from copy import deepcopy
 
 from semantics.processing import process_parse_tree
 from pipelinehost import PipelineClient
@@ -45,6 +46,17 @@ FOLLOW_SENSORS = "FOLLOW_SENSOR_CONSTRAINTS"
 
 # Actuators
 SWEEP = "sweep"
+
+# Actions to their argument
+ACTION_ARGS = {
+     'go': 'location',
+     'avoid': 'location',
+     'patrol': 'location',
+     'search': 'location',
+     'begin': None,
+     'follow': None,
+     'stay': None,
+    }
 
 
 class SpecLines(object):
@@ -177,9 +189,18 @@ class SpecGenerator(object):
                 print "Semantics response:", semantics_response
                 print "New commands:", new_commands
 
+            # Expand quantifiers
+            expanded_commands = []
+            for command in new_commands:
+                expanded_commands.extend(_expand_command(command, self.tag_dict))
+
+            if len(expanded_commands) > len(new_commands):
+                print "Expanded commands:"
+                print expanded_commands
+
             # Build the metapars
             failure = False
-            for command in new_commands:
+            for command in expanded_commands:
                 try:
                     new_sys_lines, new_env_lines, new_custom_props, new_custom_sensors = \
                         self._apply_metapar(command)
@@ -465,6 +486,50 @@ def _remove_comments(text):
     return re.sub('#.*$', '', text).strip()
 
 
+def _get_action_arg(action):
+    """Return the name of the command that an action will take as an argument."""
+    return ACTION_ARGS[action]
+
+
+def _expand_command(command, tag_dict):
+    """Return a list of the commands created by expanding any quantified items in a command."""
+    # Get the right argument for this action, and do nothing if it's not quantified
+    action = command.action
+    arg_attr = _get_action_arg(action)
+
+    # If there's no arg_attr, this isn't meant to be, just return
+    if not arg_attr:
+        return [command]
+
+    arg = getattr(command, arg_attr)
+
+    if arg.quantifier.type == "all":
+        # TODO: Handle more than one tag
+        try:
+            tag = arg.description[0]
+        except (IndexError, TypeError):
+            print "Error: Could not get description of argument {}.".format(arg)
+
+        try:
+            members = tag_dict[tag]
+        except KeyError:
+            print "Error: Could not get members of quantifier {!r}.".format(arg.description)
+
+        # Unroll into copies of the command
+        new_commands = []
+        for member in members:
+            new_command = deepcopy(command)
+            new_arg = getattr(new_command, arg_attr)
+            new_arg.quantifier.type = "exact"
+            new_arg.quantifier.number = 1
+            new_arg.name = member
+            new_commands.append(new_command)
+
+        return new_commands
+    else:
+        return [command]
+
+
 def goal_to_speclines(goal_idx, spec_lines):
     """Return all SpecLines that contain a goal index."""
     return [spec_line for spec_line in spec_lines if spec_line.contains_goal(goal_idx)]
@@ -480,5 +545,5 @@ def speclines_from_gentree(gen_tree):
 if __name__ == "__main__":
     specgen = SpecGenerator()
     specgen.generate('\n'.join(sys.argv[1:]), ("bomb", "hostage", "badguy"),
-                     ("r1", "r2", "r3", "r4"), ("defuse", "call"), {})
+                     ("r1", "r2", "r3", "r4"), ("defuse", "call"), {'patient': ['r1', 'r3']})
 
