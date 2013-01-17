@@ -85,7 +85,7 @@ class Quantifier(object):
             self.definite = True
             self.type = 'none'
             self.number = 0
-        elif dt == 'all':
+        elif dt in ('all', 'each'):
             self.definite = True
             self.type = 'all'
             self.number = None
