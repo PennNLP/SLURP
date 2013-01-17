@@ -562,13 +562,14 @@ def chunks_from_gentree(gen_tree):
             for spec_lines in spec_lines_list]
 
 
-def explain_conflict(stmt_problems, gen_tree):
+def explain_conflict(conflicting_lines, gen_tree):
     """Explain the conflict between LTL statments."""
     chunks = chunks_from_gentree(gen_tree)
-    conflicting_lines = [line for line, agent, position in stmt_problems]
-    conflicting_chunks = set.union([line_to_chunks(line, chunks) for line in conflicting_lines])
+    conflicting_chunks = set.union(*[set(line_to_chunks(line, chunks)) 
+                                     for line in conflicting_lines])
     # TODO: Finish implementation
-    return ", ".join(chunk.explanation for chunk in conflicting_chunks)
+    response = ", ".join(chunk.explanation for chunk in conflicting_chunks)
+    return response, gen_tree
 
 
 if __name__ == "__main__":
