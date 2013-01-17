@@ -492,7 +492,10 @@ def _remove_comments(text):
 
 def _get_action_arg(action):
     """Return the name of the command that an action will take as an argument."""
-    return ACTION_ARGS[action]
+    try:
+        return ACTION_ARGS[action]
+    except KeyError:
+        return None
 
 
 def _expand_command(command, tag_dict):
