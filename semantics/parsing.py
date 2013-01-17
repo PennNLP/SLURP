@@ -25,7 +25,6 @@ from lexical_constants import ACTION_ALIASES
 
 EXTRACT_DEBUG = False
 
-
 def extract_frames_from_parse(parse_tree_string):
     """Take a string representing the parse tree as input, and print the
     semantic parse. The result list consists of a list of tuples, with each
@@ -106,14 +105,18 @@ def extract_frames_from_parse(parse_tree_string):
                     if EXTRACT_DEBUG:
                         print 'Match list:'
 
-                    for m in match_list:
-                        for a, b in m[0].items():
-                            if EXTRACT_DEBUG:
+                        for m in match_list:
+                            for a, b in m[0].items():
                                 print a, str(b)
-                        if EXTRACT_DEBUG:
                             print '\n\n'
 
                     (best_match, sense) = frames.pick_best_match(match_list)
+                    
+                    if EXTRACT_DEBUG:
+                        print 'Chose: '
+                        for a, b in best_match.items():
+                            print a, str(b)
+                        print '\n\n'
                     if not best_match is None:
                         result_list.append((best_match, tree, tag_list, sense, verb, negation))
 

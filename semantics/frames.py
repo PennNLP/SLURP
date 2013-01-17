@@ -618,7 +618,7 @@ def pick_best_match(match_list):
     # Otherwise use the all matches
     return pick_most_complete_match(match_list)
 def pick_most_complete_match(match_list):
-    longest = max(match_list, key=lambda x:len(x))
+    longest = max(match_list, key=lambda x:len(x[0]))
     if sum(int(len(x) == longest) for x in match_list) > 1:
         return max(match_list, key=lambda x:int('Agent ' in x))
     else:
