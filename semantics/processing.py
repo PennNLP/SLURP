@@ -36,6 +36,8 @@ def process_parse_tree(parse_tree_input, text_input, knowledge_base=None):
 
     # Extract commands from meaning
     semantics_response = parse_semantic_structures(semantic_structures)
+    if knowledge_base:
+        knowledge_base.fill_commands(semantics_response[0])
     try:
         new_commands = semantics_response[0]
         user_response = semantics_response[3]
