@@ -48,10 +48,10 @@ class KnowledgeBase:
     def fill_commands(self, commands):
         for c in commands:
             if isinstance(c, Command):
-               if c.destination and not c.source:
-                   for fact in self.facts:
-                       if isinstance(fact, LocationFact) and fact.theme.name == c.theme.name:
-                           c.source = fact.location
+                if c.destination and not c.source:
+                    for fact in self.facts:
+                        if isinstance(fact, LocationFact) and fact.theme.name == c.theme.name:
+                            c.source = fact.location
     def readable(self):
         return '\n'.join(f.readable() for f in self.facts)
 
