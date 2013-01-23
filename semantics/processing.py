@@ -34,6 +34,13 @@ def process_parse_tree(parse_tree_input, text_input, knowledge_base=None):
     # Extract meaning
     semantic_structures = parsing.create_semantic_structures(frames)
 
+    # Update KB
+    if knowledge_base:
+        kb_response = knowledge_base.process_semantic_structures(semantic_structures)
+        print "Response from knowledge base:", kb_response
+    else:
+        kb_response = ''
+
     # Extract commands from meaning
     semantics_response = parse_semantic_structures(semantic_structures)
     if knowledge_base:
@@ -45,18 +52,6 @@ def process_parse_tree(parse_tree_input, text_input, knowledge_base=None):
     except (TypeError, IndexError):
         user_response = ""
         new_commands = []
-
-    # Update KB
-    if knowledge_base:
-        kb_response = knowledge_base.process_semantic_structures(semantic_structures)
-    else:
-        kb_response = ''
-
-    if user_response:
-        print "User response:", user_response
-
-    if kb_response:
-        print "Response from knowledge base:", kb_response
 
     return (user_response, frames, semantics_response, new_commands, kb_response)
 

@@ -21,7 +21,8 @@ from semantics.util import is_pronoun
 class KnowledgeBase:
     def __init__(self):
         self.facts = []
-        self.last_theme = None
+        self.last_object = None
+        self.last_location = None
     def process_semantic_structures(self, semantic_structures):
         response = ''
         for structure in semantic_structures:
@@ -30,11 +31,16 @@ class KnowledgeBase:
                 response = new_fact.readable()
             elif isinstance(structure, Query):
                 response = self.query(structure)
-            # Assertions, Queries, and Commands have themes that may be referenced later
-            if isinstance(structure, Assertion) or isinstance(structure, Query) or isinstance(structure, Command):
-                # Only replace resolved entities
+            # Assertions, Commands have themes and locations that may be referenced later
+            if isinstance(structure, Assertion) or isinstance(structure, Command):
+                # Only replace resolved object
                 if structure.theme and not is_pronoun(structure.theme.name):
-                    self.last_theme = structure.theme
+                    self.last_object = structure.theme
+                elif structure.condition and structure.condition.entity and not is_pronoun(structure.condition.entity.name):
+                    self.last_object = structure.condition.entity
+                # Only replace resolved locations
+                if structure.location and structure.location.name != 'there':
+                    self.last_location = structure.location
         return response
 
     def assimilate(self, assertion):
@@ -56,12 +62,20 @@ class KnowledgeBase:
     def fill_commands(self, commands):
         for c in commands:
             if isinstance(c, Command):
-                if c.theme and is_pronoun(c.theme.name) and self.last_theme:
-                    c.theme.name = self.last_theme
+                if c.theme and is_pronoun(c.theme.name) and self.last_object:
+                    c.theme.name = self.last_object.name
+                elif c.patient and is_pronoun(c.patient.name) and self.last_object:
+                    c.patient.name = self.last_object.name
+                if c.location and c.location.name == 'there' and self.last_location:
+                    c.location.name = self.last_location
                 if c.destination and not c.source:
                     for fact in self.facts:
                         if isinstance(fact, LocationFact) and c.theme and fact.theme.name == c.theme.name:
                             c.source = fact.location
+                if not c.location and not c.destination and not c.source:
+                    for fact in self.facts:
+                        if isinstance(fact, LocationFact) and c.theme and fact.theme.name == c.theme.name:
+                            c.location = fact.location
     def readable(self):
         return '\n'.join(f.readable() for f in self.facts)
 

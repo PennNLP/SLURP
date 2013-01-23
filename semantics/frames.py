@@ -108,9 +108,9 @@ except ValueError:
 # Mapping from Verbnet tags to Treebank tags
 tag_mapping = {'NP' : ['NP'],
                ('NP', 'Location') : ['PP-LOC', 'PP-DIR', 'PP-CLR', 'NN', \
-                                     'NP-A', 'WHADVP','ADVP-TMP', 'PP-PRD'],
+                                     'NP-A', 'WHADVP','ADVP-TMP', 'PP-PRD', 'ADVP-DIR'],
                ('NP', 'Destination') : ['PP-LOC', 'PP-DIR', 'NN', 'NP-A',\
-                                        'ADVP', 'PP-CLR', 'WHADVP'],
+                                        'ADVP', 'PP-CLR', 'WHADVP', 'ADVP-DIR'],
                ('NP', 'Asset') : ['NP-A'],
                ('NP', 'Agent') : ['NP-SBJ-A', 'NP', 'NP-A'],
                ('NP', 'Beneficiary') : ['NP-A'],

@@ -114,8 +114,11 @@ def extract_frames_from_parse(parse_tree_string):
                     
                     if EXTRACT_DEBUG:
                         print 'Chose: '
-                        for a, b in best_match.items():
-                            print a, str(b)
+                        if best_match:
+                            for a, b in best_match.items():
+                                print a, str(b)
+                        else:
+                            print str(None)
                         print '\n\n'
                     if not best_match is None:
                         result_list.append((best_match, tree, tag_list, sense, verb, negation))
@@ -171,6 +174,8 @@ def extract_entity(parse_tree, semantic_role=''):
             entity.name = morphy(leaves, 'n')
             if entity.name is None:
                 entity.name = leaves
+        elif node == 'RB' and leaves == 'there':
+            entity.name = 'there'
         previous_node = node
         previous_leaves = leaves
     return entity
