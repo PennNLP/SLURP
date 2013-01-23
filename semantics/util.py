@@ -52,3 +52,6 @@ def text2int(textnum):
             current = 0
 
     return result + current
+
+def is_pronoun(word):
+    return word in ('it', 'them', 'him', 'her')

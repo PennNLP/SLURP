@@ -16,12 +16,12 @@
 
 from semantics.new_structures import Assertion, Query, YNQuery, \
     LocationQuery, EntityQuery, Command
-
+from semantics.util import is_pronoun
 
 class KnowledgeBase:
     def __init__(self):
         self.facts = []
-
+        self.last_theme = None
     def process_semantic_structures(self, semantic_structures):
         response = ''
         for structure in semantic_structures:
@@ -29,6 +29,11 @@ class KnowledgeBase:
                 self.assimilate(structure)
             elif isinstance(structure, Query):
                 response = self.query(structure)
+            # Assertions, Queries, and Commands have themes that may be referenced later
+            if isinstance(structure, Assertion) or isinstance(structure, Query) or isinstance(structure, Command):
+                # Only replace resolved entities
+                if structure.theme and not is_pronoun(structure.theme.name):
+                    self.last_theme = structure.theme
         return response
 
     def assimilate(self, assertion):
@@ -48,9 +53,11 @@ class KnowledgeBase:
     def fill_commands(self, commands):
         for c in commands:
             if isinstance(c, Command):
+                if c.theme and is_pronoun(c.theme.name) and self.last_theme:
+                    c.theme.name = self.last_theme
                 if c.destination and not c.source:
                     for fact in self.facts:
-                        if isinstance(fact, LocationFact) and fact.theme.name == c.theme.name:
+                        if isinstance(fact, LocationFact) and c.theme and fact.theme.name == c.theme.name:
                             c.source = fact.location
     def readable(self):
         return '\n'.join(f.readable() for f in self.facts)
