@@ -83,7 +83,7 @@ class SpecChunk(object):
         # To be set later by consumer
         self.input = None
         self.goal_indices = set()
-        self.highlight = False
+        self.highlights = [False for _ in range(len(self.lines))]
 
     def __repr__(self):
         return '<{} lines for {!r}: {}, Command: {}, Goals: {}>'.format(self.type, self.explanation,
@@ -563,12 +563,21 @@ def chunks_from_gentree(gen_tree):
 
 
 def explain_conflict(conflicting_lines, gen_tree):
-    """Explain the conflict between LTL statments."""
+    """Explain the conflict between LTL statements."""
     chunks = chunks_from_gentree(gen_tree)
-    conflicting_chunks = set.union(*[set(line_to_chunks(line, chunks)) 
+    conflicting_chunks = set.union(*[set(line_to_chunks(line, chunks))
                                      for line in conflicting_lines])
+
+    # Mark the chunks for highlighting
+    conflicting_lines_set = set(conflicting_lines)
+    for chunk in conflicting_chunks:
+        for idx, line in enumerate(chunk.lines):
+            if line in conflicting_lines_set:
+                chunk.highlights[idx] = True
+
     # TODO: Finish implementation
-    response = ", ".join(chunk.explanation for chunk in conflicting_chunks)
+    response = ("The conflicting statements are:\n" +
+                "\n".join(chunk.explanation for chunk in conflicting_chunks))
     return response, gen_tree
 
 
