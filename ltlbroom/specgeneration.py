@@ -243,10 +243,10 @@ class SpecGenerator(object):
                     if not spec_lines.issys():
                         continue
                     for line in spec_lines.lines:
+                        spec_lines.input = input_text
                         sys_lines.append(line)
-                        if line.startswith('(' + ALWAYS + EVENTUALLY):
+                        if isgoal(line):
                             spec_lines.goal_indices.add(goal_idx)
-                            spec_lines.input = input_text
                             goal_idx += 1
 
         # Filter out any duplicates from the env_lines
@@ -562,6 +562,11 @@ def chunks_from_gentree(gen_tree):
             for spec_lines in spec_lines_list]
 
 
+def isgoal(line):
+    """Return whether a line of LTL contains a goal."""
+    return line.lstrip().startswith('(' + ALWAYS + EVENTUALLY)
+
+
 def explain_conflict(conflicting_lines, gen_tree):
     """Explain the conflict between LTL statements."""
     chunks = chunks_from_gentree(gen_tree)
@@ -575,10 +580,38 @@ def explain_conflict(conflicting_lines, gen_tree):
             if line in conflicting_lines_set:
                 chunk.highlights[idx] = True
 
-    # TODO: Finish implementation
-    response = ("The conflicting statements are:\n" +
-                "\n".join(chunk.explanation for chunk in conflicting_chunks))
-    return response, gen_tree
+    # Explain what's wrong with the goals
+    goal_explanations = [(chunk.explanation, chunk.input) for chunk in conflicting_chunks
+                         if any(isgoal(line) for line in chunk.lines)]
+    n_conflicting_goals = len(goal_explanations)
+    if n_conflicting_goals == 0:
+        goal_problem = "No goals seem to be problematic."
+    elif n_conflicting_goals == 1:
+        goal_explanation, goal_input = goal_explanations[0]
+        explain_template = ("The problematic goal is {!r}." + 
+                            " The system cannot achieve the sub-goal {!r}.")
+        goal_problem = explain_template.format(goal_input, goal_explanation)
+    else:
+        goal_template = "{!r} because of sub-goal {!r}"
+        goal_problem = ("The problematic goals are: " + 
+                        ", ".join(goal_template.format(text, explanation)
+                                  for explanation, text in goal_explanations) + '.')
+
+    # Now explain the other issues
+    other_explanations = [(chunk.explanation, chunk.input) for chunk in conflicting_chunks
+                         if any(not isgoal(line) for line in chunk.lines)]
+    other_problem = "The statements that cause the problem are:\n"
+    # Group together sub-goals by the goal that generated them
+    text_explains = defaultdict(list)
+    for explanation, text in other_explanations:
+        text_explains[text].append(explanation)
+    other_template = "{!r} because of sub-goal(s): {}."
+    other_problem += "\n".join(other_template.format(text, ", ".join(repr(ex) for ex in explanations))
+                               for text, explanations in sorted(text_explains.items()))
+
+    explanation = goal_problem + "\n" + other_problem
+
+    return explanation, gen_tree
 
 
 if __name__ == "__main__":
