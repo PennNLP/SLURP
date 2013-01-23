@@ -62,12 +62,16 @@ class KnowledgeBase:
     def fill_commands(self, commands):
         for c in commands:
             if isinstance(c, Command):
-                if c.theme and is_pronoun(c.theme.name) and self.last_object:
-                    c.theme.name = self.last_object.name
-                elif c.patient and is_pronoun(c.patient.name) and self.last_object:
-                    c.patient.name = self.last_object.name
-                if c.location and c.location.name == 'there' and self.last_location:
-                    c.location.name = self.last_location
+                if self.last_object:
+                    if c.theme and is_pronoun(c.theme.name):
+                        c.theme.name = self.last_object.name
+                    if c.patient and is_pronoun(c.patient.name):
+                        c.patient.name = self.last_object.name
+                    if c.condition and c.condition.entity and is_pronoun(c.condition.entity.name):
+                        c.condition.entity.name = self.last_object.name
+                if self.last_location:
+                    if c.location and c.location.name == 'there':
+                        c.location.name = self.last_location
                 if c.destination and not c.source:
                     for fact in self.facts:
                         if isinstance(fact, LocationFact) and c.theme and fact.theme.name == c.theme.name:
