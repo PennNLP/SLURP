@@ -198,7 +198,8 @@ class SpecGenerator(object):
                 print expanded_commands
 
             # Build the metapars
-            failure = False
+            # Assume failure if no commands
+            failure = not bool(expanded_commands)
             for command in expanded_commands:
                 try:
                     new_sys_lines, new_env_lines, new_custom_props, new_custom_sensors = \
