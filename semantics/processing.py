@@ -41,7 +41,6 @@ def process_parse_tree(parse_tree_input, text_input, knowledge_base=None):
     try:
         new_commands = semantics_response[0]
         user_response = semantics_response[3]
-        # Get the diff between the new and old command queue
         print "New commands:", new_commands
     except (TypeError, IndexError):
         user_response = ""
@@ -50,13 +49,16 @@ def process_parse_tree(parse_tree_input, text_input, knowledge_base=None):
     # Update KB
     if knowledge_base:
         kb_response = knowledge_base.process_semantic_structures(semantic_structures)
-        print "Response from knowledge base:", kb_response
     else:
         kb_response = ''
 
-    response = user_response + ' ' + kb_response if kb_response else user_response
+    if user_response:
+        print "User response:", user_response
 
-    return (response, frames, semantics_response, new_commands)
+    if kb_response:
+        print "Response from knowledge base:", kb_response
+
+    return (user_response, frames, semantics_response, new_commands, kb_response)
 
 
 def parse_semantic_structures(semantic_structure_list):

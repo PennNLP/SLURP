@@ -26,7 +26,8 @@ class KnowledgeBase:
         response = ''
         for structure in semantic_structures:
             if isinstance(structure, Assertion):
-                self.assimilate(structure)
+                new_fact = self.assimilate(structure)
+                response = new_fact.readable()
             elif isinstance(structure, Query):
                 response = self.query(structure)
             # Assertions, Queries, and Commands have themes that may be referenced later
@@ -37,7 +38,9 @@ class KnowledgeBase:
         return response
 
     def assimilate(self, assertion):
-        self.facts.append(LocationFact(assertion))
+        new_fact = LocationFact(assertion)
+        self.facts.append(new_fact)
+        return new_fact
 
     def query(self, query):
         """Reponds to a given query"""
@@ -78,7 +81,7 @@ class LocationFact(Fact):
         self.location = assertion.location
 
     def readable(self):
-        return '%s @ %s' % (self.theme.readable(), self.location.readable())
+        return '{!r} is/are in {!r}'.format(self.theme.readable(), self.location.readable())
 
     def query(self, query):
         if isinstance(query, LocationQuery):

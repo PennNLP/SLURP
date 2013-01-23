@@ -177,12 +177,11 @@ class SpecGenerator(object):
             print "Sending to remote parser:", repr(line)
             parse = parse_client.parse(line, force_nouns, force_verbs=force_verbs)
             print "Response from parser:", repr(parse)
-            user_response, semantics_result, semantics_response, new_commands = \
-                process_parse_tree(parse, line)
+            user_response, semantics_result, semantics_response, new_commands, kb_response = \
+                process_parse_tree(parse, line, self.kbase)
 
             if SEMANTICS_DEBUG:
                 print "Returned values from semantics:"
-                print "User response:", repr(user_response)
                 print "Semantics results:"
                 for result in semantics_result:
                     print "\t" + str(result)
@@ -205,7 +204,7 @@ class SpecGenerator(object):
                     new_sys_lines, new_env_lines, new_custom_props, new_custom_sensors = \
                         self._apply_metapar(command)
                 except KeyError as err:
-                    print "Could not understand command {0} due to error {1}".format(command, err)
+                    print "Could not understand command {!r} due to error {}".format(command.action, err)
                     failure = True
                     continue
 
@@ -218,7 +217,7 @@ class SpecGenerator(object):
                 custom_sensors.update(new_custom_sensors)
 
             # Add a true response if there were commands and no failures
-            responses.append(bool(new_commands and not failure))
+            responses.append(kb_response if kb_response else not failure)
             print
 
         # We need to modify non-reaction goals to be or'd with the reactions
