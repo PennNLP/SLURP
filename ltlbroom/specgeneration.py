@@ -23,7 +23,7 @@ from collections import OrderedDict, defaultdict
 from copy import deepcopy
 
 from semantics.lexical_constants import (SEARCH_ACTION, GO_ACTION,
-    FOLLOW_ACTION, SEE_ACTION, BEGIN_ACTION, AVOID_ACTION, PATROL_ACTION, 
+    FOLLOW_ACTION, SEE_ACTION, BEGIN_ACTION, AVOID_ACTION, PATROL_ACTION,
     CARRY_ACTION, STAY_ACTION, ACTIVATE_ACTION, DEACTIVATE_ACTION)
 from semantics.parsing import process_parse_tree
 from pipelinehost import PipelineClient
@@ -44,11 +44,16 @@ MEM = "mem"
 DONE = "done"
 VISIT = "visit"
 REACT = "react"
+DELIVER = "deliver"
 FOLLOW_STATIONARY = "env_stationary"
 FOLLOW_SENSORS = "FOLLOW_SENSOR_CONSTRAINTS"
 
 # Actuators
 SWEEP = "sweep"
+PICKUP = "pickup"
+DROP = "drop"
+HOLDING = "holding"
+N_CARRY_ITEMS = 1
 
 # Actions to their argument
 ACTION_ARGS = {
@@ -120,7 +125,7 @@ class SpecGenerator(object):
         self.GOALS = {PATROL_ACTION: _gen_patrol, GO_ACTION: _gen_go,
                       AVOID_ACTION: _gen_avoid, SEARCH_ACTION: _gen_search,
                       BEGIN_ACTION: _gen_begin, FOLLOW_ACTION: self._gen_follow,
-                      STAY_ACTION: self._gen_stay}
+                      STAY_ACTION: self._gen_stay, CARRY_ACTION: self._gen_carry}
 
         self.REACTIONS = {GO_ACTION: _frag_react_go, STAY_ACTION: self._frag_stay}
 
@@ -381,6 +386,48 @@ class SpecGenerator(object):
         """Generate fragments to reactively go somewhere."""
         return (and_([iff(sys_(region), next_(sys_(region))) for region in self.regions]))
 
+    def _gen_carry(self, command):
+        """Generate statements for carrying items from one region to another."""
+        item = command.theme.name
+        source = command.source.name
+        destination = command.destination.name
+
+        # Start the carry actuators and props as off
+        start_explanation = "Nothing is carried or delivered at the start."
+        mem_deliver = _prop_mem(destination, DELIVER)
+        # TODO: Support carry of multiple objects
+        # [HOLDING + "_" + str(num) for num in range(N_CARRY_ITEMS)]
+        holding_props = [HOLDING]
+        start_lines = [_frag_props_off([PICKUP, DROP, mem_deliver] + holding_props)]
+        start_chunk = SpecChunk(start_explanation, start_lines, SpecChunk.SYS, command)
+
+        pickup_explanation = "Only pick up if you can carry more."
+        pickup_lines = [always(implies(next_(sys_(HOLDING)), not_(next_(sys_(PICKUP)))))]
+        pickup_chunk = SpecChunk(pickup_explanation, pickup_lines, SpecChunk.SYS, command)
+
+        drop_explanation = "Only drop if you are carrying something."
+        drop_lines = [always(implies(not_(next_(sys_(HOLDING))), not_(next_(sys_(DROP)))))]
+        drop_chunk = SpecChunk(drop_explanation, drop_lines, SpecChunk.SYS, command)
+
+        stay_explanation = "Stay where you are when picking up and dropping."
+        stay_lines = [always(implies(or_([next_(sys_(PICKUP)), next_(sys_(DROP))]),
+                                     self._frag_stay()))]
+        stay_chunk = SpecChunk(stay_explanation, stay_lines, SpecChunk.SYS, command)
+
+        source_explanation = "Pick up {!r} in {!r}.".format(item, source)
+        source_lines = [always(iff(and_([or_([and_([sys_(source), sys_(PICKUP)]), sys_(HOLDING)]),
+                                         not_(sys_(DROP))]),
+                                   next_(sys_(HOLDING))))]
+        source_chunk = SpecChunk(source_explanation, source_lines, SpecChunk.SYS, command)
+
+        delivery_explanation = "Deliver {!r} to {!r}.".format(item, destination)
+        delivery_frag = and_([next_(sys_(destination)), next_(sys_(DROP))])
+        delivery_chunk = SpecChunk(delivery_explanation, _frag_atleastonce(mem_deliver, delivery_frag),
+                                   SpecChunk.SYS, command)
+
+        return ([start_chunk, pickup_chunk, drop_chunk, stay_chunk, source_chunk, delivery_chunk],
+                [], [mem_deliver] + holding_props, [])
+
 
 # The return signature of the statement generators is:
 # ([system lines], [env lines], [custom propositions], [custom sensors])
@@ -447,6 +494,7 @@ def _gen_search(command):
     return ([sys_lines], [env_lines], [mem_prop], [_prop_actuator_done(SWEEP)])
 
 
+
 def _frag_atleastonce(mem_prop, fragment):
     """Generate fragments for performing an action at least once by using a memory proposition."""
     return [always_eventually(sys_(mem_prop)),
@@ -458,6 +506,11 @@ def _frag_complete_context(actuator, context_prop):
     actuator_done = _prop_actuator_done(actuator)
     eventually_actuator = always_eventually(env(actuator_done))
     return [and_((sys_(actuator), next_(env(actuator_done)), context_prop)), [eventually_actuator]]
+
+
+def _frag_props_off(props):
+    """Generate a fragment for props being off in the initial state."""
+    return and_([not_(sys_(prop)) for prop in props])
 
 
 def _prop_mem(region, event):
@@ -513,6 +566,7 @@ def _expand_command(command, tag_dict):
 
     arg = getattr(command, arg_attr)
 
+    # TODO: Negated "any" should behave like "all"
     if arg.quantifier.type == "all":
         # TODO: Handle more than one tag
         try:
@@ -591,12 +645,12 @@ def explain_conflict(conflicting_lines, gen_tree):
         goal_problem = "No goals seem to be problematic."
     elif n_conflicting_goals == 1:
         goal_explanation, goal_input = goal_explanations[0]
-        explain_template = ("The problematic goal is {!r}." + 
+        explain_template = ("The problematic goal is {!r}." +
                             " The system cannot achieve the sub-goal {!r}.")
         goal_problem = explain_template.format(goal_input, goal_explanation)
     else:
         goal_template = "{!r} because of sub-goal {!r}"
-        goal_problem = ("The problematic goals are: " + 
+        goal_problem = ("The problematic goals are: " +
                         ", ".join(goal_template.format(text, explanation)
                                   for explanation, text in goal_explanations) + '.')
 
@@ -617,8 +671,16 @@ def explain_conflict(conflicting_lines, gen_tree):
     return explanation, gen_tree
 
 
-if __name__ == "__main__":
+def _test():
+    """Test spec generation."""
     specgen = SpecGenerator()
-    specgen.generate('\n'.join(sys.argv[1:]), ("bomb", "hostage", "badguy"),
-                     ("r1", "r2", "r3", "r4"), ("defuse", "call"), {'odd': ['r1', 'r3']})
+    env_lines, sys_lines, custom_props, custom_sensors, responses, gen_tree = \
+        specgen.generate('\n'.join(sys.argv[1:]), ("bomb", "hostage", "badguy"),
+                         ("r1", "r2", "r3", "r4"), ("defuse", "pickup", "drop"),
+                         {'odd': ['r1', 'r3']})
+    for line in env_lines + sys_lines:
+        print line
 
+
+if __name__ == "__main__":
+    _test()
