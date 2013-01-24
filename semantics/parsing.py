@@ -272,13 +272,12 @@ def process_parse_tree(parse_tree_input, text_input, knowledge_base=None):
 
     # Extract commands.
     new_commands = [item for item in semantic_structures if isinstance(item, Command)]
+    if knowledge_base:
+        knowledge_base.fill_commands(new_commands)
     if new_commands:
         print "New commands:"
         for command in new_commands:
             print command
-
-    if knowledge_base:
-        knowledge_base.fill_commands(new_commands)
 
     # TODO: Re-enable user responses
     user_response = ""
