@@ -25,7 +25,7 @@ from copy import deepcopy
 from semantics.lexical_constants import (SEARCH_ACTION, GO_ACTION,
     FOLLOW_ACTION, SEE_ACTION, BEGIN_ACTION, AVOID_ACTION, PATROL_ACTION, 
     CARRY_ACTION, STAY_ACTION, ACTIVATE_ACTION, DEACTIVATE_ACTION)
-from semantics.processing import process_parse_tree
+from semantics.parsing import process_parse_tree
 from pipelinehost import PipelineClient
 from semantics.new_knowledge import KnowledgeBase
 from ltlbroom.ltl import (env, and_, or_, sys_, not_, iff, next_,
@@ -181,15 +181,14 @@ class SpecGenerator(object):
             print "Sending to remote parser:", repr(line)
             parse = parse_client.parse(line, force_nouns, force_verbs=force_verbs)
             print "Response from parser:", repr(parse)
-            user_response, semantics_result, semantics_response, new_commands, kb_response = \
+            user_response, frames, new_commands, kb_response = \
                 process_parse_tree(parse, line, self.kbase)
 
             if SEMANTICS_DEBUG:
                 print "Returned values from semantics:"
                 print "Semantics results:"
-                for result in semantics_result:
-                    print "\t" + str(result)
-                print "Semantics response:", semantics_response
+                for frame in frames:
+                    print "\t" + str(frame)
                 print "New commands:", new_commands
 
             # Expand quantifiers

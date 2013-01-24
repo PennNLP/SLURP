@@ -2,9 +2,10 @@
 """An interactive test client for the pipeline host."""
 
 import sys
-from semantics.processing import process_parse_tree
+from semantics.parsing import process_parse_tree
 from semantics.new_knowledge import KnowledgeBase
 from pipelinehost import PipelineClient
+
 
 def from_stdin(kb):
     """Test semantics by processing text from stdin"""

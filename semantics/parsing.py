@@ -251,3 +251,41 @@ def create_semantic_structures(frame_semantic_list):
                                                           'ex' in frame[2]))
         
     return semantic_representation_list
+
+
+def process_parse_tree(parse_tree_input, text_input, knowledge_base=None):
+    """Produces semantic interpretations of parse trees."""
+    print "Processing:", repr(text_input)
+
+    # Perform tree operations
+    frames = extract_frames_from_parse(parse_tree_input)
+    print "Semantic frames:", frames
+
+    # Extract meaning
+    semantic_structures = create_semantic_structures(frames)
+
+    # Update KB
+    if knowledge_base:
+        kb_response = knowledge_base.process_semantic_structures(semantic_structures)
+    else:
+        kb_response = ''
+
+    # Extract commands.
+    new_commands = [item for item in semantic_structures if isinstance(item, Command)]
+    if new_commands:
+        print "New commands:"
+        for command in new_commands:
+            print command
+
+    if knowledge_base:
+        knowledge_base.fill_commands(new_commands)
+
+    # TODO: Re-enable user responses
+    user_response = ""
+
+    if kb_response:
+        print "KB response:", kb_response
+    if user_response:
+        print "User response:", user_response
+
+    return (user_response, frames, new_commands, kb_response)

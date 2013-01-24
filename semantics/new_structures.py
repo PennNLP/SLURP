@@ -235,10 +235,10 @@ class Command(object):
 
     def __str__(self, lvl=0):
         indent = '\t'*(lvl + 1)
-        return '\nCommand: \n' + \
+        return 'Command: \n' + \
                (indent + 'Agent: ' + self.agent.__str__(lvl + 1) + '\n' if self.agent else '') + \
                indent + 'Action: ' + str(self.action)  + '\n' + \
-               (indent + 'Theme:' + self.theme.__str__(lvl + 1) + '\n' if self.theme else '') + \
+               (indent + 'Theme: ' + self.theme.__str__(lvl + 1) + '\n' if self.theme else '') + \
                (indent + 'Patient:' + self.patient.__str__(lvl + 1) + '\n' if self.patient else '') + \
                (indent + 'Location: ' + self.location.__str__(lvl + 1) + '\n' if self.location else '') + \
                (indent + 'Source: ' + self.source.__str__(lvl + 1) + '\n' if self.source else '') + \
