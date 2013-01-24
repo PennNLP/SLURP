@@ -13,13 +13,14 @@ TELL_ACTION = "tell"
 BEGIN_ACTION = "begin"
 ACTIVATE_ACTION = "activate"
 DEACTIVATE_ACTION = "deactivate"
+AVOID_ACTION = "avoid"
+PATROL_ACTION = "patrol"
+CARRY_ACTION = "carry"
+STAY_ACTION = "stay"
 
 # Mapping of other verbnet senses to the same actions.
 # We include the identity entries just to make things easier on the talkback side
-# TODO remove inputs that aren't senses.
 ACTION_ALIASES = {
-                  'find': SEARCH_ACTION, # Not a sense
-                  'look': SEARCH_ACTION, # Not a sense
                   'appear': GO_ACTION,
                   'get': GET_ACTION,
                   'obtain': GET_ACTION,
@@ -38,7 +39,11 @@ ACTION_ALIASES = {
                   TELL_ACTION: TELL_ACTION,
                   BEGIN_ACTION: BEGIN_ACTION,
                   ACTIVATE_ACTION: ACTIVATE_ACTION,
-                  DEACTIVATE_ACTION: DEACTIVATE_ACTION
-                  }
+                  DEACTIVATE_ACTION: DEACTIVATE_ACTION,
+                  AVOID_ACTION: AVOID_ACTION,
+                  PATROL_ACTION: PATROL_ACTION,
+                  CARRY_ACTION: CARRY_ACTION,
+                  STAY_ACTION: STAY_ACTION,
+                 }
 
 UNDERSTOOD_SENSES = set(ACTION_ALIASES.keys())

@@ -22,6 +22,9 @@ import re
 from collections import OrderedDict, defaultdict
 from copy import deepcopy
 
+from semantics.lexical_constants import (SEARCH_ACTION, GO_ACTION,
+    FOLLOW_ACTION, SEE_ACTION, BEGIN_ACTION, AVOID_ACTION, PATROL_ACTION, 
+    CARRY_ACTION, STAY_ACTION, ACTIVATE_ACTION, DEACTIVATE_ACTION)
 from semantics.processing import process_parse_tree
 from pipelinehost import PipelineClient
 from semantics.new_knowledge import KnowledgeBase
@@ -49,14 +52,15 @@ SWEEP = "sweep"
 
 # Actions to their argument
 ACTION_ARGS = {
-     'go': 'location',
-     'avoid': 'location',
-     'patrol': 'location',
-     'search': 'location',
-     'begin': None,
-     'follow': None,
-     'stay': None,
-    }
+               GO_ACTION: 'location',
+               AVOID_ACTION: 'location',
+               PATROL_ACTION: 'location',
+               SEARCH_ACTION: 'location',
+               CARRY_ACTION: 'destination',
+               BEGIN_ACTION: None,
+               FOLLOW_ACTION: None,
+               STAY_ACTION: None,
+              }
 
 
 class SpecChunk(object):
@@ -113,12 +117,12 @@ class SpecGenerator(object):
 
     def __init__(self):
         # Handlers
-        self.GOALS = {'patrol': _gen_patrol, 'go': _gen_go,
-                     'avoid': _gen_avoid, 'search': _gen_search,
-                     'begin': _gen_begin, 'follow': self._gen_follow,
-                     'stay': self._gen_stay}
+        self.GOALS = {PATROL_ACTION: _gen_patrol, GO_ACTION: _gen_go,
+                      AVOID_ACTION: _gen_avoid, SEARCH_ACTION: _gen_search,
+                      BEGIN_ACTION: _gen_begin, FOLLOW_ACTION: self._gen_follow,
+                      STAY_ACTION: self._gen_stay}
 
-        self.REACTIONS = {'go': _frag_react_go, 'stay': self._frag_stay}
+        self.REACTIONS = {GO_ACTION: _frag_react_go, STAY_ACTION: self._frag_stay}
 
         # Information about the scenario will be updated at generation time
         self.sensors = None
@@ -205,7 +209,7 @@ class SpecGenerator(object):
                     new_sys_lines, new_env_lines, new_custom_props, new_custom_sensors = \
                         self._apply_metapar(command)
                 except KeyError as err:
-                    print "Could not understand command {!r} due to error {}".format(command.action, err)
+                    print "Could not understand command {!r} due to error {}.".format(command.action, err)
                     failure = True
                     continue
 
