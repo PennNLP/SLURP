@@ -499,7 +499,7 @@ class SpecGenerator(object):
         drop_chunk = SpecChunk(drop_explanation, drop_lines, SpecChunk.SYS, command)
 
         stay_explanation = "Stay where you are when picking up and dropping."
-        stay_lines = [always(implies(or_([next_(sys_(PICKUP)), next_(sys_(DROP))]),
+        stay_lines = [always(implies(or_([sys_(PICKUP), sys_(DROP)]),
                                      self._frag_stay()))]
         stay_chunk = SpecChunk(stay_explanation, stay_lines, SpecChunk.SYS, command)
 
