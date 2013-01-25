@@ -7,7 +7,7 @@ frames, and then returns the matching frames and their corresponding trees.
 """
 # -*- coding: iso-8859-1 -*-
 import re
-try:     
+try:
     import cPickle as pickle 
 except ImportError:
     import pickle
@@ -15,17 +15,13 @@ import os
 import time
 from semantics.tree import Tree
 
-'''
-try:
-    from xml.etree.cElementTree import parse
-except ImportError:
-    from xml.etree.ElementTree import parse
-'''
+# We cannot use cElementTree because its output cannot be pickled.
 from xml.etree.ElementTree import parse
 from copy import deepcopy
 from collections import defaultdict
 from lexical_constants import *
 
+PERF_DEBUG = False
 WORD_SENSE_FILENAME = 'word_sense_mapping.pkl'
 MODULE_PATH = os.path.dirname(os.path.abspath(__file__))
 VERBNET_DIRECTORY = os.path.join(MODULE_PATH, 'Verbnet', 'verbnet-3.1')
@@ -243,11 +239,13 @@ def load_word_sense_mapping(force_generate=False):
             raise IOError
         
         # Load the file if all is well
-        tic = time.time()
+        if PERF_DEBUG:
+            tic = time.time()
         result = pickle.load(word_sense_file)
-        #print 'Time taken to load pickle file: %f' % (time.time() - tic)
+        if PERF_DEBUG:
+            print 'Time taken to load pickle file: %f' % (time.time() - tic)
         word_sense_file.close()
-    except IOError:
+    except (IOError, EOFError):
         print "Word sense pickle file is missing or out of date, creating it..."
         result = generate_mapping(word_sense_path)
 
@@ -267,8 +265,8 @@ def generate_mapping(result_filename):
     file_list = os.listdir(VERBNET_DIRECTORY)
     temp_word_sense_mapping = defaultdict(set)
     temp_sense_frame_mapping = defaultdict(list)
-
-    tic = time.time()
+    if PERF_DEBUG:
+        tic = time.time()
     for filename in file_list:
         if (filename[-4:] == '.xml'):
             try:
@@ -280,7 +278,8 @@ def generate_mapping(result_filename):
             except IOError:
                 continue
                    
-    #print 'Time taken to parse xml files: %f' % (time.time() - tic)
+    if PERF_DEBUG:
+        print 'Time taken to parse xml files: %f' % (time.time() - tic)
 
     with open(result_filename, 'wb') as pickle_file:
         pickle.dump((temp_word_sense_mapping, temp_sense_frame_mapping), pickle_file, pickle.HIGHEST_PROTOCOL)
