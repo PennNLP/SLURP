@@ -7,9 +7,20 @@ frames, and then returns the matching frames and their corresponding trees.
 """
 # -*- coding: iso-8859-1 -*-
 import re
-import pickle
+try:     
+    import cPickle as pickle 
+except ImportError:
+    import pickle
 import os
+import time
 from semantics.tree import Tree
+
+'''
+try:
+    from xml.etree.cElementTree import parse
+except ImportError:
+    from xml.etree.ElementTree import parse
+'''
 from xml.etree.ElementTree import parse
 from copy import deepcopy
 from collections import defaultdict
@@ -19,116 +30,6 @@ WORD_SENSE_FILENAME = 'word_sense_mapping.pkl'
 MODULE_PATH = os.path.dirname(os.path.abspath(__file__))
 VERBNET_DIRECTORY = os.path.join(MODULE_PATH, 'Verbnet', 'verbnet-3.1')
 
-
-def load_word_sense_mapping(force_generate=False):
-    """Loads the pickle file for mapping words to VerbNet frames. *Required*
-    for other functions to work."""
-    
-    word_sense_path = os.path.join(VERBNET_DIRECTORY, WORD_SENSE_FILENAME)
-    try:
-        # We use the existing exception handling (designed to handle a missing file) for cases
-        # where the caller wants to require that things be generated from scratch.
-        if force_generate:
-            raise IOError("Forcing generation of new pickle file")
-        
-        # Try to open the pickled file, allowing us to fail fast if 
-        # there's no pickle file
-        word_sense_file = open(word_sense_path, 'r')
-        
-        # Otherwise, confirm that the pickled file is up to date
-        # Get the most recent file in the directory
-        max_mtime = 0
-        for dirname, _, files in os.walk(VERBNET_DIRECTORY):
-            for filename in files:
-                # We only care about the XML and pickle files
-                if not (filename.endswith('.xml') or filename.endswith('.pkl')):
-                    continue
-                full_path = os.path.join(dirname, filename)
-                try:
-                    mtime = os.stat(full_path).st_mtime
-                except (OSError, IOError):
-                    continue
-                if mtime > max_mtime:
-                    max_mtime = mtime
-                    max_file = filename
-        # Make sure the pickle file is most recent
-        if max_file != WORD_SENSE_FILENAME:
-            raise IOError
-        
-        # Load the file if all is well
-        result = pickle.load(word_sense_file)
-        word_sense_file.close()
-    except IOError:
-        print "Word sense pickle file is missing or out of date, creating it..."
-        result = generate_mapping(word_sense_path)
-
-    return result
-
-def generate_mapping(result_filename):
-    """Create and store the mappings between senses and words."""
-    file_list = os.listdir(VERBNET_DIRECTORY)
-    temp_word_sense_mapping = defaultdict(set)
-
-    for filename in file_list:
-        if (filename[-4:] == '.xml'):
-            try:
-                with open(os.path.join(VERBNET_DIRECTORY, filename), 'r') as f:
-                    tree = parse(f)
-                    root_element = tree.getroot()
-                    class_id = root_element.attrib['ID']
-                    for member in tree.getroot().findall('MEMBERS/MEMBER'):
-                        temp_word_sense_mapping[member.attrib['name']].\
-                                                    add((filename,class_id))
-    
-                    for subclass in tree.getroot().findall('SUBCLASSES/VNSUBCLASS'):
-                        class_id = subclass.attrib['ID']
-                        for member in subclass.findall('MEMBERS/MEMBER'):
-                            temp_word_sense_mapping[member.attrib['name']].\
-                                                    add((filename,class_id))
-            except IOError:
-                continue
-                   
-    with open(result_filename, 'w') as f:
-        pickle.dump(temp_word_sense_mapping, f)
-
-    return temp_word_sense_mapping
-
-try:
-    word_sense_mapping = load_word_sense_mapping()
-except ValueError:
-    word_sense_mapping = load_word_sense_mapping(True)
-
-# Mapping from Verbnet tags to Treebank tags
-tag_mapping = {'NP' : ['NP'],
-               ('NP', 'Location') : ['PP-LOC', 'PP-DIR', 'PP-CLR', 'NN', \
-                                     'NP-A', 'WHADVP','ADVP-TMP', 'PP-PRD', 'ADVP-DIR'],
-               ('NP', 'Destination') : ['PP-LOC', 'PP-DIR', 'NN', 'NP-A',\
-                                        'ADVP', 'PP-CLR', 'WHADVP', 'ADVP-DIR'],
-               ('NP', 'Asset') : ['NP-A'],
-               ('NP', 'Agent') : ['NP-SBJ-A', 'NP', 'NP-A'],
-               ('NP', 'Beneficiary') : ['NP-A'],
-               ('NP', 'Recipient') : ['NP-A'],
-               ('NP', 'Patient') : ['NP'],
-               ('NP', 'Instrument') : ['NP-A'],
-               ('NP', 'Topic') : ['S-A', 'NP-A', 'WHNP'],
-               ('NP', 'Theme') : ['NP-A', 'NP-SBJ-A', 'NP', 'NP-SBJ', \
-                                  'WHNP', 'WP'],
-               ('PREP', ) : ['exact'],
-               'PREP' : ['IN','TO','ADVP-DIR'],
-               'VERB' : ['VB']
-               }
-
-# Mapping from syntax restrictions to Treebank tags and matching conditions
-synrestr_mapping = {'to_be' : ('NP', 'to be', 'to_be','begins'),
-                    'ac_ing' : ('VP', 'gerund', 'ac_ing', 'VBG'),
-                    'that_comp' : ('S', 'that', 'that_comp', 'begins'),
-                    'wh_comp' : ('S', 'what', 'wh_comp', 'begins'),
-                    'poss_ing' : ('S', 'wanting', 'poss_ing', 'VBG'),
-                    'wh_inf' : ('S', 'how', 'wh_inf', 'WH')
-                    }
-
-auxiliary_verbs = ['was', 'is', 'get', 'are', 'got', 'were', 'been', 'being']
-        
 class VerbFrameObject:
     """Object which contains elements of a frame in a list. Each element has
     the form (POS tag, role, syntactic restriction, child node to match /
@@ -165,9 +66,7 @@ class VerbFrameObject:
 
     def __repr__(self):
         result = 'Classid: ' + str(self.classid) + ' Verb: ' + str(self.verb)
-
         return result
-        
 
     def print_frame(self):
         for element in self.frame:
@@ -274,6 +173,125 @@ class VerbFrameObject:
                     return True
 
         return False
+
+
+# Mapping from Verbnet tags to Treebank tags
+tag_mapping = {'NP' : ['NP'],
+               ('NP', 'Location') : ['PP-LOC', 'PP-DIR', 'PP-CLR', 'NN', \
+                                     'NP-A', 'WHADVP','ADVP-TMP', 'PP-PRD', 'ADVP-DIR'],
+               ('NP', 'Destination') : ['PP-LOC', 'PP-DIR', 'NN', 'NP-A',\
+                                        'ADVP', 'PP-CLR', 'WHADVP', 'ADVP-DIR'],
+               ('NP', 'Asset') : ['NP-A'],
+               ('NP', 'Agent') : ['NP-SBJ-A', 'NP', 'NP-A'],
+               ('NP', 'Beneficiary') : ['NP-A'],
+               ('NP', 'Recipient') : ['NP-A'],
+               ('NP', 'Patient') : ['NP'],
+               ('NP', 'Instrument') : ['NP-A'],
+               ('NP', 'Topic') : ['S-A', 'NP-A', 'WHNP'],
+               ('NP', 'Theme') : ['NP-A', 'NP-SBJ-A', 'NP', 'NP-SBJ', \
+                                  'WHNP', 'WP'],
+               ('PREP', ) : ['exact'],
+               'PREP' : ['IN','TO','ADVP-DIR'],
+               'VERB' : ['VB']
+               }
+
+# Mapping from syntax restrictions to Treebank tags and matching conditions
+synrestr_mapping = {'to_be' : ('NP', 'to be', 'to_be','begins'),
+                    'ac_ing' : ('VP', 'gerund', 'ac_ing', 'VBG'),
+                    'that_comp' : ('S', 'that', 'that_comp', 'begins'),
+                    'wh_comp' : ('S', 'what', 'wh_comp', 'begins'),
+                    'poss_ing' : ('S', 'wanting', 'poss_ing', 'VBG'),
+                    'wh_inf' : ('S', 'how', 'wh_inf', 'WH')
+                    }
+
+auxiliary_verbs = ['was', 'is', 'get', 'are', 'got', 'were', 'been', 'being']
+
+
+def load_word_sense_mapping(force_generate=False):
+    """Loads the pickle file for mapping words to VerbNet frames. *Required*
+    for other functions to work."""
+    
+    word_sense_path = os.path.join(VERBNET_DIRECTORY, WORD_SENSE_FILENAME)
+    try:
+        # We use the existing exception handling (designed to handle a missing file) for cases
+        # where the caller wants to require that things be generated from scratch.
+        if force_generate:
+            raise IOError("Forcing generation of new pickle file")
+        
+        # Try to open the pickled file, allowing us to fail fast if 
+        # there's no pickle file
+        word_sense_file = open(word_sense_path, 'rb')
+        
+        # Otherwise, confirm that the pickled file is up to date
+        # Get the most recent file in the directory
+        max_mtime = 0
+        for dirname, _, files in os.walk(VERBNET_DIRECTORY):
+            for filename in files:
+                # We only care about the XML and pickle files
+                if not (filename.endswith('.xml') or filename.endswith('.pkl')):
+                    continue
+                full_path = os.path.join(dirname, filename)
+                try:
+                    mtime = os.stat(full_path).st_mtime
+                except (OSError, IOError):
+                    continue
+                if mtime > max_mtime:
+                    max_mtime = mtime
+                    max_file = filename
+        # Make sure the pickle file is most recent
+        if max_file != WORD_SENSE_FILENAME:
+            raise IOError
+        
+        # Load the file if all is well
+        tic = time.time()
+        result = pickle.load(word_sense_file)
+        #print 'Time taken to load pickle file: %f' % (time.time() - tic)
+        word_sense_file.close()
+    except IOError:
+        print "Word sense pickle file is missing or out of date, creating it..."
+        result = generate_mapping(word_sense_path)
+
+    return result
+
+def fill_mappings(node, temp_word_sense_mapping, temp_sense_frame_mapping):
+    class_id = node.attrib['ID']
+    for member in node.findall('MEMBERS/MEMBER'):
+        temp_word_sense_mapping[member.attrib['name']].add(class_id)
+    for frame in node.findall('FRAMES/FRAME/SYNTAX'):
+        temp_sense_frame_mapping[class_id].append(VerbFrameObject(class_id,
+                                                                  node,
+                                                                  list(frame)))
+
+def generate_mapping(result_filename):
+    """Create and store the mappings between senses and words."""
+    file_list = os.listdir(VERBNET_DIRECTORY)
+    temp_word_sense_mapping = defaultdict(set)
+    temp_sense_frame_mapping = defaultdict(list)
+
+    tic = time.time()
+    for filename in file_list:
+        if (filename[-4:] == '.xml'):
+            try:
+                with open(os.path.join(VERBNET_DIRECTORY, filename), 'r') as verbnet_file:
+                    tree = parse(verbnet_file)
+                    fill_mappings(tree.getroot(), temp_word_sense_mapping, temp_sense_frame_mapping)
+                    for subclass in tree.getroot().findall('SUBCLASSES/VNSUBCLASS'):
+                        fill_mappings(subclass, temp_word_sense_mapping, temp_sense_frame_mapping)
+            except IOError:
+                continue
+                   
+    #print 'Time taken to parse xml files: %f' % (time.time() - tic)
+
+    with open(result_filename, 'wb') as pickle_file:
+        pickle.dump((temp_word_sense_mapping, temp_sense_frame_mapping), pickle_file, pickle.HIGHEST_PROTOCOL)
+
+    return (temp_word_sense_mapping, temp_sense_frame_mapping)
+
+try:
+    (word_sense_mapping, sense_frame_mapping) = load_word_sense_mapping()
+except ValueError:
+    (word_sense_mapping, sense_frame_mapping) = load_word_sense_mapping(True)
+        
 
 def activize_clause(parse_tree_clause):
     """Converts passive clauses to active voice, substituting 'something' for the
@@ -572,33 +590,10 @@ def split_clauses(parse_tree):
 
 def create_VerbFrameObjects(word):
     """Gets VerbNet data without using NLTK corpora browser."""
-    vnclass_elements = get_vnclass_elements(word)
-
     vfo_list = []
-    for element in vnclass_elements:
-        for frame in element.findall('FRAMES/FRAME/SYNTAX'):
-            vfo_list.append(VerbFrameObject(element.attrib['ID'],
-                                            element,
-                                            list(frame)))
-
+    for class_id in word_sense_mapping[word]:
+        vfo_list.extend(sense_frame_mapping[class_id])
     return vfo_list
-        
-    
-def get_vnclass_elements(word):
-    """Get all of the VerbNet classes for a given word."""
-    class_id_filenames = word_sense_mapping[word]
-    vnclass_elements = []
-    for (cif, cid) in class_id_filenames:
-        with open(os.path.join(VERBNET_DIRECTORY, cif), 'r') as xml_file:
-            verb_xml = parse(xml_file)
-            vnclass_elements.append(verb_xml.getroot())
-
-            for subclass in verb_xml.getroot().findall('SUBCLASSES/VNSUBCLASS'):
-                vnclass_elements.append(subclass)
-
-    return vnclass_elements
-
-
 def pick_best_match(match_list):
     """From the list of tuples, with the first element being the dict containing role assignments,
     and the second element being the verb class, pick the match that maps to an action if it exists."""
