@@ -388,9 +388,12 @@ class SpecGenerator(object):
 
     def _gen_carry(self, command):
         """Generate statements for carrying items from one region to another."""
-        item = command.theme.name
-        source = command.source.name
-        destination = command.destination.name
+        try:
+            item = command.theme.name
+            source = command.source.name
+            destination = command.destination.name
+        except AttributeError:
+            raise KeyError("Missing item, source, or destination for carry.")
 
         # Start the carry actuators and props as off
         start_explanation = "Nothing is carried or delivered at the start."
