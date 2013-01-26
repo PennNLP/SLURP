@@ -117,14 +117,15 @@ class SpecChunk(object):
         """Returns whether this contains env lines."""
         return self.type == SpecChunk.ENV
 
+
 class SpecGenerator(object):
     """Enables specification generation using natural language."""
 
     def __init__(self):
         # Handlers
-        self.GOALS = {PATROL_ACTION: _gen_patrol, GO_ACTION: _gen_go,
-                      AVOID_ACTION: _gen_avoid, SEARCH_ACTION: _gen_search,
-                      BEGIN_ACTION: _gen_begin, FOLLOW_ACTION: self._gen_follow,
+        self.GOALS = {PATROL_ACTION: self._gen_patrol, GO_ACTION: self._gen_go,
+                      AVOID_ACTION: self._gen_avoid, SEARCH_ACTION: self._gen_search,
+                      BEGIN_ACTION: self._gen_begin, FOLLOW_ACTION: self._gen_follow,
                       STAY_ACTION: self._gen_stay, CARRY_ACTION: self._gen_carry}
 
         self.REACTIONS = {GO_ACTION: _frag_react_go, STAY_ACTION: self._frag_stay}
@@ -139,7 +140,6 @@ class SpecGenerator(object):
 
         # Knowledge base
         self.kbase = KnowledgeBase()
-
 
     def generate(self, text, sensors, regions, props, tag_dict):
         """Generate a logical specification from natural language and propositions."""
@@ -196,19 +196,10 @@ class SpecGenerator(object):
                     print "\t" + str(frame)
                 print "New commands:", new_commands
 
-            # Expand quantifiers
-            expanded_commands = []
-            for command in new_commands:
-                expanded_commands.extend(_expand_command(command, self.tag_dict))
-
-            if len(expanded_commands) > len(new_commands):
-                print "Expanded commands:"
-                print expanded_commands
-
             # Build the metapars
             # Assume failure if no commands
-            failure = not bool(expanded_commands)
-            for command in expanded_commands:
+            failure = not bool(new_commands)
+            for command in new_commands:
                 try:
                     new_sys_lines, new_env_lines, new_custom_props, new_custom_sensors = \
                         self._apply_metapar(command)
@@ -297,6 +288,38 @@ class SpecGenerator(object):
             # Extract the targets from args and pass them as arguments
             return handler(command)
 
+    def _expand_argument(self, argument, command):
+        """Return a list of the arguments created by expanding the argument if its quantified."""
+        # What to return if quantification fails
+        default_return = [argument]
+        quant = argument.quantifier.type
+        if quant == "all" or (command.negation and quant == "any"):
+            # TODO: Handle more than one tag
+            try:
+                tag = argument.description[0]
+            except (IndexError, TypeError):
+                print "Error: Could not get description of argument {}.".format(argument)
+                return default_return
+
+            try:
+                members = sorted(self.tag_dict[tag])
+            except KeyError:
+                print "Error: Could not get members of tag {!r}.".format(argument.description)
+                return default_return
+
+            # Unroll into copies of the command.
+            new_args = [deepcopy(argument) for _ in range(len(members))]
+            for new_arg, member in zip(new_args, members):
+                new_arg.quantifier.type = "exact"
+                new_arg.quantifier.number = 1
+                new_arg.name = member
+
+            return new_args
+        else:
+            return default_return
+
+    # The return signature of the statement generators is:
+    # ([system lines], [env lines], [custom propositions], [custom sensors])
     def _gen_follow(self, command):
         """Generate statements for following."""
         # Env is stationary iff in the last state change our region and the env's region were stable
@@ -388,20 +411,21 @@ class SpecGenerator(object):
 
     def _gen_carry(self, command):
         """Generate statements for carrying items from one region to another."""
-        try:
-            item = command.theme.name
-            source = command.source.name
-            destination = command.destination.name
-        except AttributeError:
+        if not all((command.theme, command.source, command.destination)):
             raise KeyError("Missing item, source, or destination for carry.")
+
+        item = command.theme.name
+        source = command.source.name
+        dest_arg = command.destination
+        destinations = [dest.name for dest in self._expand_argument(dest_arg, command)]
 
         # Start the carry actuators and props as off
         start_explanation = "Nothing is carried or delivered at the start."
-        mem_deliver = _prop_mem(destination, DELIVER)
+        deliver_mems = [_prop_mem(dest, DELIVER) for dest in destinations]
         # TODO: Support carry of multiple objects
         # [HOLDING + "_" + str(num) for num in range(N_CARRY_ITEMS)]
         holding_props = [HOLDING]
-        start_lines = [_frag_props_off([PICKUP, DROP, mem_deliver] + holding_props)]
+        start_lines = [_frag_props_off([PICKUP, DROP] + deliver_mems + holding_props)]
         start_chunk = SpecChunk(start_explanation, start_lines, SpecChunk.SYS, command)
 
         pickup_explanation = "Only pick up if you can carry more."
@@ -423,85 +447,99 @@ class SpecGenerator(object):
                                    next_(sys_(HOLDING))))]
         source_chunk = SpecChunk(source_explanation, source_lines, SpecChunk.SYS, command)
 
-        delivery_explanation = "Deliver {!r} to {!r}.".format(item, destination)
-        delivery_frag = and_([next_(sys_(destination)), next_(sys_(DROP))])
-        delivery_chunk = SpecChunk(delivery_explanation, _frag_atleastonce(mem_deliver, delivery_frag),
+        # This is not a list comprehension solely for readability
+        delivery_chunks = [_chunk_deliver(command, item, dest, mem_dest)
+                           for dest, mem_dest in zip(destinations, deliver_mems)]
+
+        return ([start_chunk, pickup_chunk, drop_chunk, stay_chunk, source_chunk] + delivery_chunks,
+                [], deliver_mems + holding_props, [])
+
+    def _gen_begin(self, command):
+        """Generate statements to begin in a location."""
+        region = command.theme.name
+        explanation = "The robot begins in {!r}.".format(region)
+        sys_lines = SpecChunk(explanation, [sys_(region)], SpecChunk.SYS, command)
+        return ([sys_lines], [], [], [])
+
+    def _gen_patrol(self, command):
+        """Generate statements to always eventually be in a location."""
+        regions = [location.name for location in self._expand_argument(command.location, command)]
+        sys_chunks = []
+        for region in regions:
+            explanation = "Continuously visit {!r}.".format(region)
+            sys_chunks.append(SpecChunk(explanation, [always_eventually(sys_(region))],
+                                       SpecChunk.SYS, command))
+        return (sys_chunks, [], [], [])
+
+    def _gen_go(self, command):
+        """Generate statements to go to a location once."""
+        # Avoid if it's negated
+        if command.negation:
+            return self._gen_avoid(command)
+
+        regions = [location.name for location in self._expand_argument(command.location, command)]
+        sys_chunks = []
+        mem_props = []
+        for region in regions:
+            explanation = "Visit {!r}.".format(region)
+            # Set memory false initially
+            mem_prop = _prop_mem(region, VISIT)
+            sys_lines = [not_(sys_(mem_prop))]
+            sys_lines += _frag_atleastonce(mem_prop, next_(sys_(region)))
+            sys_chunk = SpecChunk(explanation, sys_lines, SpecChunk.SYS, command)
+            mem_props.append(mem_prop)
+            sys_chunks.append(sys_chunk)
+
+        return (sys_chunks, [], mem_props, [])
+
+    def _gen_avoid(self, command):
+        """Generate statements for never going to a location."""
+        regions = [location.name for location in self._expand_argument(command.location, command)]
+        spec_chunks = []
+        for region in regions:
+            explanation1 = "Do not go to {!r}.".format(region)
+            sys_lines1 = SpecChunk(explanation1, [always(not_(sys_(region)))],
                                    SpecChunk.SYS, command)
+            explanation2 = "The robot does not begin in {!r}.".format(region)
+            sys_lines2 = SpecChunk(explanation2, [not_(sys_(region))], SpecChunk.SYS, command)
+            spec_chunks.extend([sys_lines1, sys_lines2])
 
-        return ([start_chunk, pickup_chunk, drop_chunk, stay_chunk, source_chunk, delivery_chunk],
-                [], [mem_deliver] + holding_props, [])
+        return (spec_chunks, [], [], [])
 
+    def _gen_search(self, command):
+        """Generate statements for searching a region."""
+        regions = [location.name for location in self._expand_argument(command.location, command)]
+        spec_chunks = []
+        mem_props = []
+        for region in regions:
+            explanation1 = "Complete a search in {!r}.".format(region)
+            mem_prop = _prop_mem(region, SWEEP)
+            cic_frag, cic_env = _frag_complete_context(SWEEP, sys_(region))
+            alo_sys = _frag_atleastonce(mem_prop, cic_frag)
+            # Set memory false initially
+            alo_sys += [not_(sys_(mem_prop))]
+            mem_props.append(mem_prop)
+            spec_chunks.append(SpecChunk(explanation1, alo_sys, SpecChunk.SYS, command))
 
-# The return signature of the statement generators is:
-# ([system lines], [env lines], [custom propositions], [custom sensors])
+        explanation2 = "Assume that searches eventually complete."
+        env_chunk = SpecChunk(explanation2, cic_env, SpecChunk.ENV, command)
 
-def _gen_begin(command):
-    """Generate statements to begin in a location."""
-    region = command.theme.name
-    explanation = "The robot begins in {!r}.".format(region)
-    sys_lines = SpecChunk(explanation, [sys_(region)], SpecChunk.SYS, command)
-    return ([sys_lines], [], [], [])
-
-
-def _gen_patrol(command):
-    """Generate statements to always eventually be in a location."""
-    region = command.location.name
-    explanation = "Continuously visit {!r}.".format(region)
-    sys_lines = SpecChunk(explanation, [always_eventually(sys_(region))], SpecChunk.SYS, command)
-    return ([sys_lines], [], [], [])
-
-
-def _gen_go(command):
-    """Generate statements to go to a location once."""
-    # Avoid if it's negated
-    if command.negation:
-        return _gen_avoid(command)
-
-    region = command.location.name
-    explanation = "Have visited {!r} at least once.".format(region)
-    mem_prop = _prop_mem(region, VISIT)
-    sys_lines = _frag_atleastonce(mem_prop, next_(sys_(region)))
-    # Set memory false initially
-    sys_lines += [not_(sys_(mem_prop))]
-    sys_chunk = SpecChunk(explanation, sys_lines, SpecChunk.SYS, command)
-    return ([sys_chunk], [], [mem_prop], [])
+        return (spec_chunks, [env_chunk], mem_props, [_prop_actuator_done(SWEEP)])
 
 
-def _frag_react_go(region):
-    """Generate a fragment to reactively go somewhere."""
-    return (sys_(region))
-
-
-def _gen_avoid(command):
-    """Generate statements for avoiding a location, adding that the robot does not start there."""
-    region = command.location.name
-    explanation1 = "Do not go to {!r}.".format(region)
-    sys_lines1 = SpecChunk(explanation1, [always(not_(sys_(region)))], SpecChunk.SYS, command)
-    explanation2 = "The robot does not begin in {!r}.".format(region)
-    sys_lines2 = SpecChunk(explanation2, [not_(sys_(region))], SpecChunk.SYS, command)
-    return ([sys_lines1, sys_lines2], [], [], [])
-
-
-def _gen_search(command):
-    """Generate statements for searching a region."""
-    region = command.location.name
-    explanation1 = "Have a memory of completing a search in {!r}.".format(region)
-    mem_prop = _prop_mem(region, SWEEP)
-    cic_frag, cic_env = _frag_complete_context(SWEEP, sys_(region))
-    alo_sys = _frag_atleastonce(mem_prop, cic_frag)
-    # Set memory false initially
-    alo_sys += [not_(sys_(mem_prop))]
-    explanation2 = "Assume that searches eventually complete.".format(region)
-    sys_lines = SpecChunk(explanation1, alo_sys, SpecChunk.SYS, command)
-    env_lines = SpecChunk(explanation2, cic_env, SpecChunk.ENV, command)
-    return ([sys_lines], [env_lines], [mem_prop], [_prop_actuator_done(SWEEP)])
-
+def _chunk_deliver(command, item, dest, mem_dest):
+    """Return a chunk representing delivering an item to its destination."""
+    delivery_explanation = "Deliver {!r} to {!r}.".format(item, dest)
+    delivery_frag = and_([next_(sys_(dest)), next_(sys_(DROP))])
+    delivery_chunk = SpecChunk(delivery_explanation, _frag_atleastonce(mem_dest, delivery_frag),
+                               SpecChunk.SYS, command)
+    return delivery_chunk
 
 
 def _frag_atleastonce(mem_prop, fragment):
     """Generate fragments for performing an action at least once by using a memory proposition."""
-    return [always_eventually(sys_(mem_prop)),
-            always(iff(next_(sys_(mem_prop)), or_((sys_(mem_prop), fragment))))]
+    return [always(iff(next_(sys_(mem_prop)), or_((sys_(mem_prop), fragment)))),
+            always_eventually(sys_(mem_prop))]
 
 
 def _frag_complete_context(actuator, context_prop):
@@ -514,6 +552,11 @@ def _frag_complete_context(actuator, context_prop):
 def _frag_props_off(props):
     """Generate a fragment for props being off in the initial state."""
     return and_([not_(sys_(prop)) for prop in props])
+
+
+def _frag_react_go(region):
+    """Generate a fragment to reactively go somewhere."""
+    return (sys_(region))
 
 
 def _prop_mem(region, event):
@@ -555,48 +598,6 @@ def _get_action_arg(action):
         return ACTION_ARGS[action]
     except KeyError:
         return None
-
-
-def _expand_command(command, tag_dict):
-    """Return a list of the commands created by expanding any quantified items in a command."""
-    # Get the right argument for this action, and do nothing if it's not quantified
-    action = command.action
-    arg_attr = _get_action_arg(action)
-
-    # If there's no arg_attr, this isn't meant to be, just return
-    if not arg_attr:
-        return [command]
-
-    arg = getattr(command, arg_attr)
-
-    # TODO: Negated "any" should behave like "all"
-    if arg.quantifier.type == "all":
-        # TODO: Handle more than one tag
-        try:
-            tag = arg.description[0]
-        except (IndexError, TypeError):
-            print "Error: Could not get description of argument {}.".format(arg)
-            return [command]
-
-        try:
-            members = tag_dict[tag]
-        except KeyError:
-            print "Error: Could not get members of quantifier {!r}.".format(arg.description)
-            return [command]
-
-        # Unroll into copies of the command
-        new_commands = []
-        for member in members:
-            new_command = deepcopy(command)
-            new_arg = getattr(new_command, arg_attr)
-            new_arg.quantifier.type = "exact"
-            new_arg.quantifier.number = 1
-            new_arg.name = member
-            new_commands.append(new_command)
-
-        return new_commands
-    else:
-        return [command]
 
 
 def goal_to_chunk(goal_idx, spec_chunks):
