@@ -653,9 +653,9 @@ def explain_conflict(conflicting_lines, gen_tree):
         goal_problem = explain_template.format(goal_input, goal_explanation)
     else:
         goal_template = "{!r} because of sub-goal {!r}"
-        goal_problem = ("The problematic goals are: " +
-                        ", ".join(goal_template.format(text, explanation)
-                                  for explanation, text in goal_explanations) + '.')
+        goal_problem = ("The problematic goals are:\n" +
+                        "\n".join(goal_template.format(text, explanation)
+                                  for explanation, text in goal_explanations))
 
     # Now explain the other issues
     other_explanations = [(chunk.explanation, chunk.input) for chunk in conflicting_chunks
