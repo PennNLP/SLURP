@@ -55,6 +55,10 @@ PICKUP = "pickup"
 DROP = "drop"
 HOLDING = "holding"
 
+# Talkback constants
+GOTIT = "Got it. I can {!r}."
+MISUNDERSTAND = "Sorry, I didn't understand that at all."
+
 
 class SpecChunk(object):
     """Class for holding system or environment lines for a specification."""
@@ -153,6 +157,7 @@ class SpecGenerator(object):
         force_verbs = list(self.props) + self.GOALS.keys()
 
         parse_client = PipelineClient()
+        results = []
         responses = []
         custom_props = set()
         custom_sensors = set()
@@ -164,7 +169,8 @@ class SpecGenerator(object):
 
             if not line:
                 # Blank lines are counted as being processed correctly but are skipped
-                responses.append(True)
+                results.append(True)
+                responses.append('')
                 continue
 
             # Init the generation tree to the empty result
@@ -174,8 +180,7 @@ class SpecGenerator(object):
             print "Sending to remote parser:", repr(line)
             parse = parse_client.parse(line, force_nouns, force_verbs=force_verbs)
             print "Response from parser:", repr(parse)
-            user_response, frames, new_commands, kb_response = \
-                process_parse_tree(parse, line, self.kbase)
+            frames, new_commands, kb_response = process_parse_tree(parse, line, self.kbase)
 
             if SEMANTICS_DEBUG:
                 print "Returned values from semantics:"
@@ -185,16 +190,22 @@ class SpecGenerator(object):
                 print "New commands:", new_commands
 
             # Build the metapars
-            # Assume failure if no commands
-            failure = not bool(new_commands)
+            # For now, assume success if there were commands or a kb_response
+            success = bool(new_commands) or bool(kb_response)
+            command_responses = [kb_response] if kb_response else []
             for command in new_commands:
                 try:
                     new_sys_lines, new_env_lines, new_custom_props, new_custom_sensors = \
                         self._apply_metapar(command)
                 except KeyError as err:
-                    print "Could not understand command {!r} due to error {}.".format(command.action, err)
-                    failure = True
+                    problem = \
+                        "Could not understand {!r} due to error {}.".format(command.action, err)
+                    print "ERROR: " + problem
+                    command_responses.append(problem)
+                    success = False
                     continue
+                else:
+                    command_responses.append(respond_okay(command.action))
 
                 # Add in the new lines
                 generated_lines[_format_command(command)].extend(new_sys_lines)
@@ -204,8 +215,13 @@ class SpecGenerator(object):
                 custom_props.update(new_custom_props)
                 custom_sensors.update(new_custom_sensors)
 
-            # Add a true response if there were commands and no failures
-            responses.append(kb_response if kb_response else not failure)
+            # If we've got no responses, say we didn't understand at all.
+            if not command_responses:
+                command_responses.append(respond_nocommand())
+
+            # Add responses and successes
+            results.append(success)
+            responses.append(' '.join(command_responses))
             print
 
         # We need to modify non-reaction goals to be or'd with the reactions
@@ -252,13 +268,14 @@ class SpecGenerator(object):
         custom_sensors = list(custom_sensors)
 
         print "Spec generation complete."
+        print "Results:", results
         print "Responses:", responses
         print "Environment lines:", env_lines
         print "System lines:", sys_lines
         print "Custom props:", custom_props
         print "Custom sensors:", custom_sensors
         print "Generation tree:", self.generation_trees
-        return (env_lines, sys_lines, custom_props, custom_sensors, responses,
+        return (env_lines, sys_lines, custom_props, custom_sensors, results, responses,
                 self.generation_trees)
 
     def _apply_metapar(self, command):
@@ -654,10 +671,22 @@ def explain_conflict(conflicting_lines, gen_tree):
     return explanation, gen_tree
 
 
+
+def respond_nocommand():
+    """Respond saying we did not understand at all."""
+    return MISUNDERSTAND
+
+
+def respond_okay(action):
+    """Respond that we will perform the action."""
+    return GOTIT.format(action)
+
+
+
 def _test():
     """Test spec generation."""
     specgen = SpecGenerator()
-    env_lines, sys_lines, custom_props, custom_sensors, responses, gen_tree = \
+    env_lines, sys_lines, custom_props, custom_sensors, results, responses, gen_tree = \
         specgen.generate('\n'.join(sys.argv[1:]), ("bomb", "hostage", "badguy"),
                          ("r1", "r2", "r3", "r4"), ("defuse", "pickup", "drop"),
                          {'odd': ['r1', 'r3']})

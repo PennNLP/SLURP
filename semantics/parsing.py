@@ -111,7 +111,7 @@ def extract_frames_from_parse(parse_tree_string):
                             print '\n\n'
 
                     (best_match, sense) = frames.pick_best_match(match_list)
-                    
+
                     if EXTRACT_DEBUG:
                         print 'Chose: '
                         if best_match:
@@ -249,7 +249,7 @@ def create_semantic_structures(frame_semantic_list):
             semantic_representation_list.append(Assertion(item_to_entity.get('Theme', None),
                                                           item_to_entity.get('Location', None),
                                                           'ex' in frame[2]))
-        
+
     return semantic_representation_list
 
 
@@ -279,12 +279,7 @@ def process_parse_tree(parse_tree_input, text_input, knowledge_base=None):
         for command in new_commands:
             print command
 
-    # TODO: Re-enable user responses
-    user_response = ""
-
     if kb_response:
         print "KB response:", kb_response
-    if user_response:
-        print "User response:", user_response
 
-    return (user_response, frames, new_commands, kb_response)
+    return (frames, new_commands, kb_response)
