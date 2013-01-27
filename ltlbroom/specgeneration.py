@@ -47,6 +47,7 @@ REACT = "react"
 DELIVER = "deliver"
 FOLLOW_STATIONARY = "env_stationary"
 FOLLOW_SENSORS = "FOLLOW_SENSOR_CONSTRAINTS"
+STAY_THERE = "STAY_THERE"
 
 # Actuators
 SWEEP = "sweep"
@@ -394,7 +395,7 @@ class SpecGenerator(object):
 
     def _frag_stay(self):
         """Generate fragments to reactively go somewhere."""
-        return (and_([iff(sys_(region), next_(sys_(region))) for region in self.regions]))
+        return STAY_THERE
 
     def _gen_carry(self, command):
         """Generate statements for carrying items from one region to another."""
