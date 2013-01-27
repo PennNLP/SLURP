@@ -53,19 +53,6 @@ SWEEP = "sweep"
 PICKUP = "pickup"
 DROP = "drop"
 HOLDING = "holding"
-N_CARRY_ITEMS = 1
-
-# Actions to their argument
-ACTION_ARGS = {
-               GO_ACTION: 'location',
-               AVOID_ACTION: 'location',
-               PATROL_ACTION: 'location',
-               SEARCH_ACTION: 'location',
-               CARRY_ACTION: 'destination',
-               BEGIN_ACTION: None,
-               FOLLOW_ACTION: None,
-               STAY_ACTION: None,
-              }
 
 
 class SpecChunk(object):
@@ -422,8 +409,6 @@ class SpecGenerator(object):
         # Start the carry actuators and props as off
         start_explanation = "Nothing is carried or delivered at the start."
         deliver_mems = [_prop_mem(dest, DELIVER) for dest in destinations]
-        # TODO: Support carry of multiple objects
-        # [HOLDING + "_" + str(num) for num in range(N_CARRY_ITEMS)]
         holding_props = [HOLDING]
         start_lines = [_frag_props_off([PICKUP, DROP] + deliver_mems + holding_props)]
         start_chunk = SpecChunk(start_explanation, start_lines, SpecChunk.SYS, command)
@@ -591,13 +576,6 @@ def _remove_comments(text):
     """Remove from the comment character to the end of the line."""
     return re.sub('#.*$', '', text).strip()
 
-
-def _get_action_arg(action):
-    """Return the name of the command that an action will take as an argument."""
-    try:
-        return ACTION_ARGS[action]
-    except KeyError:
-        return None
 
 
 def goal_to_chunk(goal_idx, spec_chunks):
