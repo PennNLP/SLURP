@@ -3,9 +3,11 @@
 
 import sys
 from semantics.parsing import process_parse_tree
+import semantics.parsing
 from semantics.new_knowledge import KnowledgeBase
 from pipelinehost import PipelineClient
 
+semantics.parsing.EXTRACT_DEBUG = True
 
 def from_stdin(kb):
     """Test semantics by processing text from stdin"""
