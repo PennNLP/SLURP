@@ -329,51 +329,23 @@ def activize_clause(parse_tree_clause):
 def find_verbs(parse_tree):
     """Returns the list of tuples: (verb, negation)"""
     results = []
+    ignore_positions = []
     # Depth-first traversal
     for position in parse_tree.treepositions():
         if not isinstance(parse_tree[position], Tree) or position == ():
             continue
-        # Pad tag to prevent out-of-bounds
-        tag = parse_tree[position].node + '   '
+        if position in ignore_positions:
+            continue
+        # Check for do-insertion
+        if parse_tree[position].node == 'VP' and len(parse_tree[position]) >= 2 and parse_tree[position][0][0].lower() == 'do' and parse_tree[position][-1].node == 'VP-A':
+            # Found a do-insertion
+            is_negated = parse_tree[position][1].node == 'RB' and parse_tree[position][1][0].lower() in ('not', "n't")
+            results.append((parse_tree[position][-1][0][0].lower(), is_negated))
+            ignore_positions.extend(position + subposition for subposition in parse_tree[position].treepositions())
         # Check for verbs
-        if tag[:2] == 'VB' and tag[2] in (' ','D','G','N','P','Z'):
-            # Skip to next branch to look for 'not'
-            is_negated = False
-            try:
-                pp_node = parse_tree[(position[0],position[1] + 1)]
-                for pp_position in pp_node.treepositions():
-                    if not isinstance(pp_node[pp_position], Tree) or position == ():
-                        continue
-                    if pp_node[pp_position].node == 'RB' and pp_node[pp_position][0] == 'not':
-                        is_negated = True
-            except IndexError:
-                pass
-            results.append((parse_tree[position][0].lower(),is_negated))
-    return results, parse_tree
-
-def negation_inversion(parse_tree):
-    """Returns the list of tuples: (verb, negation) and removes negations from the tree"""
-    """Assumes only one inversion"""
-    results = []
-    is_negated = False
-    skip_verb = False
-    negation_position = None
-    vp_replacement = None
-
-    # Depth-first traversal
-    for position in parse_tree.treepositions():
-        if not isinstance(parse_tree[position], Tree) or position == ():
-            continue
-        if len(parse_tree[position]) >= 2 and isinstance(parse_tree[position][0], Tree) and isinstance(parse_tree[position][1], Tree):
-            if not isinstance(parse_tree[position][0][0], Tree) and not isinstance(parse_tree[position][1][0],Tree):
-                if parse_tree[position][0][0].lower() == 'do' and parse_tree[position][1][0].lower() in ('not',"n't"):
-                    vp = parse_tree[position][2]
-                    verb_node = vp[0]
-                    pp_node = vp[1]
-                    inverted_vp = Tree('VP', [verb_node, Tree('ADVP-DIR',[Tree('RB',['not']),pp_node])])
-                    parse_tree[position] = inverted_vp
-                    return parse_tree
-    return parse_tree
+        elif parse_tree[position].node[:2] == 'VB':
+            results.append((parse_tree[position][0].lower(), False))
+    return results
 
 def wh_movement(parse_tree):
     """Moves the WH cluase to the null element. Where are the hostages -> The hostages are where?"""
