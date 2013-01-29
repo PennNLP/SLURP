@@ -13,3 +13,5 @@ Is the bomb in the kitchen?
 The hostage is also in the kitchen.
 What is in the kitchen?
 What is in the cafeteria?
+What are you doing?
+Where are you?

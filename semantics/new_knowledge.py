@@ -50,6 +50,11 @@ class KnowledgeBase:
 
     def query(self, query):
         """Reponds to a given query"""
+        
+        # Ignore queries like "Where are you?"
+        if isinstance(query, LocationQuery) and query.theme.name == 'you':
+            return None
+
         responses = [r for r in (
             fact.query(query) for fact in self.facts) if r is not None]
         if len(responses) > 0:
@@ -58,6 +63,7 @@ class KnowledgeBase:
             return "I don't know about %s" % query.theme.readable()
         elif isinstance(query, EntityQuery):
             return "I don't know about %s" % query.location.readable()
+        return None
 
     def fill_commands(self, commands):
         for c in commands:

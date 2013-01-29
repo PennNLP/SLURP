@@ -69,6 +69,10 @@ def extract_frames_from_parse(parse_tree_string):
                 tree = frames.invert_clause(tree)
                 tree = frames.wh_movement(tree)
 
+                if EXTRACT_DEBUG:
+                    print 'Transformed tree:'
+                    print str(tree)
+
                 verbs = frames.find_verbs(tree)
 
                 # Create VFOs for each verb, then match them to the parse tree

@@ -355,8 +355,8 @@ def wh_movement(parse_tree):
     
     tag_match = re.compile(r'(?<=\()[A-Z][A-Z-]*')
     tags = tag_match.findall(str(parse_tree))
-    if 'NP-PRD-A' not in tags:
-        # Only do WH movement if an NP predicate exists:
+    if 'NP-PRD-A' not in tags and 'NP-SBJ' not in tags:
+        # Only do WH movement if an NP predicate or NP subject exists:
         return parse_tree
 
     for position in parse_tree.treepositions():
