@@ -78,7 +78,7 @@ def extract_frames_from_parse(parse_tree_string):
                     match_list = []
 
                     if EXTRACT_DEBUG:
-                        print 'VFO list:'
+                        print 'VFO list for %s:' % verb
                         print '\n'.join(str(vfo.frame_list) for vfo in vfo_list)
 
                     for vfo in vfo_list:
@@ -202,13 +202,14 @@ def create_semantic_structures(frame_semantic_list):
         wh_question_type = frames.get_wh_question_type(str(frame[1]))
 
         # If it's a WH-question, find the type of question it is and add the object
-        if wh_question_type is not None and 'Theme' in item_to_entity:
-            if wh_question_type == 'Location':
-                semantic_representation_list.append(LocationQuery(item_to_entity['Theme']))
-            elif wh_question_type == 'Status':
-                semantic_representation_list.append(StatusQuery(item_to_entity['Theme']))
-            elif wh_question_type in ('People', 'Entity'):
-                semantic_representation_list.append(EntityQuery(item_to_entity['Location']))
+        if wh_question_type is not None:
+            if wh_question_type == 'Status':
+                semantic_representation_list.append(StatusQuery())
+            elif 'Theme' in item_to_entity:
+                if wh_question_type == 'Location':
+                    semantic_representation_list.append(LocationQuery(item_to_entity['Theme']))
+                elif wh_question_type in ('People', 'Entity'):
+                    semantic_representation_list.append(EntityQuery(item_to_entity['Location']))
 
         # If it's a yes-no question, add the theme and location of the question
         elif frames.is_yn_question(str(frame[1])):
@@ -239,7 +240,9 @@ def create_semantic_structures(frame_semantic_list):
             semantic_representation_list.append(Assertion(item_to_entity.get('Theme', None),
                                                           item_to_entity.get('Location', None),
                                                           'ex' in frame[2]))
-
+    if EXTRACT_DEBUG:
+        print 'Semantic representation list:'
+        print semantic_representation_list
     return semantic_representation_list
 
 

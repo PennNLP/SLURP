@@ -157,8 +157,8 @@ class Assertion(object):
 
     def __str__(self, lvl=0):
         indent = '\t'*(lvl)
-        return '\n' + indent + '\tTheme: %s\n' % str(self.theme, lvl + 1) + \
-               indent + '\tLocation: %s\n' % str(self.location, lvl + 1) + \
+        return '\n' + indent + '\tTheme: %s\n' % self.theme.__str__(lvl + 1) + \
+               indent + '\tLocation: %s\n' % self.location.__str__(lvl + 1) + \
                indent + '\tExistential: %s\n' % str(self.existential)
 
     def __repr__(self):
@@ -181,7 +181,7 @@ class Query(object):
     def __str__(self, lvl=0):
         indent = '\t'*(lvl)
         return '\n' + indent + 'LocationQuery: \n' + \
-               indent + '\tTheme: %s\n' % str(self.theme, lvl + 1)
+               indent + '\tTheme: %s\n' % self.theme.__str__(lvl + 1)
 
 
 class YNQuery(Query):
@@ -193,8 +193,8 @@ class YNQuery(Query):
     def __str__(self, lvl=0):
         indent = '\t'*(lvl)
         return 'YNQuery: \n' + \
-               indent + '\tTheme: %s\n' % str(self.theme, lvl + 1) + \
-               indent + '\tLocation: %s' % str(self.location, lvl + 1)
+               indent + '\tTheme: %s\n' % self.theme.__str__(lvl + 1) + \
+               indent + '\tLocation: %s' % self.location.__str__(lvl + 1)
 
 
 class LocationQuery(Query):
@@ -204,8 +204,10 @@ class LocationQuery(Query):
 
 class StatusQuery(Query):
     """Status queries"""
-    pass
-
+    def __init__(self):
+        pass
+    def __str__(self, lvl=0):
+        return 'StatusQuery'
 
 class EntityQuery(Query):
     """Who/What queries"""
@@ -215,7 +217,7 @@ class EntityQuery(Query):
     def __str__(self, lvl=0):
         indent = '\t'*(lvl)
         return 'EntityQuery: \n' + \
-               indent + '\tLocation: %s\n' % str(self.location, lvl + 1)
+               indent + '\tLocation: %s\n' % self.location.__str__(lvl + 1)
 
 
 class Command(object):
