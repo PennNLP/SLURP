@@ -337,7 +337,8 @@ def find_verbs(parse_tree):
         if position in ignore_positions:
             continue
         # Check for do-insertion
-        if parse_tree[position].node == 'VP' and len(parse_tree[position]) >= 2 and parse_tree[position][0][0].lower() == 'do' and parse_tree[position][-1].node == 'VP-A':
+        if parse_tree[position].node == 'VP' and len(parse_tree[position]) >= 2 and parse_tree[position][0].node == 'VBP' \
+                and parse_tree[position][0][0].lower() == 'do' and parse_tree[position][-1].node == 'VP-A':
             # Found a do-insertion
             is_negated = parse_tree[position][1].node == 'RB' and parse_tree[position][1][0].lower() in ('not', "n't")
             results.append((parse_tree[position][-1][0][0].lower(), is_negated))
