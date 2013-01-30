@@ -123,7 +123,9 @@ class SpecGenerator(object):
                       STAY_ACTION: self._gen_stay, CARRY_ACTION: self._gen_carry,
                       ACTIVATE_ACTION: self._gen_activate, DEACTIVATE_ACTION: self._gen_deactivate}
 
-        self.REACTIONS = {GO_ACTION: _frag_react_go, STAY_ACTION: self._frag_stay}
+        self.REACTIONS = {GO_ACTION: _frag_react_go, STAY_ACTION: self._frag_stay,
+                          ACTIVATE_ACTION: _frag_react_activate,
+                          DEACTIVATE_ACTION: _frag_react_deactivate}
 
         # Information about the scenario will be updated at generation time
         self.sensors = None
@@ -136,7 +138,7 @@ class SpecGenerator(object):
         # Knowledge base
         self.kbase = KnowledgeBase()
 
-    def generate(self, text, sensors, regions, props, tag_dict):
+    def generate(self, text, sensors, regions, props, tag_dict, realizable_reactions=False):
         """Generate a logical specification from natural language and propositions."""
         # Clean unicode out of everything
         text = text.encode('ascii', 'ignore')
@@ -228,7 +230,7 @@ class SpecGenerator(object):
             print
 
         # We need to modify non-reaction goals to be or'd with the reactions
-        if self.react_props:
+        if realizable_reactions and self.react_props:
             # Dedupe and make an or over all the reaction properties
             reaction_or_frag = or_([sys_(prop) for prop in self.react_props])
             # HACK: Rewrite all the goals!
@@ -289,9 +291,7 @@ class SpecGenerator(object):
             raise KeyError('Unknown action {0}'.format(command.action))
 
         if command.condition:
-            raise ValueError("Conditionals are not currently supported :(.")
-            # TODO: Re-enable conditionals
-            #return self._gen_conditional(command)
+            return self._gen_conditional(command)
         else:
             # Extract the targets from args and pass them as arguments
             return handler(command)
@@ -353,21 +353,26 @@ class SpecGenerator(object):
                                [FOLLOW_SENSORS], SpecChunk.ENV, command)
         return ([stationary_lines, stay_there_lines] + follow_goals, [follow_env], [FOLLOW_STATIONARY], [])
 
-    def _gen_conditional(self, action, arg_dict, condition):
+    def _gen_conditional(self, command):
         """Generate a conditional action"""
         # Validate the condition
-        if condition not in self.sensors:
-            raise KeyError("Unknown condition {0}".format(condition))
+        if not command.condition.entity:
+            raise KeyError("Cannot understand condition:\n{}".format(command.condition))
+        if command.condition.entity.name not in self.sensors:
+            raise KeyError("No sensor to detect condition {!r}".format(command.condition.entity.name))
+        if command.condition.sensor != SEE_ACTION:
+            raise KeyError("Cannot use action {} as a condition".format(command.condition.action))
 
-        condition_stmt = env(condition)
-        sys_statements = [not_(condition_stmt)]
-        new_props = []
+        condition = command.condition.entity.name
+        condition_frag = env(condition)
 
         # Validate the action
+        action = command.action
         if action not in self.props and action not in self.REACTIONS:
             raise KeyError("Unknown reaction or actuator {0}".format(action))
 
         # Create the right type of reaction
+        new_props = []
         if action in self.props:
             # Simple actuator
             reaction_prop = action
@@ -379,15 +384,18 @@ class SpecGenerator(object):
             new_props.append(reaction_prop_name)
 
         # Generate the response
+        sys_statements = []
         if action == "go":
+            if not command.location:
+                raise KeyError("No location in go reaction")
             # Go is unusual because the outcome is not immediately satisfiable
-            destination_stmt = sys_(arg_dict[LOCATION])
+            destination_stmt = sys_(command.location.name)
             # New goal for where we should go
             go_goal = always_eventually(implies(reaction_prop, destination_stmt))
             # Safety that persists
             go_safety = \
                 always(iff(next_(reaction_prop),
-                             or_([reaction_prop, next_(condition_stmt)])))
+                             or_([reaction_prop, next_(condition_frag)])))
             # Make sure we act immediately: []((!react & next(react) )-> stay_there)
             stay_there = always(implies(and_((not_(reaction_prop), next_(reaction_prop))),
                                           self._frag_stay()))
@@ -395,16 +403,17 @@ class SpecGenerator(object):
             sys_statements.extend([go_goal, go_safety, stay_there])
         else:
             # Otherwise we are always creating reaction safety
-            sys_statements.append(always(iff(next_(condition_stmt), next_(reaction_prop))))
+            sys_statements.append(always(iff(next_(condition_frag), next_(reaction_prop))))
 
             # Create a reaction fragment if needed
             if action in self.REACTIONS:
-                handler, targets = self.REACTIONS[action]
-                args = [arg_dict[target] for target in targets]
-                reaction_frag = handler(*args)
+                handler = self.REACTIONS[action]
+                reaction_frag = handler(command)
                 sys_statements.append(always(implies(next_(reaction_prop), reaction_frag)))
 
-        return (sys_statements, [], new_props, [])
+        explanation = "React"
+        sys_chunk = SpecChunk(explanation, sys_statements, SpecChunk.SYS, command)
+        return ([sys_chunk], [], new_props, [])
 
     def _gen_stay(self, command):
         """Generate statements to stay exactly where you are."""
@@ -412,7 +421,7 @@ class SpecGenerator(object):
                               SpecChunk.SYS, command)
         return ([sys_lines], [], [], [])
 
-    def _frag_stay(self):
+    def _frag_stay(self, command=None):
         """Generate fragments to reactively go somewhere."""
         return STAY_THERE
 
@@ -593,7 +602,17 @@ def _frag_props_off(props):
 
 def _frag_react_go(region):
     """Generate a fragment to reactively go somewhere."""
-    return (sys_(region))
+    return sys_(region)
+
+
+def _frag_react_activate(command):
+    """Generate a fragment to activate an actuator."""
+    return next_(sys_(command.theme.name))
+
+
+def _frag_react_deactivate(command):
+    """Generate a fragment to activate an actuator."""
+    return not_(next_(sys_(command.theme.name)))
 
 
 def _prop_mem(region, event):
@@ -721,8 +740,8 @@ def _test():
     """Test spec generation."""
     specgen = SpecGenerator()
     env_lines, sys_lines, custom_props, custom_sensors, results, responses, gen_tree = \
-        specgen.generate('\n'.join(sys.argv[1:]), ("bomb", "hostage", "badguy"),
-                         ("r1", "r2", "r3", "r4"), ("defuse", "pickup", "drop"),
+        specgen.generate('\n'.join(sys.argv[1:]), ("bomb", "hostage", "badguy", "monkey"),
+                         ("r1", "r2", "r3", "r4"), ("defuse", "pickup", "drop", "banana"),
                          {'odd': ['r1', 'r3']})
     for line in env_lines + sys_lines:
         print line
