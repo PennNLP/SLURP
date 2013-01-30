@@ -499,7 +499,7 @@ def split_conjunctions(parse_tree):
         # Get any phrases that are siblings of a CC
         if 'CC' in children_nodes:
             for child in children:
-                if not child.node == 'CC':
+                if child.node not in ('CC', 'DT'):
                     phrase_list.append(child)
                 else:
                     conjunction = child[0]
