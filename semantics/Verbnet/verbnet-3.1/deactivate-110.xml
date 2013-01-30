@@ -2,7 +2,6 @@
 <!DOCTYPE VNCLASS SYSTEM "vn_class-3.dtd">
 <VNCLASS ID="deactivate-110" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="vn_schema-3.xsd">
     <MEMBERS>
-        <MEMBER name="defuse" wn="defuse%2:33:00" grouping=""/>
 	<MEMBER name="disable" grouping=""/>
 	<MEMBER name="deactivate" wn="deactivate%2:30:01" grouping=""/>
 	<MEMBER name="inactivate" wn="inactivate%2:30:00" grouping=""/>
@@ -28,7 +27,7 @@
         <FRAME>
             <DESCRIPTION descriptionNumber="0.2" primary="NP V NP" secondary="Basic Transitive" xtag="0.2"/>
             <EXAMPLES>
-                <EXAMPLE>The technician defused the bomb.</EXAMPLE>
+                <EXAMPLE>The tourist deactivated his camera.</EXAMPLE>
             </EXAMPLES>
             <SYNTAX>
                 <NP value="Agent">
@@ -57,7 +56,7 @@
         <FRAME>
             <DESCRIPTION descriptionNumber="0.2" primary="NP V NP PP.instrument" secondary="NP-PPInstrument-PP" xtag=""/>
             <EXAMPLES>
-                <EXAMPLE>The robot defused the bomb with water.</EXAMPLE>
+                <EXAMPLE>The tourist deactivated his camera.</EXAMPLE>
             </EXAMPLES>
             <SYNTAX>
                 <NP value="Agent">

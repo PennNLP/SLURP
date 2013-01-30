@@ -13,6 +13,7 @@ TELL_ACTION = "tell"
 BEGIN_ACTION = "begin"
 ACTIVATE_ACTION = "activate"
 DEACTIVATE_ACTION = "deactivate"
+DEFUSE_ACTION = "defuse"
 AVOID_ACTION = "avoid"
 PATROL_ACTION = "patrol"
 CARRY_ACTION = "carry"
@@ -44,6 +45,7 @@ ACTION_ALIASES = {
                   PATROL_ACTION: PATROL_ACTION,
                   CARRY_ACTION: CARRY_ACTION,
                   STAY_ACTION: STAY_ACTION,
+                  DEFUSE_ACTION: DEFUSE_ACTION,
                  }
 
 UNDERSTOOD_SENSES = set(ACTION_ALIASES.keys())

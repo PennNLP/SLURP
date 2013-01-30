@@ -8,8 +8,9 @@ Two meals are in the kitchen.
 Carry them to the patient rooms.
 Where is the bomb?
 Where is the hostage?
-Is the bomb in the hallway?
-Is the bomb in the kitchen?
+A book is in the kitchen.
+Is the book in the hallway?
+Is the book in the kitchen?
 The hostage is also in the kitchen.
 What is in the kitchen?
 What is in the cafeteria?
