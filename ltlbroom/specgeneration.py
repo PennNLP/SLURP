@@ -46,6 +46,7 @@ VISIT = "visit"
 REACT = "react"
 DELIVER = "deliver"
 FOLLOW_STATIONARY = "env_stationary"
+ENV_STATIONARY = "TARGET_IS_STATIONARY"
 FOLLOW_SENSORS = "FOLLOW_SENSOR_CONSTRAINTS"
 STAY_THERE = "STAY_THERE"
 
@@ -331,8 +332,7 @@ class SpecGenerator(object):
         stationary_explanation = "Definition of when the target is moving."
         stationary_safeties = \
             always(iff(next_(sys_(FOLLOW_STATIONARY)),
-                         and_([iff(env(region), next_(env(region)))
-                               for region in self.regions])))
+                       ENV_STATIONARY))
         stationary_lines = SpecChunk(stationary_explanation, [stationary_safeties], SpecChunk.SYS,
                                      command)
 
