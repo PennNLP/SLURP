@@ -332,7 +332,7 @@ def find_verbs(parse_tree):
     ignore_positions = []
     # Depth-first traversal
     for position in parse_tree.treepositions():
-        if not isinstance(parse_tree[position], Tree) or position == ():
+        if not isinstance(parse_tree[position], Tree):
             continue
         if position in ignore_positions:
             continue
@@ -343,6 +343,15 @@ def find_verbs(parse_tree):
             is_negated = parse_tree[position][1].node == 'RB' and parse_tree[position][1][0].lower() in ('not', "n't")
             results.append((parse_tree[position][-1][0][0].lower(), is_negated))
             ignore_positions.extend(position + subposition for subposition in parse_tree[position].treepositions())
+        # Check for 'Never X' structures
+        if isinstance(parse_tree[position][0], Tree) and parse_tree[position][0].node == 'ADVP-TMP' \
+                and parse_tree[position][0][0].node == 'RB' and parse_tree[position][0][0][0].lower() == 'never':
+            for child in parse_tree[position][1:]:
+                if child.node == 'VP':
+                    # Everything found in the VP should be negated
+                    results.extend((verb, True) for verb, bad_negation in find_verbs(child))
+                    # Ignore the extracted verbs
+                    ignore_positions.extend(position + subposition for subposition in parse_tree[position].treepositions())
         # Check for verbs
         elif parse_tree[position].node[:2] == 'VB':
             results.append((parse_tree[position][0].lower(), False))

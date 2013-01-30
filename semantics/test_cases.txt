@@ -1,5 +1,6 @@
 Go to the kitchen.
 Don't go to the kitchen.
+Never go to the kitchen.
 Don't activate the camera in the bathroom.
 There is a bomb in the hallway.
 If you see it, defuse it.
@@ -16,4 +17,4 @@ What is in the kitchen?
 What is in the cafeteria?
 What are you doing?
 Where are you?
-Activate your camera in the closet and hall_w.
+Activate your camera in the closet and hallway.
