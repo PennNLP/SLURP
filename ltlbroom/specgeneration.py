@@ -24,7 +24,8 @@ from copy import deepcopy
 
 from semantics.lexical_constants import (SEARCH_ACTION, GO_ACTION,
     FOLLOW_ACTION, SEE_ACTION, BEGIN_ACTION, AVOID_ACTION, PATROL_ACTION,
-    CARRY_ACTION, STAY_ACTION, ACTIVATE_ACTION, DEACTIVATE_ACTION)
+    CARRY_ACTION, STAY_ACTION, ACTIVATE_ACTION, DEACTIVATE_ACTION,
+    DEFUSE_ACTION)
 from semantics.parsing import process_parse_tree
 from pipelinehost import PipelineClient
 from semantics.new_knowledge import KnowledgeBase
@@ -119,7 +120,8 @@ class SpecGenerator(object):
         self.GOALS = {PATROL_ACTION: self._gen_patrol, GO_ACTION: self._gen_go,
                       AVOID_ACTION: self._gen_avoid, SEARCH_ACTION: self._gen_search,
                       BEGIN_ACTION: self._gen_begin, FOLLOW_ACTION: self._gen_follow,
-                      STAY_ACTION: self._gen_stay, CARRY_ACTION: self._gen_carry}
+                      STAY_ACTION: self._gen_stay, CARRY_ACTION: self._gen_carry,
+                      ACTIVATE_ACTION: self._gen_activate, DEACTIVATE_ACTION: self._gen_deactivate}
 
         self.REACTIONS = {GO_ACTION: _frag_react_go, STAY_ACTION: self._frag_stay}
 
@@ -528,6 +530,35 @@ class SpecGenerator(object):
         env_chunk = SpecChunk(explanation2, cic_env, SpecChunk.ENV, command)
 
         return (spec_chunks, [env_chunk], mem_props, [_prop_actuator_done(SWEEP)])
+
+    def _gen_activate(self, command, negated=False):
+        """Generate statements for activating an actuator."""
+        try:
+            actuator = command.theme.name
+        except AttributeError:
+            raise KeyError("Missing actuator for activate/deactivate.")
+
+        # If negation isn't set, allow the command to set it
+        negated = negated or command.negation
+        actuator_frag = sys_(actuator) if not negated else not_(sys_(actuator))
+        when = "Always" if not negated else "Never"
+
+        if command.location:
+            # Generate a location-restricted action
+            location = command.location.name
+            explanation = "{} activate {!r} in {!r}.".format(when, actuator, location)
+            formula = always(implies(sys_(location), actuator_frag))
+        else:
+            # Always activate
+            explanation = "{} activate {!r}.".format(when, actuator)
+            formula = always(actuator_frag)
+
+        sys_chunks = [SpecChunk(explanation, [formula], SpecChunk.SYS, command)]
+        return (sys_chunks, [], [], [])
+
+    def _gen_deactivate(self, command):
+        """Generate statements for deactivating an actuator."""
+        return self._gen_activate(command, True)
 
 
 def _chunk_deliver(command, item, dest, mem_dest):
