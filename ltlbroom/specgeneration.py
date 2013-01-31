@@ -367,12 +367,15 @@ class SpecGenerator(object):
             if command.condition.sensor != SEE_ACTION:
                 raise KeyError("Cannot use action {} as a condition".format(command.condition.action))
             condition_frag = env(condition)
+            explanation = "To react to {!r},".format(condition)
         elif isinstance(command.condition, Assertion):
+            # TODO: Add support for assertions not about "you". Ex: If there is a hostage...
             # Validate the condition
             if not command.condition.location:
                 raise KeyError("Cannot understand condition:\n{}".format(command.condition))
             condition = command.condition.location.name
             condition_frag = sys_(condition)
+            explanation = "When in {!r},".format(condition)
         else:
             raise KeyError("Cannot understand condition:\n{}".format(command.condition))
 
@@ -413,19 +416,21 @@ class SpecGenerator(object):
                                           self._frag_stay()))
 
             sys_statements.extend([go_goal, go_safety, stay_there])
+            explanation += " go to {!r}.".format(command.location.name)
         elif action == STAY_ACTION:
             sys_statements.append(always(implies(condition_frag, reaction_prop)))
+            explanation += " stay there."
         else:
             # Otherwise we are always creating reaction safety
             sys_statements.append(always(iff(next_(condition_frag), next_(reaction_prop))))
+            explanation += " activate {!r}.".format(reaction_prop)
 
             # Create a reaction fragment if needed
-            if action in self.REACTIONS and action != STAY_ACTION:
+            if action in self.REACTIONS:
                 handler = self.REACTIONS[action]
                 reaction_frag = handler(command)
                 sys_statements.append(always(implies(next_(reaction_prop), reaction_frag)))
 
-        explanation = "React"
         sys_chunk = SpecChunk(explanation, sys_statements, SpecChunk.SYS, command)
         return ([sys_chunk], [], new_props, [])
 
@@ -729,7 +734,7 @@ def explain_conflict(conflicting_lines, gen_tree):
     text_explains = defaultdict(list)
     for explanation, text in other_explanations:
         text_explains[text].append(explanation)
-    other_template = "{!r} because of sub-goal(s): {}."
+    other_template = "{!r} because of item(s): {}."
     other_problem += "\n".join(other_template.format(text, ", ".join(repr(ex) for ex in explanations))
                                for text, explanations in sorted(text_explains.items()))
 
