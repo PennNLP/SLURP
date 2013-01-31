@@ -19,16 +19,18 @@ from semantics.new_structures import Assertion, Query, YNQuery, \
 from semantics.util import is_pronoun
 
 class KnowledgeBase:
-    def __init__(self):
-        self.facts = []
+    def __init__(self, other_agents=None):
+        self.facts = [MapFact()]
+        if other_agents:
+            self.facts.extend(KnowledgeFact(agent) for agent in other_agents)
         self.last_object = None
         self.last_location = None
-    def process_semantic_structures(self, semantic_structures):
+    def process_semantic_structures(self, semantic_structures, source=None):
         response = ''
         for structure in semantic_structures:
             if isinstance(structure, Assertion):
-                new_fact = self.assimilate(structure)
-                response = new_fact.readable()
+                self.assimilate(structure, source)
+                response = 'Got it. %s' % structure.readable()
             elif isinstance(structure, Query):
                 response = self.query(structure)
             # Assertions, Commands have themes and locations that may be referenced later
@@ -43,26 +45,20 @@ class KnowledgeBase:
                     self.last_location = structure.location
         return response
 
-    def assimilate(self, assertion):
-        new_fact = LocationFact(assertion)
-        self.facts.append(new_fact)
-        return new_fact
+    def assimilate(self, assertion, source):
+        """ Assimilates new piece of knowledge (Assertion) """
+        for f in self.facts:
+            f.assimilate(assertion, source)
 
     def query(self, query):
         """Reponds to a given query"""
-        
         # Ignore queries like "Where are you?"
         if isinstance(query, LocationQuery) and query.theme.name == 'you':
             return None
-
         responses = [r for r in (
             fact.query(query) for fact in self.facts) if r is not None]
         if len(responses) > 0:
             return '\n'.join(responses)
-        elif isinstance(query, LocationQuery) or isinstance(query, YNQuery):
-            return "I don't know about %s" % query.theme.readable()
-        elif isinstance(query, EntityQuery):
-            return "I don't know about %s" % query.location.readable()
         return None
 
     def fill_commands(self, commands):
@@ -78,17 +74,22 @@ class KnowledgeBase:
                 if self.last_location:
                     if c.location and c.location.name == 'there':
                         c.location.name = self.last_location
-                if c.destination and not c.source:
-                    for fact in self.facts:
-                        if isinstance(fact, LocationFact) and c.theme and fact.theme.name == c.theme.name:
-                            c.source = fact.location
-                if not c.location and not c.destination and not c.source:
-                    for fact in self.facts:
-                        if isinstance(fact, LocationFact) and c.theme and fact.theme.name == c.theme.name:
-                            c.location = fact.location
-    def readable(self):
-        return '\n'.join(f.readable() for f in self.facts)
-
+                for f in self.facts:
+                    if isinstance(f, MapFact):
+                        if c.destination and not c.source:
+                            # Fill in source
+                            if c.theme:
+                                result = f.query_map(None, c.theme)
+                                if len(result) > 0:
+                                    c.source = result[0]
+                        if not c.location and not c.destination and not c.source:
+                            # Fill in location
+                            if c.theme:
+                                result = f.query_map(None, c.theme)
+                                if len(result) > 0:
+                                    c.location = result[0]
+    def __str__(self):
+        return '\n'.join(str(f) for f in self.facts)
 
 class Fact:
     def __init__(self):
@@ -98,26 +99,69 @@ class Fact:
         """Returns a reponse if fact answers query, none otherwise"""
         return None
 
+    def assimilate(self, assertion, source):
+        pass
 
-class LocationFact(Fact):
-    def __init__(self, assertion):
-        self.theme = assertion.theme
-        self.location = assertion.location
+class MapFact(Fact):
+    def __init__(self):
+        # Mapping from location to a set of entities
+        self.env_map = {}
 
-    def readable(self):
-        return '{!r} is/are in {!r}'.format(self.theme.readable(), self.location.readable())
+    def query_map(self, location, theme):
+        """"Returns the missing argument. If both arguments are present, returns whether that mapping is found"""
+        if not location and not theme:
+            return None
+        elif not theme:
+            return self.env_map.get(location, None)
+        elif not location:
+            return [location for location, entities in self.env_map.items() if theme in entities]
+        else:
+            # Both arguments are present
+            if location in self.env_map:
+                return theme in self.env_map[location]
+            else:
+                return None
 
     def query(self, query):
-        if isinstance(query, LocationQuery):
-            if query.theme.name == self.theme.name:
-                return self.readable()
-        elif isinstance(query, YNQuery):
-            if query.theme.name == self.theme.name:
-                if query.location.name == self.location.name:
-                    return 'Yes, %s' % self.readable()
-                else:
-                    return 'No, %s' % self.readable()
+        if isinstance(query, YNQuery):
+            result = self.query_map(query.location, query.theme)
+            if result:
+                return 'Yes, {!r} is/are in {!r}.'.format(query.theme.readable(), query.location.readable())
+            else:
+                explicit_response = 'No, {!r} is/are not in {!r}.'.format(query.theme.readable(), query.location.readable())
+                # Then find out where it is
+                return explicit_response + ' ' + self.query(LocationQuery(query.theme))
         elif isinstance(query, EntityQuery):
-            if query.location.name == self.location.name:
-                return self.readable()
-        return None
+            result = self.query_map(query.location, None)
+            if result:
+                return '{!r} is/are in {!r}'.format(', '.join(entity.readable() for entity in result), query.location.readable())
+            else:
+                return 'I don\'t know about anything in {!r}'.format(query.location.readable())
+        elif isinstance(query, LocationQuery):
+            result = self.query_map(None, query.theme)
+            if len(result) == 0:
+                return 'I don\'t know where {!r} is/are'.format(query.theme.readable())
+            else:
+                return '{!r} is/are in {!r}'.format(query.theme.readable(), ', '.join(location.readable() for location in result))
+
+    def assimilate(self, assertion, source):
+        if assertion.location not in self.env_map:
+            self.env_map[assertion.location] = set()
+        self.env_map[assertion.location].add(assertion.theme)
+
+    def __str__(self):
+        return 'Environment Map: \n\t' + \
+            '\n'.join('%s: %s' % (location.name, str([e.name for e in entities])) for location, entities in self.env_map.items())
+
+class KnowledgeFact(Fact):
+    def __init__(self, source):
+        self.source = source
+        self.kb = KnowledgeBase()
+
+    def assimilate(self, assertion, source):
+        if source == self.source:
+            self.kb.assimilate(assertion, source)
+
+    def __str__(self):
+        return 'Agent Knowledge: \n\t' + \
+            '%s knows: %s' % (self.source, str(self.kb))

@@ -55,6 +55,11 @@ class Entity(object):
     def __repr__(self):
         return str(self)
 
+    def __eq__(self, other):
+        return self.name == other.name
+
+    def __hash__(self):
+        return hash(self.name)
 
 class ObjectEntity(Entity):
     """Class representing an object entity"""
@@ -155,6 +160,9 @@ class Assertion(object):
         self.location = location
         self.existential = existential
 
+    def readable(self):
+        return '{!r} is/are in {!r}'.format(self.theme.readable(), self.location.readable())
+
     def __str__(self, lvl=0):
         indent = '\t'*(lvl)
         return '\n' + indent + '\tTheme: %s\n' % self.theme.__str__(lvl + 1) + \
@@ -167,22 +175,8 @@ class Assertion(object):
 
 class Query(object):
     """Base class for all queries"""
-
-    def __init__(self, theme):
-        self.theme = theme
-
-    def check_fact(self, fact):
-        """ Returns response if query is answered by fact. Returns none otherwise"""
-        return None
-
     def __repr__(self):
         return str(self)
-
-    def __str__(self, lvl=0):
-        indent = '\t'*(lvl)
-        return '\n' + indent + 'LocationQuery: \n' + \
-               indent + '\tTheme: %s\n' % self.theme.__str__(lvl + 1)
-
 
 class YNQuery(Query):
     """Yes/No queries."""
@@ -199,7 +193,13 @@ class YNQuery(Query):
 
 class LocationQuery(Query):
     """Where queries"""
-    pass
+    def __init__(self, theme):
+        self.theme = theme
+
+    def __str__(self, lvl=0):
+        indent = '\t'*(lvl)
+        return '\n' + indent + 'LocationQuery: \n' + \
+               indent + '\tTheme: %s\n' % self.theme.__str__(lvl + 1)
 
 
 class StatusQuery(Query):

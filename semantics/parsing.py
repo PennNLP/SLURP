@@ -265,7 +265,7 @@ def process_parse_tree(parse_tree_input, text_input, knowledge_base=None, quiet=
 
     # Update KB
     if knowledge_base:
-        kb_response = knowledge_base.process_semantic_structures(semantic_structures)
+        kb_response = knowledge_base.process_semantic_structures(semantic_structures, source='cmdr')
     else:
         kb_response = ''
 

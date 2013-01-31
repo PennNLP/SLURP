@@ -28,6 +28,7 @@ def process_input(text, kb, verbose=True):
         frames, new_commands, kb_response = process_parse_tree(msg, text, kb, quiet=True)
         if verbose:
             print frames
+            print str(kb)
         if kb_response:
             print kb_response
         print '\n'.join(str(c) for c in new_commands)
@@ -44,7 +45,7 @@ def run_test_cases(kb):
         process_input(u, kb, verbose=False)
         print '_'*65
 if __name__ == "__main__":
-    KB = KnowledgeBase()
+    KB = KnowledgeBase(other_agents=['cmdr'])
 
     if len(sys.argv) <= 1:
         from_stdin(KB)
