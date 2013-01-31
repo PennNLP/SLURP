@@ -517,12 +517,16 @@ class SpecGenerator(object):
         sys_chunks = []
         mem_props = []
         for region in regions:
-            explanation = "Visit {!r}.".format(region)
             # Set memory false initially
             mem_prop = _prop_mem(region, VISIT)
-            sys_lines = [not_(sys_(mem_prop))]
-            sys_lines += _frag_atleastonce(mem_prop, next_(sys_(region)))
-            sys_chunk = SpecChunk(explanation, sys_lines, SpecChunk.SYS, command)
+            explanation1 = "Initially, {!r} has not been visited.".format(region)
+            init_off = not_(sys_(mem_prop))
+            init_chunk = SpecChunk(explanation1, [init_off], SpecChunk.SYS, command)
+            sys_chunks.append(init_chunk)
+
+            sys_lines = _frag_atleastonce(mem_prop, next_(sys_(region)))
+            explanation2 = "Visit {!r}.".format(region)
+            sys_chunk = SpecChunk(explanation2, sys_lines, SpecChunk.SYS, command)
             mem_props.append(mem_prop)
             sys_chunks.append(sys_chunk)
 
@@ -548,12 +552,15 @@ class SpecGenerator(object):
         spec_chunks = []
         mem_props = []
         for region in regions:
-            explanation1 = "Complete a search in {!r}.".format(region)
+            # Set memory false initially
             mem_prop = _prop_mem(region, SWEEP)
+            init_off = [not_(sys_(mem_prop))]
+            explanation0 = "Initially, {!r} has not been searched.".format(region)
+            spec_chunks.append(SpecChunk(explanation0, init_off, SpecChunk.SYS, command))
+
+            explanation1 = "Complete a search in {!r}.".format(region)
             cic_frag, cic_env = _frag_complete_context(SWEEP, sys_(region))
             alo_sys = _frag_atleastonce(mem_prop, cic_frag)
-            # Set memory false initially
-            alo_sys += [not_(sys_(mem_prop))]
             mem_props.append(mem_prop)
             spec_chunks.append(SpecChunk(explanation1, alo_sys, SpecChunk.SYS, command))
 
