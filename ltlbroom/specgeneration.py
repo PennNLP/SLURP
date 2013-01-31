@@ -26,6 +26,7 @@ from semantics.lexical_constants import (SEARCH_ACTION, GO_ACTION,
     FOLLOW_ACTION, SEE_ACTION, BEGIN_ACTION, AVOID_ACTION, PATROL_ACTION,
     CARRY_ACTION, STAY_ACTION, ACTIVATE_ACTION, DEACTIVATE_ACTION,
     DEFUSE_ACTION)
+from semantics.new_structures import Event, Assertion
 from semantics.parsing import process_parse_tree
 from pipelinehost import PipelineClient
 from semantics.new_knowledge import KnowledgeBase
@@ -355,16 +356,25 @@ class SpecGenerator(object):
 
     def _gen_conditional(self, command):
         """Generate a conditional action"""
-        # Validate the condition
-        if not command.condition.entity:
-            raise KeyError("Cannot understand condition:\n{}".format(command.condition))
-        if command.condition.entity.name not in self.sensors:
-            raise KeyError("No sensor to detect condition {!r}".format(command.condition.entity.name))
-        if command.condition.sensor != SEE_ACTION:
-            raise KeyError("Cannot use action {} as a condition".format(command.condition.action))
 
-        condition = command.condition.entity.name
-        condition_frag = env(condition)
+        if isinstance(command.condition, Event):
+            # Validate the condition
+            if not command.condition.theme:
+                raise KeyError("Cannot understand condition:\n{}".format(command.condition))
+            condition = command.condition.theme.name
+            if condition not in self.sensors:
+                raise KeyError("No sensor to detect condition {!r}".format(command.condition.theme.name))
+            if command.condition.sensor != SEE_ACTION:
+                raise KeyError("Cannot use action {} as a condition".format(command.condition.action))
+            condition_frag = env(condition)
+        elif isinstance(command.condition, Assertion):
+            # Validate the condition
+            if not command.condition.location:
+                raise KeyError("Cannot understand condition:\n{}".format(command.condition))
+            condition = command.condition.location.name
+            condition_frag = sys_(condition)
+        else:
+            raise KeyError("Cannot understand condition:\n{}".format(command.condition))
 
         # Validate the action
         action = command.action
@@ -376,6 +386,8 @@ class SpecGenerator(object):
         if action in self.props:
             # Simple actuator
             reaction_prop = action
+        elif action == STAY_ACTION:
+            reaction_prop = STAY_THERE
         else:
             # Reaction proposition
             reaction_prop_name = REACT + "_" + condition
@@ -385,7 +397,7 @@ class SpecGenerator(object):
 
         # Generate the response
         sys_statements = []
-        if action == "go":
+        if action == GO_ACTION:
             if not command.location:
                 raise KeyError("No location in go reaction")
             # Go is unusual because the outcome is not immediately satisfiable
@@ -401,12 +413,14 @@ class SpecGenerator(object):
                                           self._frag_stay()))
 
             sys_statements.extend([go_goal, go_safety, stay_there])
+        elif action == STAY_ACTION:
+            sys_statements.append(always(implies(condition_frag, reaction_prop)))
         else:
             # Otherwise we are always creating reaction safety
             sys_statements.append(always(iff(next_(condition_frag), next_(reaction_prop))))
 
             # Create a reaction fragment if needed
-            if action in self.REACTIONS:
+            if action in self.REACTIONS and action != STAY_ACTION:
                 handler = self.REACTIONS[action]
                 reaction_frag = handler(command)
                 sys_statements.append(always(implies(next_(reaction_prop), reaction_frag)))
