@@ -220,14 +220,19 @@ def create_semantic_structures(frame_semantic_list):
         elif frames.is_yn_question(str(frame[1])):
             if 'Theme' in item_to_entity and 'Location' in item_to_entity:
                 semantic_representation_list.append(YNQuery(item_to_entity['Theme'], item_to_entity['Location']))
-        # If it's a conditional statement, the first statement is an event
+        # If it's a conditional statement, the first statement is an event or an assertion
         elif conditional:
-            event = Event(item_to_entity.get('Stimulus', None), action)
-            if len(semantic_representation_list) > 0 and isinstance(semantic_representation_list[-1], Command):
-                semantic_representation_list[-1].condition = event
+            if 'Stimulus' in item_to_entity:
+                condition = Event(item_to_entity['Stimulus'], action)
             else:
-                # Dangling event (shouldn't happen)
-                semantic_representation_list.append(event)
+                condition = Assertion(item_to_entity.get('Theme', None),\
+                                          item_to_entity.get('Location', None),\
+                                          'ex' in frame[2])
+            if len(semantic_representation_list) > 0 and isinstance(semantic_representation_list[-1], Command):
+                semantic_representation_list[-1].condition = condition
+            else:
+                # Dangling condition (shouldn't happen)
+                semantic_representation_list.append(condition)
         # It's a regular command
         elif action is not None and action not in  ('is', 'are', 'be'):
             theme = item_to_entity.get('Theme', None)

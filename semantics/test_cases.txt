@@ -18,3 +18,4 @@ What is in the cafeteria?
 What are you doing?
 Where are you?
 Activate your camera in the closet and hallway.
+If you are in the hallway, stay there.

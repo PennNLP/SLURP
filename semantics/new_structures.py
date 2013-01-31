@@ -255,15 +255,15 @@ class Command(object):
 class Event(object):
     """An event in the environment."""
 
-    def __init__(self, entity, sensor):
-        self.entity = entity
+    def __init__(self, theme, sensor):
+        self.theme = theme
         self.sensor = sensor
 
     def __str__(self, lvl=0):
         indent = '\t'*(lvl)
         return 'Event:\n' + \
                indent + '\tSensor: ' + str(self.sensor) + '\n' + \
-               (indent + '\tEntity: ' + self.entity.__str__(lvl + 1) if self.entity else '')
+               (indent + '\tTheme: ' + self.theme.__str__(lvl + 1) if self.theme else '')
 
     def __repr__(self):
         return str(self)

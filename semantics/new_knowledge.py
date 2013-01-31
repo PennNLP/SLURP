@@ -35,14 +35,16 @@ class KnowledgeBase:
                 response = self.query(structure)
             # Assertions, Commands have themes and locations that may be referenced later
             if isinstance(structure, Assertion) or isinstance(structure, Command):
-                # Only replace resolved object
+                # Only replace resolved object (theme has priority over condition)
                 if structure.theme and not is_pronoun(structure.theme.name):
                     self.last_object = structure.theme
-                elif structure.condition and structure.condition.entity and not is_pronoun(structure.condition.entity.name):
-                    self.last_object = structure.condition.entity
-                # Only replace resolved locations
+                elif structure.condition and structure.condition.theme and not is_pronoun(structure.condition.theme.name):
+                    self.last_object = structure.condition.theme
+                # Only replace resolved locations (theme has priority over condition)
                 if structure.location and structure.location.name != 'there':
                     self.last_location = structure.location
+                elif structure.condition and isinstance(structure.condition, Assertion) and structure.condition.location and structure.condition.location.name != 'there':
+                    self.last_location = structure.condition.location
         return response
 
     def assimilate(self, assertion, source):
@@ -69,11 +71,11 @@ class KnowledgeBase:
                         c.theme.name = self.last_object.name
                     if c.patient and is_pronoun(c.patient.name):
                         c.patient.name = self.last_object.name
-                    if c.condition and c.condition.entity and is_pronoun(c.condition.entity.name):
-                        c.condition.entity.name = self.last_object.name
+                    if c.condition and c.condition.theme and is_pronoun(c.condition.theme.name):
+                        c.condition.theme.name = self.last_object.name
                 if self.last_location:
                     if c.location and c.location.name == 'there':
-                        c.location.name = self.last_location
+                        c.location.name = self.last_location.name
                 for f in self.facts:
                     if isinstance(f, MapFact):
                         if c.destination and not c.source:
@@ -154,14 +156,14 @@ class MapFact(Fact):
             '\n'.join('%s: %s' % (location.name, str([e.name for e in entities])) for location, entities in self.env_map.items())
 
 class KnowledgeFact(Fact):
-    def __init__(self, source):
-        self.source = source
+    def __init__(self, agent):
+        self.agent = agent
         self.kb = KnowledgeBase()
 
     def assimilate(self, assertion, source):
-        if source == self.source:
+        if source == self.agent:
             self.kb.assimilate(assertion, source)
 
     def __str__(self):
         return 'Agent Knowledge: \n\t' + \
-            '%s knows: %s' % (self.source, str(self.kb))
+            '%s knows: %s' % (self.agent, str(self.kb))
