@@ -381,8 +381,8 @@ class SpecGenerator(object):
 
         # Validate the action
         action = command.action
-        if action not in self.props and action not in self.REACTIONS:
-            raise KeyError("Unknown reaction or actuator {0}".format(action))
+        if action not in self.REACTIONS:
+            raise KeyError("Unknown reaction {!r}".format(action))
 
         # Create the right type of reaction
         new_props = []
@@ -421,15 +421,18 @@ class SpecGenerator(object):
             sys_statements.append(always(implies(condition_frag, reaction_prop)))
             explanation += " stay there."
         else:
+            if command.theme.name not in self.props:
+                raise KeyError("Unknown actuator {!r}".format(command.theme.name))
             # Otherwise we are always creating reaction safety
             sys_statements.append(always(iff(next_(condition_frag), next_(reaction_prop))))
-            explanation += " activate {!r}.".format(reaction_prop)
-
-            # Create a reaction fragment if needed
-            if action in self.REACTIONS:
-                handler = self.REACTIONS[action]
-                reaction_frag = handler(command)
-                sys_statements.append(always(implies(next_(reaction_prop), reaction_frag)))
+            explanation += " {} {!r}.".format(action, command.theme.name)
+            # TODO: Change the handlers to support negation
+            handler = self.REACTIONS[action]
+            reaction_frag = handler(command)
+            react = always(implies(next_(reaction_prop), reaction_frag))
+            stay_there = always(implies(and_((not_(reaction_prop), next_(reaction_prop))),
+                                        self._frag_stay()))
+            sys_statements.extend([react, stay_there])
 
         sys_chunk = SpecChunk(explanation, sys_statements, SpecChunk.SYS, command)
         return ([sys_chunk], [], new_props, [])
