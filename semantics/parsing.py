@@ -100,6 +100,7 @@ def extract_frames_from_parse(parse_tree_string):
                         print 'Match list:'
 
                         for m in match_list:
+                            print 'Sense:', m[1]
                             for a, b in m[0].items():
                                 print a, str(b)
                             print '\n\n'

@@ -32,6 +32,7 @@ ACTION_ALIASES = {
                   'rummage': SEARCH_ACTION,
                   'characterize': SEE_ACTION,
                   'chase': FOLLOW_ACTION,
+                  'lodge': STAY_ACTION,
                   SEARCH_ACTION: SEARCH_ACTION,
                   GO_ACTION: GO_ACTION,
                   GET_ACTION: GET_ACTION,

@@ -126,22 +126,18 @@ class VerbFrameObject:
         
         tags = tag_match.findall(str(subtree))
 
-        # Check for special mapping/matching restrictions
-        if frame_tag[2] == '':
-            # Tag/Role -> Treebank map
-            if ((frame_tag[0], frame_tag[1])) in tag_mapping.keys():
-                tree_tags = tag_mapping[(frame_tag[0], frame_tag[1])]
-            # PREP tag that requires exact match to preposition
-            elif (not frame_tag[1] == '') and \
-                 (frame_tag[0],) in tag_mapping.keys() and \
-                 (not frame_tag[0] == frame_tag[1]) :
-                tree_tags = tag_mapping[(frame_tag[0], )]
-            # Regular VerbNet tag -> Treebank tag map
-            elif frame_tag[0] in tag_mapping.keys():
-                tree_tags = tag_mapping[frame_tag[0]]
-            # No mapping needed
-            else:
-                tree_tags = [frame_tag[0]]
+        # Tag/Role -> Treebank map
+        if ((frame_tag[0], frame_tag[1])) in tag_mapping.keys():
+            tree_tags = tag_mapping[(frame_tag[0], frame_tag[1])]
+        # PREP tag that requires exact match to preposition
+        elif (not frame_tag[1] == '') and \
+                (frame_tag[0],) in tag_mapping.keys() and \
+                (not frame_tag[0] == frame_tag[1]) :
+            tree_tags = tag_mapping[(frame_tag[0], )]
+        # Regular VerbNet tag -> Treebank tag map
+        elif frame_tag[0] in tag_mapping.keys():
+            tree_tags = tag_mapping[frame_tag[0]]
+        # No mapping needed
         else:
             tree_tags = [frame_tag[0]]
 
@@ -173,7 +169,7 @@ class VerbFrameObject:
 
 # Mapping from Verbnet tags to Treebank tags
 tag_mapping = {'NP' : ['NP'],
-               ('NP', 'Location') : ['PP-LOC', 'PP-DIR', 'PP-CLR', 'NN', \
+               ('NP', 'Location') : ['PP-LOC', 'PP-DIR', 'PP-CLR', 'NN', 'ADVP-LOC', \
                                      'NP-A', 'WHADVP','ADVP-TMP', 'PP-PRD', 'ADVP-DIR'],
                ('NP', 'Destination') : ['PP-LOC', 'PP-DIR', 'NN', 'NP-A',\
                                         'ADVP', 'PP-CLR', 'WHADVP', 'ADVP-DIR'],
