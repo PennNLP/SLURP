@@ -165,9 +165,10 @@ class Assertion(object):
 
     def __str__(self, lvl=0):
         indent = '\t'*(lvl)
-        return '\n' + indent + '\tTheme: %s\n' % self.theme.__str__(lvl + 1) + \
-               indent + '\tLocation: %s\n' % self.location.__str__(lvl + 1) + \
-               indent + '\tExistential: %s\n' % str(self.existential)
+        return 'Assertion: \n' + \
+            (indent + '\tTheme: %s\n' % self.theme.__str__(lvl + 1) if self.theme else '') + \
+            (indent + '\tLocation: %s\n' % self.location.__str__(lvl + 1) if self.location else '')+ \
+            indent + '\tExistential: %s\n' % str(self.existential)
 
     def __repr__(self):
         return str(self)
