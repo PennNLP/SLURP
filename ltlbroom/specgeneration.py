@@ -759,7 +759,7 @@ def explain_conflict(conflicting_lines, gen_tree):
         goal_problem = "No goals seem to be problematic."
     elif n_conflicting_goals == 1:
         goal_explanation, goal_input = goal_explanations[0]
-        explain_template = ("The problematic goal is {!r}." +
+        explain_template = ("The problematic goal comes from the statement {!r}." +
                             " The system cannot achieve the sub-goal {!r}.")
         goal_problem = explain_template.format(goal_input, goal_explanation)
     else:
