@@ -581,21 +581,22 @@ class SpecGenerator(object):
         actuator_frag = sys_(actuator) if not negated else not_(sys_(actuator))
         when = "Always" if not negated else "Never"
 
-        off_chunk = SpecChunk("{} is initially off.".format(actuator), [not_(sys_(actuator))],
-                              SpecChunk.SYS, command)
-
+        chunks = []
         if command.location:
-            # Generate a location-restricted action
-            location = command.location.name
-            explanation = "{} activate {!r} in {!r}.".format(when, actuator, location)
-            formula = always(implies(next_(sys_(location)), next_(actuator_frag)))
+            regions = [location.name for location in
+                       self._expand_argument(command.location, command)]
+            for region in regions:
+                # Generate a location-restricted action
+                explanation = "{} activate {!r} in {!r}.".format(when, actuator, region)
+                formula = always(implies(next_(sys_(region)), next_(actuator_frag)))
+                chunks.append(SpecChunk(explanation, [formula], SpecChunk.SYS, command))
         else:
             # Always activate
             explanation = "{} activate {!r}.".format(when, actuator)
-            formula = always(actuator_frag)
-        activation_chunk = SpecChunk(explanation, [formula], SpecChunk.SYS, command)
+            formula = always(next_(actuator_frag))
+            chunks.append(SpecChunk(explanation, [formula], SpecChunk.SYS, command))
 
-        return ([off_chunk, activation_chunk], [], [], [])
+        return (chunks, [], [], [])
 
     def _gen_deactivate(self, command):
         """Generate statements for deactivating an actuator."""
