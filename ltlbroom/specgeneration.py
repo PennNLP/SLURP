@@ -365,7 +365,7 @@ class SpecGenerator(object):
             if condition not in self.sensors:
                 raise KeyError("No sensor to detect condition {!r}".format(command.condition.theme.name))
             if command.condition.sensor != SEE_ACTION:
-                raise KeyError("Cannot use action {} as a condition".format(command.condition.action))
+                raise KeyError("Cannot use action {!r} as a condition".format(command.condition.action))
             condition_frag = env(condition)
             explanation = "To react to {!r},".format(condition)
         elif isinstance(command.condition, Assertion):
