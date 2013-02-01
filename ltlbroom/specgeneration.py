@@ -212,7 +212,7 @@ class SpecGenerator(object):
                     problem = \
                         "Could not understand {!r} due to error {}.".format(command.action, err)
                     print "ERROR: " + problem
-                    command_responses.append(problem)
+                    command_responses.append(str(err))
                     success = False
                     continue
                 else:
@@ -439,7 +439,8 @@ class SpecGenerator(object):
                 raise KeyError("Unknown actuator {!r}".format(command.theme.name))
             # Otherwise we are always creating reaction safety
             sys_statements.append(always(iff(next_(condition_frag), next_(reaction_prop))))
-            explanation += " {} {!r}.".format(action, command.theme.name)
+            template = " {} {!r}." if not command.negation else " do not {} {!r}."
+            explanation += template.format(action, command.theme.name)
 
             if not command.negation:
                 handler = self.REACTIONS[action]
@@ -679,10 +680,18 @@ def _prop_actuator_done(actuator):
 
 def _format_command(command):
     """Format a command nicely for display."""
-    # TODO: Should have a more general solution here.
-    argument = command.location.name if command.location else \
-        command.theme.name if command.theme else 'None'
-    return "Action: {!r}, Argument: {!r}".format(command.action, argument)
+    action = ("Action: {!r}" if not command.negation else "Action: do not {!r}").format(command.action)
+    fields = [action]
+    if command.theme:
+        fields.append("Argument: {!r}".format(command.theme.name))
+    if command.location:
+        fields.append("Location: {!r}".format(command.location.name))
+    if command.source:
+        fields.append("Source: {!r}".format(command.source.name))
+    if command.destination:
+        fields.append("Destination: {!r}".format(command.destination.name))
+
+    return ", ".join(fields)
 
 
 def _insert_or_before_goal(or_clause, statement):
