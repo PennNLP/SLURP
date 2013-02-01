@@ -130,8 +130,7 @@ class SpecGenerator(object):
                           DEACTIVATE_ACTION: _frag_react_deactivate}
 
         # TODO: Make this unnecessary
-        self.NEG_REACTIONS = {GO_ACTION: _frag_react_avoid,
-                              ACTIVATE_ACTION: _frag_react_deactivate,
+        self.NEG_REACTIONS = {ACTIVATE_ACTION: _frag_react_deactivate,
                               DEACTIVATE_ACTION: _frag_react_activate}
 
         # Information about the scenario will be updated at generation time
@@ -410,27 +409,28 @@ class SpecGenerator(object):
             # Go is unusual because the outcome is not immediately satisfiable
             if not command.location:
                 raise KeyError("No location in go reaction")
-
-            # TODO: Refactor this out
-            if not command.negation:
-                handler = self.REACTIONS[action]
-            else:
-                handler = self.NEG_REACTIONS[action]
             destination = command.location.name
-            destination_stmt = handler(destination)
 
-            # New goal for where we should go
-            go_goal = always_eventually(implies(reaction_prop, destination_stmt))
-            # Safety that persists
-            go_safety = \
-                always(iff(next_(reaction_prop),
-                             or_([reaction_prop, next_(condition_frag)])))
-            # Make sure we act immediately: []((!react & next(react) )-> stay_there)
-            stay_there = always(implies(and_((not_(reaction_prop), next_(reaction_prop))),
-                                          self._frag_stay()))
+            # Negation is easy, so we take a shortcut
+            if ((action == GO_ACTION and command.negation) or
+                (action == AVOID_ACTION and not command.negation)):
+                sys_statements.append(always(implies(next_(condition_frag),
+                                                     not_(next_(sys_(destination))))))
+                explanation += " avoid {!r}.".format(command.location.name)
+            else:
+                destination_stmt = sys_(destination)
+                # New goal for where we should go
+                go_goal = always_eventually(implies(reaction_prop, destination_stmt))
+                # Safety that persists
+                go_safety = \
+                    always(iff(next_(reaction_prop),
+                                 or_([reaction_prop, next_(condition_frag)])))
+                # Make sure we act immediately: []((!react & next(react) )-> stay_there)
+                stay_there = always(implies(and_((not_(reaction_prop), next_(reaction_prop))),
+                                              self._frag_stay()))
 
-            sys_statements.extend([go_goal, go_safety, stay_there])
-            explanation += " go to {!r}.".format(command.location.name)
+                sys_statements.extend([go_goal, go_safety, stay_there])
+                explanation += " go to {!r}.".format(command.location.name)
         elif action == STAY_ACTION:
             sys_statements.append(always(implies(condition_frag, reaction_prop)))
             explanation += " stay there."
@@ -440,7 +440,7 @@ class SpecGenerator(object):
             # Otherwise we are always creating reaction safety
             sys_statements.append(always(iff(next_(condition_frag), next_(reaction_prop))))
             explanation += " {} {!r}.".format(action, command.theme.name)
-            # TODO: Change the handlers to support negation
+
             if not command.negation:
                 handler = self.REACTIONS[action]
             else:
