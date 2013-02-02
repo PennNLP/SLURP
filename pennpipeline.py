@@ -39,9 +39,9 @@ tokenizer = SED +" -f " + os.path.join(tool_dir, "tokenizer.sed")
 tagger_jar = os.path.join(root_dir, "mxpost", "mxpost.jar")
 tagger_project = os.path.join(root_dir, "mxpost", "tagger.project")
 tagger = "java -Xmx128m -classpath %s tagger.TestTagger %s" % (tagger_jar, tagger_project)
-parser = "%s -Xmx768m -cp %s %s %s -is %s  -sa - -out -" % \
+parser = "%s -Xmx1024m -cp %s %s %s -is %s  -sa - -out -" % \
     (java, parser_classpath, settings, parser_class, parse_model)
-ecrestorer = "%s -cp %s edu.upenn.cis.emptycategories.RestoreECs run - --perceptron --ante_perceptron --nptrace --whxp --wh --whxpdiscern --nptraceante --noante" \
+ecrestorer = "%s -Xmx256m -cp %s edu.upenn.cis.emptycategories.RestoreECs run - --perceptron --ante_perceptron --nptrace --whxp --wh --whxpdiscern --nptraceante --noante" \
     % (java, ecrestore_classpath)
 
 token_proc = None
@@ -109,10 +109,20 @@ def process_pipe_filter(text, process, line_filter=""):
     return text
 
 
-def parse_text(text, force_nouns=set(), force_verbs=set()):
+def parse_text(text, force_nouns=None, force_verbs=None, correct_punc=True):
     """Run the text through the pipelines."""
     if not all((token_proc, tag_proc, parse_proc, ecrestore_proc)):
         raise ValueError("You must call init_pipes before parsing.")
+    
+    # Create default set arguments
+    if not force_nouns:
+        force_nouns = set()
+    if not force_verbs:
+        force_verbs = set()
+
+    # Add in final punctuation if it's missing
+    if correct_punc and text[-1] not in ('.', '?', '!'):
+        text += '.'
 
     token_sent = process_pipe_filter(text, token_proc)
     tagged_sent = process_pipe_filter(token_sent, tag_proc)

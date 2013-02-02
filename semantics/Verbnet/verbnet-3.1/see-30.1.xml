@@ -191,8 +191,9 @@
                 <MEMBER name="feel" wn="feel%2:31:00 feel%2:39:00 feel%2:29:00 feel%2:35:00" grouping="feel.01 feel.02 feel.03"/>
                 <MEMBER name="sense" wn="sense%2:39:00" grouping="sense.01"/>
                 <MEMBER name="perceive" wn="" grouping=""/>
+                <MEMBER name="hear" wn="" grouping=""/>
                 <MEMBER name="notice" wn="notice%2:39:04 notice%2:39:00" grouping="notice.01"/>
-                <MEMBER name="see" wn="see%2:39:00 see%2:39:02 see%2:36:00 see%2:39:03 see%2:32:00 see%2:41:11 see%2:41:12 see%2:41:10 see%2:39:11 see%2:39:13" grouping="see.01 see.02 see.03 see.06"/>
+                <MEMBER name="see" wn="see%2:39:00 see%2:39:02 see%2:36:00 see%2:39:03 see%2:32:00 see%2:41:11 see%2:41:12 see%2:41:10 see%2:39:11 see%2:39:13" grouping="see.01 see.02 see.03 see.06" />
             </MEMBERS>
             <THEMROLES/>
             <FRAMES>

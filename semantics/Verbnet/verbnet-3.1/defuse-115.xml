@@ -1,10 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE VNCLASS SYSTEM "vn_class-3.dtd">
-<VNCLASS ID="defuse-110" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="vn_schema-3.xsd">
+<VNCLASS ID="defuse-115" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="vn_schema-3.xsd">
     <MEMBERS>
         <MEMBER name="defuse" wn="defuse%2:33:00" grouping=""/>
-		<MEMBER name="deactivate" wn="deactivate%2:30:01" grouping=""/>
-		<MEMBER name="inactivate" wn="inactivate%2:30:00" grouping=""/>
     </MEMBERS>
     <THEMROLES>
         <THEMROLE type="Agent">

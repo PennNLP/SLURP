@@ -33,7 +33,6 @@
         <MEMBER name="stretch" wn="stretch%2:42:00" grouping="stretch.01"/>
         <MEMBER name="sweep" wn="sweep%2:42:03" grouping="sweep.05"/>
         <MEMBER name="tumble" wn="" grouping=""/>
-        <MEMBER name="turn" wn="" grouping=""/>
         <MEMBER name="twist" wn="" grouping=""/>
         <MEMBER name="undulate" wn="" grouping=""/>
         <MEMBER name="wander" wn="wander%2:38:01" grouping="wander.02"/>

@@ -107,7 +107,7 @@ class Knowledge:
             return ("Okay, I'll belay those orders.", None, None, None)   
         else:
             # Actually do semantic parsing
-            semantics_result = parsing.get_semantics_from_parse_tree(parse_tree_input)
+            semantics_result = parsing.extract_frames_from_parse(parse_tree_input)
             semantic_structures = parsing.create_semantic_structures(semantics_result)
             semantics_response = self.parse_semantic_structures(semantic_structures)
             print "Answer from semantics:", semantics_response

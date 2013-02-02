@@ -1,0 +1,21 @@
+Go to the kitchen.
+Don't go to the kitchen.
+Never go to the kitchen.
+Don't activate the camera in the bathroom.
+There is a bomb in the hallway.
+If you see it, defuse it.
+If you see hostages, rescue them.
+Two meals are in the kitchen.
+Carry them to the patient rooms.
+Where is the bomb?
+Where is the hostage?
+A book is in the kitchen.
+Is the book in the hallway?
+Is the book in the kitchen?
+The hostage is also in the kitchen.
+What is in the kitchen?
+What is in the cafeteria?
+What are you doing?
+Where are you?
+Activate your camera in the closet and hallway.
+If you are in the hallway, stay there.

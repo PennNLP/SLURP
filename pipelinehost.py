@@ -22,6 +22,7 @@ Hosts requests sent to the NLPipeline over sockets.
 # along with SLURP.  If not, see <http://www.gnu.org/licenses/>.
 
 import json
+import socket
 from commproxy import CallbackSocket, _parse_msg
 from pennpipeline import parse_text, init_pipes, close_pipes
 
@@ -29,7 +30,7 @@ MSG_SEP = "\n"
 DEFAULT_PORT = 9001
 
 
-def socket_parse(**kwargs):
+def _socket_parse(**kwargs):
     """Send a remote parsing request and get a response."""
     # Get the socket out of kwargs and send over the rest
     sock = kwargs.pop('asocket')
@@ -54,14 +55,19 @@ class PipelineHost(CallbackSocket):
         init_pipes()
 
     def __del__(self):
-        # We put this check as it may already be undefined during interpreter shutdown.
-        # There's no guarantee this will succeed during shutdown anyway.
+        # We put this check as it may already be undefined during interpreter 
+        # shutdown. There's no guarantee this will succeed during shutdown 
+        # anyway.
         if close_pipes:
             close_pipes()
 
     def parse_text(self, message):
-        """Send a parse request to the pipline."""
-        data = json.loads(message)
+        """Receive a parse request for the pipeline."""
+        try:
+            data = json.loads(message)
+        except ValueError:
+            # Make a default set of arguments
+            data = {'text': message}
         print "Message:", repr(data)
         print "Parsing..."
         response = parse_text(**data)
@@ -69,9 +75,39 @@ class PipelineHost(CallbackSocket):
         self.send(response)
 
 
+class PipelineClient(object):
+    """Provides a client to the PipelineHost."""
+    
+    def __init__(self, port=DEFAULT_PORT, hostname='localhost'):
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            self.sock.connect((hostname, port))
+        except socket.error:
+            raise IOError("Could not connect to pipelinehost on %s:%d. "
+                          "Make sure that pipelinehost is running." %
+                            (hostname, port))
+            
+    def parse(self, text, force_nouns=None, force_verbs=None):
+        """Parse text using a remote pipeline."""
+        # Lowercase and strip any trailing punctuation.
+        text = text.strip().lower()
+        # Wrap in kwargs
+        return _socket_parse(asocket=self.sock, text=text, force_nouns=force_nouns,
+                             force_verbs=force_verbs)
+        
+    def close(self):
+        """Close the connection to the pipeline host.
+        
+        If you need the connection closed promptly, it's wise to call this, but garbage collection
+        will accomplish the same purpose.
+        """
+        self.sock.shutdown(socket.SHUT_RDWR)
+        self.sock.close()
+
+
 def main():
     """Start the parsing server and leave it up until KeyboardInterrupt."""
-    host = PipelineHost(DEFAULT_PORT, True)
+    PipelineHost(DEFAULT_PORT, True)
     try:
         while True:
             raw_input()

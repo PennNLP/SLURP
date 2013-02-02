@@ -1,0 +1,4 @@
+To force repickling of the VerbNet data, e.g., when the format of the
+pickle file changes, just commit a change to this file by incrementing
+the number below.
+0

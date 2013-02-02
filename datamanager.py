@@ -34,7 +34,7 @@ def download(url, path=None):
     # Use the provided path, or default to the basename
     filename = path if path else posixpath.basename(url)
     try:
-        localFile = open(filename, 'w')
+        localFile = open(filename, 'wb')
         localFile.write(url_file.read())
         localFile.close()
     except IOError:
