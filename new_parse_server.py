@@ -18,6 +18,8 @@ class PipelineProtocol(protocol.Protocol):
         self.kb = kb
         self.lock = lock
     def dataReceived(self, data):
+        # Remove extra escape characters
+        data = data.replace('\\','')
         print 'Received input: ', data
 
         knowledge_demo = data.startswith(SECRET_CODE)
@@ -42,6 +44,7 @@ class PipelineProtocol(protocol.Protocol):
             response['trees'] = []
             response['frames'] = []
         response['response'] = kb_response # TODO: Add command-based response
+        response['structures'] = '\n\n'.join(str(c) for c in new_commands)
         self.transport.write(json.dumps(response))
 
 class PipelineFactory(protocol.Factory):
