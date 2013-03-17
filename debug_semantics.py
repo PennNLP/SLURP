@@ -5,6 +5,7 @@ import sys
 from semantics.parsing import process_parse_tree
 import semantics.parsing
 from semantics.new_knowledge import KnowledgeBase
+from semantics.response import make_response
 from pipelinehost import PipelineClient
 
 semantics.parsing.EXTRACT_DEBUG = True
@@ -29,8 +30,8 @@ def process_input(text, kb, verbose=True):
         if verbose:
             print frames
             print str(kb)
-        if kb_response:
-            print kb_response
+        
+        print 'Response: %s' % make_response(new_commands, kb_response)
         print '\n'.join(str(c) for c in new_commands)
         return True
     else:

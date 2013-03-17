@@ -252,6 +252,27 @@ class Command(object):
     def __repr__(self):
         return str(self)
 
+    def readable(self):
+        response = ''
+        if self.negation:
+            response += ' not'
+        if not self.action:
+            return ''
+        else:
+            response += ' %s' % self.action
+        if self.theme:
+            response += ' %s' % self.theme.readable()
+        elif self.patient:
+            response += ' %s' % self.patient.readable()
+        if self.location:
+            response += ' in %s' % self.location.readable()
+        if self.source:
+            response += ' from %s' % self.source.readable()
+        if self.destination:
+            response += ' to %s' % self.destination.readable()
+        if self.condition:
+            response += ' if %s' % self.condition.readable()
+        return response
 
 class Event(object):
     """An event in the environment."""
@@ -268,3 +289,6 @@ class Event(object):
 
     def __repr__(self):
         return str(self)
+
+    def readable(self):
+        return 'I %s %s' % (self.sensor, self.theme.readable())

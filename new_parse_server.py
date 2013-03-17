@@ -5,6 +5,7 @@ from pipelinehost import PipelineClient
 from twisted.internet import protocol, reactor
 from semantics.new_knowledge import KnowledgeBase
 from semantics.parsing import process_parse_tree
+from semantics.response import make_response
 from semantics import tree
 import semantics.parsing
 import json
@@ -43,7 +44,7 @@ class PipelineProtocol(protocol.Protocol):
         else:
             response['trees'] = []
             response['frames'] = []
-        response['response'] = kb_response # TODO: Add command-based response
+        response['response'] = make_response(new_commands, kb_response)
         response['structures'] = '\n\n'.join(str(c) for c in new_commands)
         self.transport.write(json.dumps(response))
 

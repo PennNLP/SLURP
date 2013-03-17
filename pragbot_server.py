@@ -7,12 +7,11 @@ from twisted.internet import reactor
 from pipelinehost import PipelineClient
 from semantics.new_knowledge import KnowledgeBase
 from semantics.parsing import process_parse_tree
-from semantics import tree
+from semantics.response import make_response
 from pragbot.GameEnvironment import GameEnvironment
 import semantics.parsing
 import sys
 import threading
-
 
 class PragbotProtocol(LineReceiver):
     def __init__(self, game_id, lock):
@@ -42,9 +41,8 @@ class PragbotProtocol(LineReceiver):
                 s = s[len('CHAT_MESSAGE_PREFIX<Commander> '):]
                 with self.lock:
                     parse = PipelineClient().parse(s)
-                response = parse
                 frames, new_commands, kb_response = process_parse_tree(parse, data, self.kb, quiet=True)
-                self.sendMessage('CHAT_MESSAGE_PREFIX', response)
+                self.sendMessage('CHAT_MESSAGE_PREFIX', '<Junior> ' + make_response(new_commands, kb_response))
 
 class PragbotFactory(Factory):
     def __init__(self):
