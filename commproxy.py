@@ -37,7 +37,7 @@ class CallbackSocket(object):
     # TODO: Change to accept multiple simultaneous clients
     def _accept(self):
         """Accept connections on the listening port."""
-        waiting = False # Use this flag to avoid printing when we timeout
+        waiting = False  # Use this flag to avoid printing when we timeout
         while True:
             if not waiting:
                 print "%s: Waiting for connection..." % self.name
@@ -45,14 +45,14 @@ class CallbackSocket(object):
             try:
                 self._conn, addr = self._sock.accept()
                 self.client_addr = addr
-                print "%s: Connected to %s" % (self.name, str(addr)) 
+                print "%s: Connected to %s" % (self.name, str(addr))
             except timeout:
                 self._conn = None
                 self.client_addr = None
                 continue
-            except: # Because any error can occur here during shutdown
+            except:  # Because any error can occur here during shutdown
                 break
-                
+
             while True:
                 try:
                     buff = self._conn.recv(4096)
@@ -70,9 +70,9 @@ class CallbackSocket(object):
                     if msg:
                         self._queue.put(msg)
                     else:
-                        print "%s: Received an incomplete message: %s" % (self.name, repr(buff)) 
+                        print "%s: Received an incomplete message: %s" % (self.name, repr(buff))
                         break
-                
+
             print "%s: Client disconnected." % self.name
             self._conn = None
             self.client_addr = None
@@ -97,7 +97,7 @@ class CallbackSocket(object):
         """Add a callback to the set of callbacks."""
         with self._callback_lock:
             self.callbacks.append(func)
-            
+
     def is_connected(self):
         """Report whether we have a client connected."""
         return bool(self._conn)

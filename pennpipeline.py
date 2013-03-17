@@ -20,13 +20,13 @@ TOOL_DIR = os.path.join(ROOT_DIR, "tools")
 PARSE_PROPS = os.path.join(ROOT_DIR, "models", "eatb3.properties")
 PARSE_MODEL = os.path.join(ROOT_DIR, "models", "wsjall.obj")
 PARSER_DIR = os.path.join(ROOT_DIR, "dbparser-0.9.9c-modified")
-ECRESTORE_DIR = os.path.join(ROOT_DIR, "addnulls-mod") 
+ECRESTORE_DIR = os.path.join(ROOT_DIR, "addnulls-mod")
 
 # Parser/JAVA options
 JAVA = "java"
 PARSER_CLASS = "danbikel.parser.Parser"
 PARSER_SETTINGS = "-Dparser.settingsFile=%s" % PARSE_PROPS
-PARSER_CLASSPATH = (os.path.join(PARSER_DIR, "dbparser.jar") + CLASSPATH_SEP + 
+PARSER_CLASSPATH = (os.path.join(PARSER_DIR, "dbparser.jar") + CLASSPATH_SEP +
                     os.path.join(PARSER_DIR, "dbparser-ext.jar"))
 
 # EC Restore/JAVA options
@@ -34,7 +34,7 @@ ECRESTORER_CLASSPATH = ECRESTORE_DIR + CLASSPATH_SEP + os.path.join(TOOL_DIR, "m
 
 # Pipeline commands
 SED = "sed -l" if sys.platform == "darwin" else "sed -u"
-TOKENIZER = SED +" -f " + os.path.join(TOOL_DIR, "tokenizer.sed")
+TOKENIZER = SED + " -f " + os.path.join(TOOL_DIR, "tokenizer.sed")
 TAGGER_JAR = os.path.join(ROOT_DIR, "mxpost", "mxpost.jar")
 TAGGER_PROJECT = os.path.join(ROOT_DIR, "mxpost", "tagger.project")
 TAGGER = "%s -Xmx128m -classpath %s tagger.TestTagger %s" % (JAVA, TAGGER_JAR, TAGGER_PROJECT)
@@ -50,7 +50,7 @@ OUTER_PARENS_RE = re.compile(r"\(\s*(.+)\s*\)")
 
 class PennPipeline(object):
     """Provide access to a pipeline of NLP tools."""
-    
+
     def __init__(self):
         # Set up the pipes
         self.token_proc = _setup_pipe(TOKENIZER)
@@ -71,21 +71,21 @@ class PennPipeline(object):
             force_nouns = set()
         if not force_verbs:
             force_verbs = set()
-    
+
         # Add in final punctuation if it's missing
         if correct_punc and text[-1] not in ('.', '?', '!'):
             text += '.'
-    
+
         token_sent = _process_pipe_filter(text, self.token_proc)
         tagged_sent = _process_pipe_filter(token_sent, self.tag_proc)
         clean_tagged_sent = _tag_convert(tagged_sent, force_nouns, force_verbs)
         parsed_sent = _process_pipe_filter(clean_tagged_sent, self.parse_proc, "(")
         # Wrap input to the null restorer as ( x) exactly as wrap-stream.pl used to do
         restored_sent = _process_pipe_filter("( " + parsed_sent + ")", self.ecrestore_proc, "(")
-    
+
         # Remove extra parens from the parse with elements restored
         final_parse = OUTER_PARENS_RE.match(restored_sent).group(1)
-    
+
         return final_parse
 
 
@@ -103,7 +103,7 @@ def _setup_pipe(command, cwd=None):
     # Windows expects a string for the command, so only lex other systems
     if sys.platform != "win32":
         command = shlex.split(command)
-    
+
     try:
         return Popen(command, stdin=PIPE, stdout=PIPE, stderr=open(os.devnull, 'w'), cwd=cwd)
     except OSError:
@@ -118,7 +118,7 @@ def _process_pipe_filter(text, process, line_filter=""):
         text = process.stdout.readline().strip()
         while not text.startswith(line_filter):
             text = process.stdout.readline().strip()
-    else: 
+    else:
         text = process.stdout.readline().strip()
 
     return text
@@ -130,7 +130,7 @@ def _tag_convert(sent, force_nouns, force_verbs):
     # We use rsplit with one to make sure underscores in the token aren't harmed.
     token_tags = [token.rsplit('_', 1) for token in sent.rstrip().split()]
     # Coerce the tags
-    token_tags = [(word, _coerce_tag(word, tag, force_nouns, force_verbs)) 
+    token_tags = [(word, _coerce_tag(word, tag, force_nouns, force_verbs))
                   for word, tag in token_tags]
     # Bikel: (word (tag)), with () around the line
     return "(" + " ".join("(%s (%s))" % (word, tag) for word, tag in token_tags) + ")"

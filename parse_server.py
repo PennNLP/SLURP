@@ -10,7 +10,7 @@ import threading
 from commproxy import _parse_msg
 from pennpipeline import PennPipeline
 from semantics import knowledge, tree
-from semantics.knowledge import (SEARCH_ACTION, GO_ACTION, GET_ACTION, FOLLOW_ACTION, 
+from semantics.knowledge import (SEARCH_ACTION, GO_ACTION, GET_ACTION, FOLLOW_ACTION,
                                  SEE_ACTION, TELL_ACTION, ACTION_ALIASES)
 
 
@@ -25,7 +25,7 @@ COMPLEX_ACTUATORS = {"get": "get_obj"}
 SIMPLE_ACTUATORS = set((SEARCH_PROP, FOLLOW_PROP, DEFUSE_PROP, EXPLORE_PROP))
 
 # Semantics constants
-KNOWN_ACTIONS = set((SEARCH_ACTION, GO_ACTION, GET_ACTION, FOLLOW_ACTION, SEE_ACTION, 
+KNOWN_ACTIONS = set((SEARCH_ACTION, GO_ACTION, GET_ACTION, FOLLOW_ACTION, SEE_ACTION,
                      TELL_ACTION))
 THEME = "Theme"
 LOCATION = "Location"
@@ -68,7 +68,7 @@ class ServiceSocket:
         while True:
             try:
                 conn, addr = self._sock.accept()
-                print "%s: Connected to %s" % (self.name, str(addr)) 
+                print "%s: Connected to %s" % (self.name, str(addr))
 
                 # Start up a new thread to handle the client
                 name = "Client " + str(addr)
@@ -80,7 +80,7 @@ class ServiceSocket:
             except timeout:
                 continue
             # pylint: disable=W0702
-            except: # Because any error can occur here during shutdown
+            except:  # Because any error can occur here during shutdown
                 pass
 
     def _handle_client(self, conn, name):
@@ -115,9 +115,9 @@ class ServiceSocket:
                             send_error = True
                             break
                 else:
-                    print "%s: Received an incomplete message: %s" % (self.name, repr(buff)) 
+                    print "%s: Received an incomplete message: %s" % (self.name, repr(buff))
                     break
-                
+
             # Break out if there was a sending error
             if send_error:
                 break
@@ -134,7 +134,7 @@ class ServiceSocket:
             text = text[len(SECRET_CODE):]
         else:
             knowledge_demo = False
-        
+
         # Return nothing if there was not text
         if not text:
             return {}
@@ -143,29 +143,29 @@ class ServiceSocket:
             print "Secret demo mode!"
             # pylint: disable=W0603
             global _WORLD_KNOWLEDGE
-            if not _WORLD_KNOWLEDGE or text == "reset":                
+            if not _WORLD_KNOWLEDGE or text == "reset":
                 _WORLD_KNOWLEDGE = knowledge.Knowledge()
 
             world_knowledge = _WORLD_KNOWLEDGE
         else:
             world_knowledge = knowledge.Knowledge()
-        
+
         response = {}
 
         # Run the parse pipeline
         parse = self._pipeline.parse_text(text)
         response['parse'] = parse.replace('(', '[').replace(')', ']')
-        
+
         # Get the results from semantics
         results = world_knowledge.process_parse_tree(parse, text)
         answer, frame_trees, new_commands = results[0], results[1], results[3]
 
         # Use the answer if there was one and it was a string
         user_response = answer if answer and isinstance(answer, str) else ""
-            
+
         # Also, echo back any new commands
         command_echo = make_response(new_commands)
-                
+
         # Combine the responses as needed.
         if not user_response:
             user_response = command_echo
@@ -176,11 +176,11 @@ class ServiceSocket:
 
         if frame_trees is not None:
             modified_trees = [str(modified_parse_tree[1]).replace('(', '[').replace(')', ']')
-                              for modified_parse_tree in frame_trees 
-                              if (len(modified_parse_tree) > 1 and 
+                              for modified_parse_tree in frame_trees
+                              if (len(modified_parse_tree) > 1 and
                                   isinstance(modified_parse_tree[1], tree.Tree))]
             response['trees'] = list(set(modified_trees))
-            
+
             frames = [frame_dict for frame_dict in [frame[0] for frame in frame_trees
                                                     if isinstance(frame[0], dict)]]
             response['frames'] = frames
@@ -191,9 +191,9 @@ class ServiceSocket:
         # Extract the command queue and add it to the response.
         # This is turned off for now because better talkback makes it
         # unnecessary.
-        #command_queue = world_knowledge.command_queue
-        #if command_queue:
-        #    response['response'] += " Commands: " + str(command_queue) 
+        # command_queue = world_knowledge.command_queue
+        # if command_queue:
+        #    response['response'] += " Commands: " + str(command_queue)
 
         return response
 
@@ -223,7 +223,7 @@ def main(port):
         raise
     finally:
         listener.shutdown()
- 
+
 
 def make_response(new_commands):
     """Make a response based on the new commands."""
@@ -261,7 +261,7 @@ def make_response(new_commands):
 
         response += DUNNO % _join_commands(bad_commands)
 
-    # Return the response made 
+    # Return the response made
     return response if response else MISUNDERSTAND
 
 
@@ -287,7 +287,7 @@ def _englishify_command(command):
     determiner = "the"
     preposition = None
     obj2 = None
-    
+
     # Some specific rules for extracting targets
     if LOCATION in target:
         preposition = "to" if verb != SEARCH_PROP else None
@@ -334,5 +334,3 @@ if __name__ == "__main__":
         main(int(sys.argv[1]))
     except (IndexError, ValueError):
         print >> sys.stderr, "Usage parse_server port"
-
-

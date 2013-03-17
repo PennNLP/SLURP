@@ -12,7 +12,7 @@ Hosts requests sent to the NLPipeline over sockets.
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # SLURP is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -46,9 +46,9 @@ def _socket_parse(**kwargs):
 class PipelineHost(CallbackSocket):
     """Provides a connection to pipeline over a listening socket."""
     name = "pipelinehost"
-    
+
     def __init__(self, port, local=False):
-        # Set up callback        
+        # Set up callback
         CallbackSocket.__init__(self, port, MSG_SEP, local)
         self.register_callback(self.parse_text)
         # Start up the pipeline
@@ -71,7 +71,7 @@ class PipelineHost(CallbackSocket):
 
 class PipelineClient(object):
     """Provides a client to the PipelineHost."""
-    
+
     def __init__(self, port=DEFAULT_PORT, hostname='localhost'):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
@@ -79,8 +79,8 @@ class PipelineClient(object):
         except socket.error:
             raise IOError("Could not connect to pipelinehost on %s:%d. "
                           "Make sure that pipelinehost is running." %
-                            (hostname, port))
-            
+                          (hostname, port))
+
     def parse(self, text, force_nouns=None, force_verbs=None):
         """Parse text using a remote pipeline."""
         # Lowercase and strip any trailing punctuation.
@@ -88,10 +88,10 @@ class PipelineClient(object):
         # Wrap in kwargs
         return _socket_parse(asocket=self.sock, text=text, force_nouns=force_nouns,
                              force_verbs=force_verbs)
-        
+
     def close(self):
         """Close the connection to the pipeline host.
-        
+
         If you need the connection closed promptly, it's wise to call this, but garbage collection
         will accomplish the same purpose.
         """
@@ -108,6 +108,6 @@ def main():
     except KeyboardInterrupt:
         pass
 
-    
+
 if __name__ == "__main__":
     main()
