@@ -40,11 +40,12 @@ TAGGER_PROJECT = os.path.join(ROOT_DIR, "mxpost", "tagger.project")
 TAGGER = "%s -Xmx128m -classpath %s tagger.TestTagger %s" % (JAVA, TAGGER_JAR, TAGGER_PROJECT)
 PARSER = "%s -Xmx1024m -cp %s %s %s -is %s  -sa - -out -" % \
     (JAVA, PARSER_CLASSPATH, PARSER_SETTINGS, PARSER_CLASS, PARSE_MODEL)
-ECRESTORER = "%s -Xmx256m -cp %s edu.upenn.cis.emptycategories.RestoreECs run - --perceptron --ante_perceptron --nptrace --whxp --wh --whxpdiscern --nptraceante --noante" \
-    % (JAVA, ECRESTORER_CLASSPATH)
+ECRESTORER = ("%s -Xmx256m -cp %s edu.upenn.cis.emptycategories.RestoreECs "
+              "run - --perceptron --ante_perceptron --nptrace --whxp --wh "
+              "--whxpdiscern --nptraceante --noante") % (JAVA, ECRESTORER_CLASSPATH)
 
 # Pipeline constants
-OUTER_PARENS_RE = re.compile("\(\s*(.+)\s*\)")
+OUTER_PARENS_RE = re.compile(r"\(\s*(.+)\s*\)")
 
 
 class PennPipeline(object):
@@ -92,8 +93,8 @@ def _terminate_with_extreme_prejudice(proc):
     """Terminate a process without any regard for exceptions."""
     try:
         proc.terminate()
+    # pylint: disable=W0702
     except:
-        # pylint: disable-msg=W0702
         pass
 
 

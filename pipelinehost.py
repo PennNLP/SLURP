@@ -63,7 +63,7 @@ class PipelineHost(CallbackSocket):
             data = {'text': message}
         print "Message:", repr(data)
         print "Parsing..."
-        # pylint: disable-msg=W0142,E1101 
+        # pylint: disable=W0142,E1101
         response = self.pipeline.parse_text(**data)
         print "Sending:", repr(response)
         self.send(response)

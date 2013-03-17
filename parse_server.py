@@ -79,6 +79,7 @@ class ServiceSocket:
                 accept_thread.start()
             except timeout:
                 continue
+            # pylint: disable=W0702
             except: # Because any error can occur here during shutdown
                 pass
 
@@ -91,6 +92,7 @@ class ServiceSocket:
                 buff = conn.recv(4096)
             except timeout:
                 continue
+            # pylint: disable=W0702
             except:
                 # Break the connection for all more serious errors
                 break
@@ -139,6 +141,7 @@ class ServiceSocket:
 
         if knowledge_demo:
             print "Secret demo mode!"
+            # pylint: disable=W0603
             global _WORLD_KNOWLEDGE
             if not _WORLD_KNOWLEDGE or text == "reset":                
                 _WORLD_KNOWLEDGE = knowledge.Knowledge()
