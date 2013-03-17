@@ -8,14 +8,14 @@ from socket import timeout
 import threading
 
 from commproxy import _parse_msg
-from pennpipeline import parse_text, init_pipes, close_pipes
+from pennpipeline import PennPipeline
 from semantics import knowledge, tree
 from semantics.knowledge import (SEARCH_ACTION, GO_ACTION, GET_ACTION, FOLLOW_ACTION, 
                                  SEE_ACTION, TELL_ACTION, ACTION_ALIASES)
 
+
 SECRET_CODE = ",oO-i2De<2W5NVuJa6E"
 _WORLD_KNOWLEDGE = None
-
 
 SEARCH_PROP = "search"
 FOLLOW_PROP = "follow_me"
@@ -51,6 +51,9 @@ class ServiceSocket:
         self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._sock.bind(('', port))
         self._sock.listen(1)
+
+        # Initialize pipeline
+        self._pipeline = PennPipeline()
 
         # Make a thread that keeps the connection alive
         accept_thread = threading.Thread(target=self._accept)
@@ -147,7 +150,7 @@ class ServiceSocket:
         response = {}
 
         # Run the parse pipeline
-        parse = parse_text(text)
+        parse = self._pipeline.parse_text(text)
         response['parse'] = parse.replace('(', '[').replace(')', ']')
         
         # Get the results from semantics
@@ -201,9 +204,6 @@ class ServiceSocket:
 
 def main(port):
     """Start listening for input."""
-    
-    # Set up the pipes
-    init_pipes()
 
     # Set up listener
     listener = ServiceSocket(port)
@@ -219,10 +219,6 @@ def main(port):
     except:
         raise
     finally:
-        # Only shutdown the pipeline if we actually were taking language input
-        
-        print "Shutting down NL pipeline..."
-        close_pipes()
         listener.shutdown()
  
 

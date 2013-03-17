@@ -24,7 +24,7 @@ Hosts requests sent to the NLPipeline over sockets.
 import json
 import socket
 from commproxy import CallbackSocket, _parse_msg
-from pennpipeline import parse_text, init_pipes, close_pipes
+from pennpipeline import PennPipeline
 
 MSG_SEP = "\n"
 DEFAULT_PORT = 9001
@@ -52,14 +52,7 @@ class PipelineHost(CallbackSocket):
         CallbackSocket.__init__(self, port, MSG_SEP, local)
         self.register_callback(self.parse_text)
         # Start up the pipeline
-        init_pipes()
-
-    def __del__(self):
-        # We put this check as it may already be undefined during interpreter 
-        # shutdown. There's no guarantee this will succeed during shutdown 
-        # anyway.
-        if close_pipes:
-            close_pipes()
+        self.pipeline = PennPipeline()
 
     def parse_text(self, message):
         """Receive a parse request for the pipeline."""
@@ -70,7 +63,8 @@ class PipelineHost(CallbackSocket):
             data = {'text': message}
         print "Message:", repr(data)
         print "Parsing..."
-        response = parse_text(**data)
+        # pylint: disable-msg=W0142,E1101 
+        response = self.pipeline.parse_text(**data)
         print "Sending:", repr(response)
         self.send(response)
 

@@ -6,7 +6,7 @@ import _curses
 import curses.textpad
 import signal
 
-from pennpipeline import parse_text, init_pipes, close_pipes
+from pennpipeline import PennPipeline
 from semantics import knowledge, tree
 
 MIN_HEIGHT = 35
@@ -82,11 +82,14 @@ def interactive_mode(window):
     """Interactively get input from the user and parse it."""
     input_frame, input_win, parse_win, semantic_win = setup_windows(window)
 
+    # Initialize pipeline
+    pipeline = PennPipeline()
+
     # Set up semantics module
     world_knowledge = knowledge.Knowledge()
     
     # Send some data through the pipeline
-    result = parse_text("This is a test.")
+    result = pipeline.parse_text("This is a test.")
     input_frame.addstr(1, 1, 'Enter your input, then press Ctrl+G. '
                        'Enter "quit" or press Ctrl+C to exit.')
     input_frame.refresh()
@@ -113,7 +116,7 @@ def interactive_mode(window):
         semantic_win.refresh()
 
         # Run the parse pipeline
-        result = parse_text(text)
+        result = pipeline.parse_text(text)
 
         # Clear the status and output the result, it's easiest to just
         # clear and echo the input again 
@@ -165,9 +168,6 @@ def interactive_mode(window):
 
 def main():
     """Get input and process it in a loop."""
-    
-    # Set up the pipes
-    init_pipes()
 
     # Get input from user interactively    
     signal.signal(signal.SIGWINCH, sigwinch_handler)
@@ -176,8 +176,6 @@ def main():
     except WindowTooSmallError as exc:
         print >> sys.stderr, exc
         sys.exit(1)
-
-    close_pipes()
 
 
 if __name__ == "__main__":
