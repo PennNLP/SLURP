@@ -27,7 +27,6 @@ class PragbotProtocol(LineReceiver):
         print 'Client connected'
         self.sendMessage('SET_ROLE', 1)
         self.sendMessage('CREATE_FPSENVIRONMENT', self.ge.to_fps_string())
-        self.sendMessage('CREATE_ENVIRONMENT', self.ge.to_string())
 
     def connectionLost(self, reason):
         print 'Client disconnected'
@@ -38,11 +37,19 @@ class PragbotProtocol(LineReceiver):
 
         for s in lines:
             if s.startswith('CHAT_MESSAGE_PREFIX'):
-                s = s[len('CHAT_MESSAGE_PREFIX<Commander> '):]
+                s = remove_prefix(s, 'CHAT_MESSAGE_PREFIX<Commander> ')
                 with self.lock:
                     parse = PipelineClient().parse(s)
                 frames, new_commands, kb_response = process_parse_tree(parse, data, self.kb, quiet=True)
                 self.sendMessage('CHAT_MESSAGE_PREFIX', '<Junior> ' + make_response(new_commands, kb_response))
+            elif s.startswith('MOVE_PLAYER_CELL'):
+                s = remove_prefix(s, 'MOVE_PLAYER_CELL')
+                new_x, old_x, new_y, old_y = s.split(',')
+                self.ge.update_cmdr((int(new_x), int(new_y)))
+                print str(self.ge)
+
+def remove_prefix(s, prefix):
+    return s[len(prefix):]
 
 class PragbotFactory(Factory):
     def __init__(self):
