@@ -23,52 +23,47 @@ Hosts requests sent to the NLPipeline as ROS services.
 
 import roslib
 roslib.load_manifest('nlp')
-from nlp_comms.srv import String, StringResponse
+from nlp.srv import String
 import rospy
 
 import sys
 import os
 # Get slurp into the sys.path
 MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(MODULE_DIR, '..', '..'))
+sys.path.append(os.path.join(MODULE_DIR, '..', '..', '..'))
 
-from pennpipeline import parse_text, init_pipes, close_pipes
+from pennpipeline import PennPipeline
 
-NODE_NAME = "upenn_nlp_pipeline_server"
-SERVICE_NAME = "upenn_nlp_pipeline_service"
+NODE_NAME = "penn_nlp_pipeline_server"
+SERVICE_NAME = "penn_nlp_pipeline_service"
 
 class PipelineService():
     """Provides a connection to the pipeline via a ROS service."""
     
     def __init__(self):
-        init_pipes()
-
-    def __del__(self):
-        # We put this check as it may already be undefined during interpreter shutdown.
-        # There's no guarantee this will succeed during shutdown anyway.
-        if close_pipes:
-            close_pipes()
+        self._pipeline = PennPipeline()
 
     def parse_text(self, request):
         """Return a parse response."""
         text = request.in_
         rospy.loginfo("NLP pipeline request: %r" % text)
-        response = parse_text(text)
+        response = self._pipeline.parse_text(text)
         rospy.loginfo("NLP pipeline response: %r" % response)
         return response
 
 
 def pipeline_server():
+    """Run the pipeline service."""
     # ROS node setup
     rospy.init_node(NODE_NAME)
-    rospy.loginfo("UPenn NLP Pipeline started on node %s" % NODE_NAME)
+    rospy.loginfo("Penn NLP Pipeline started on node %s" % NODE_NAME)
 
     # Pipeline setup
     host = PipelineService()
 
     # Start the service
     srv = rospy.Service(SERVICE_NAME, String, host.parse_text)
-    rospy.loginfo("UPenn NLP Pipeline available on service %s" % SERVICE_NAME)
+    rospy.loginfo("Penn NLP Pipeline available on service %s" % SERVICE_NAME)
     rospy.spin()
 
 

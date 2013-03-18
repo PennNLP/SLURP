@@ -23,23 +23,25 @@ Hosts requests sent to the NLPipeline as ROS services.
 
 import roslib
 roslib.load_manifest('nlp')
-from nlp_comms.srv import String, StringResponse
+from nlp.srv import String
 import rospy
 
 import sys
 import os
 import json
+
 # Get slurp into the sys.path
 MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(MODULE_DIR, '..', '..'))
+sys.path.append(os.path.join(MODULE_DIR, '..', '..', '..'))
+from semantics.parsing import process_parse_tree
 
-from semantics.processing import process_parse_tree
 
-NODE_NAME = "upenn_nlp_semantics_server"
-SERVICE_NAME = "upenn_nlp_semantics_service"
+NODE_NAME = "penn_nlp_semantics_server"
+SERVICE_NAME = "penn_nlp_semantics_service"
 
 # In-order names to give to return values of the response
 SEMANTICS_KEYS = ('user_response', 'new_commands')
+
 
 def process_text(request):
     """Return a parse response."""
@@ -47,13 +49,11 @@ def process_text(request):
     rospy.loginfo("NLP semantics request: %r" % request_dict)
     response = process_parse_tree(request_dict['tree'].encode('ascii', 'replace'), 
                                   request_dict['text'].encode('ascii', 'replace'))
-    user_response, semantics_result, semantics_response, new_commands = response
-    user_response = "Got it."
+    frames, new_commands, kb_response = response
+    user_response = "Got it." if not kb_response else "I understood: " + kb_response
 
-    # Repack commands into one dictionary
-    command_dicts =  [{'Command': command} for command, _ in new_commands]
-    for command_dict, (_, args) in zip(command_dicts, new_commands):
-        command_dict.update(args)
+    # TODO: Properly serialize the commands, possibly into a new message format
+    command_dicts =  [{'Command': str(command)} for command in new_commands]
 
     response_dict = dict(zip(SEMANTICS_KEYS, [user_response, command_dicts]))
     response_json = json.dumps(response_dict)
@@ -62,13 +62,14 @@ def process_text(request):
 
 
 def semantics_server():
+    """Run the semantics service."""
     # ROS node setup
     rospy.init_node(NODE_NAME)
-    rospy.loginfo("UPenn Semantics started on node %s" % NODE_NAME)
+    rospy.loginfo("Penn Semantics started on node %s" % NODE_NAME)
 
     # Start the service
     srv = rospy.Service(SERVICE_NAME, String, process_text)
-    rospy.loginfo("UPenn Semantics available on service %s" % SERVICE_NAME)
+    rospy.loginfo("Penn Semantics available on service %s" % SERVICE_NAME)
     rospy.spin()
 
 

@@ -15,5 +15,4 @@ nlpipeline.zip
 build
 CMakeFiles
 CMakeCache.txt
-*.dox
 srv_gen
