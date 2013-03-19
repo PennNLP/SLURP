@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
-from semantics.knowledge import (SEARCH_ACTION, GO_ACTION, GET_ACTION, FOLLOW_ACTION, 
-                                 SEE_ACTION, TELL_ACTION, ACTION_ALIASES)
+from semantics.knowledge import ACTION_ALIASES
 
 # Semantics constants
 KNOWN_ACTIONS = set(ACTION_ALIASES.values())
@@ -13,8 +12,8 @@ MISUNDERSTAND = "Sorry, I didn't understand that at all."
 
 def make_response(new_commands, kb_response):
     """Make a response based on the new commands and the knowledge base response."""
-    # Give up if there were no new commands
     if not new_commands:
+        # Use knowledge base response if available, otherwise give up
         if kb_response:
             return kb_response
         else:
@@ -23,12 +22,9 @@ def make_response(new_commands, kb_response):
     # Split into good and bad commands, futher filtering the good ones
     good_commands = []
     bad_commands = []
+    # TODO: handle unknown entities
 
     for c in new_commands:
-        # Skip the SEE_ACTION entirely
-        if c.action == SEE_ACTION:
-            continue
-
         if c.action in KNOWN_ACTIONS:
             good_commands.append(c)
         else:
