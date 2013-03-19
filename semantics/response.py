@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+"""Generates a response"""
 
 from semantics.knowledge import ACTION_ALIASES
 
@@ -11,7 +12,8 @@ GOTIT = "Got it. I'll%s."
 MISUNDERSTAND = "Sorry, I didn't understand that at all."
 
 def make_response(new_commands, kb_response):
-    """Make a response based on the new commands and the knowledge base response."""
+    """Make a response based on the new commands
+    and the knowledge base response."""
     if not new_commands:
         # Use knowledge base response if available, otherwise give up
         if kb_response:
