@@ -9,6 +9,11 @@ class Cell:
         # Cell coordinates
         self.location = location
         self.celltype = celltype
+        self.neighbors = []
+
+    def add_neighbor(self, n):
+        if n.is_open():
+            self.neighbors.append(n)
 
     def is_open(self):
         """Whether an agent can be at this cell"""
@@ -18,6 +23,12 @@ class Cell:
         """Returns the center of the cell in world coordinates"""
         return tuple(to_world_coordinate(c) for c in self.location)
 
+    def __str__(self):
+        return str(self.location)
+
+    def __repr__(self):
+        return str(self)
+
 class Agent:
     """Class representing an agent in the continuous world"""
     def __init__(self, cell, location=None):
@@ -26,6 +37,7 @@ class Agent:
         self.location = location
         if not self.location:
             self.fix_location()
+        self.waypoints = []
 
     def fix_location(self):
         """Moves the agent to the center of its cell"""
@@ -35,6 +47,28 @@ class Agent:
         """Sets the agent's cell and the location to the center of it"""
         self.cell = cell
         self.fix_location()
+
+    def plan_path(self, goal):
+        """Breadth-first path search"""
+        # TODO: convert this to A*
+        parent_dict = {self.cell: None}
+        explored = set()
+        frontier = [self.cell]
+        while len(frontier) != 0:
+            current = frontier.pop(0)
+            if current is goal:
+                self.waypoints = []
+                while current is not None:
+                    self.waypoints.append(current)
+                    current = parent_dict[current]
+                self.waypoints.reverse()
+                return True
+            explored.add(current)
+            for n in current.neighbors:
+                if n not in explored:
+                    parent_dict[n] = current
+                    frontier.append(n)
+        return False
 
 class GameEnvironment:
     """Class representing the game environment"""
@@ -57,7 +91,16 @@ class GameEnvironment:
                             self.cmdr = Agent(new_cell)
                         elif c == 'J':
                             self.jr = Agent(new_cell)
-
+        for i, row in enumerate(self.grid):
+            for j, cell in enumerate(row):
+                if i > 1:
+                    cell.add_neighbor(self.grid[i-1][j])
+                if i < len(self.grid) - 1:
+                    cell.add_neighbor(self.grid[i+1][j])
+                if j > 1:
+                    cell.add_neighbor(self.grid[i][j-1])
+                if j < len(self.grid) - 1:
+                    cell.add_neighbor(self.grid[i][j+1])
     def to_fps_string(self):
         """Returns the fps_string as understood by the client"""
         return ROW_DELIMITER.join(self.original_lines)
@@ -104,4 +147,5 @@ def to_simple_cell(c):
 if __name__ == '__main__':
     ge = GameEnvironment()
     print str(ge)
-    print ge.to_fps_string()
+    ge.jr.plan_path(ge.cmdr.cell)
+    print ge.jr.waypoints
