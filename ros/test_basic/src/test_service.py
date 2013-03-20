@@ -1,11 +1,14 @@
+#!/usr/bin/env python
 import roslib
 roslib.load_manifest('nlp')
 
-from nlp_comms.srv import String, StringResponse
 import rospy
+from nlp.srv import String, StringResponse
+
 
 def handle_test_service(request):
     return StringResponse("bar")
+
 
 def string_server():
     rospy.init_node("test_server")
@@ -13,5 +16,9 @@ def string_server():
     print "Service started."
     rospy.spin()
 
+
 if __name__ == "__main__":
-    string_server()
+    try:
+        string_server()
+    except rospy.ROSInterruptException:
+        pass

@@ -1,13 +1,13 @@
 <package>
-  <description brief="nlp">
+  <description brief="test_basic">
 
-     nlp
+     test_basic
 
   </description>
   <author>Constantine Lignos</author>
-  <license>GPLv3</license>
+  <license>BSD</license>
   <review status="unreviewed" notes=""/>
-  <url>http://ros.org/wiki/nlp</url>
+  <url>http://ros.org/wiki/test_basic</url>
   <depend package="rospy"/>
   <depend package="std_msgs"/>
 </package>

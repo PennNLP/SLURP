@@ -66,6 +66,10 @@ class PennPipeline(object):
 
     def parse_text(self, text, force_nouns=None, force_verbs=None, correct_punc=True):
         """Run the text through the pipelines."""
+        # Check for empty text
+        if not text:
+            return ""
+
         # Create default set arguments
         if not force_nouns:
             force_nouns = set()
