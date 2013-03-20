@@ -22,16 +22,17 @@ import re
 from collections import OrderedDict, defaultdict
 from copy import deepcopy
 
-from semantics.lexical_constants import (SEARCH_ACTION, GO_ACTION,
-    FOLLOW_ACTION, SEE_ACTION, BEGIN_ACTION, AVOID_ACTION, PATROL_ACTION,
-    CARRY_ACTION, STAY_ACTION, ACTIVATE_ACTION, DEACTIVATE_ACTION,
-    DEFUSE_ACTION)
+from semantics.lexical_constants import (
+    SEARCH_ACTION, GO_ACTION, FOLLOW_ACTION, SEE_ACTION, BEGIN_ACTION,
+    AVOID_ACTION, PATROL_ACTION, CARRY_ACTION, STAY_ACTION, ACTIVATE_ACTION,
+    DEACTIVATE_ACTION, DEFUSE_ACTION)
 from semantics.new_structures import Event, Assertion
 from semantics.parsing import process_parse_tree
 from pipelinehost import PipelineClient
 from semantics.new_knowledge import KnowledgeBase
-from ltlbroom.ltl import (env, and_, or_, sys_, not_, iff, next_,
-    always, always_eventually, implies, space, ALWAYS, EVENTUALLY, OR)
+from ltlbroom.ltl import (
+    env, and_, or_, sys_, not_, iff, next_, always, always_eventually, implies,
+    space, ALWAYS, EVENTUALLY, OR)
 
 
 # Debug constants
@@ -90,8 +91,9 @@ class SpecChunk(object):
         self.highlights = [False for _ in range(len(self.lines))]
 
     def __repr__(self):
-        return '<{} lines for {!r}: {}, Command: {}, Goals: {}>'.format(self.type, self.explanation,
-            self.lines, _format_command(self.command), list(self.goal_indices))
+        return '<{} lines for {!r}: {}, Command: {}, Goals: {}>'.format(
+            self.type, self.explanation, self.lines, _format_command(self.command),
+            list(self.goal_indices))
 
     def __str__(self):
         return '<{} lines for {!r}: {}>'.format(self.type, self.explanation, self.lines)
@@ -152,7 +154,7 @@ class SpecGenerator(object):
         self.regions = [astr.encode('ascii', 'ignore') for astr in regions]
         self.props = [astr.encode('ascii', 'ignore') for astr in props]
         self.tag_dict = {key.encode('ascii', 'ignore'):
-                             [value.encode('ascii', 'ignore') for value in values]
+                         [value.encode('ascii', 'ignore') for value in values]
                          for key, values in tag_dict.items()}
 
         print "NL->LTL Generation called on:"
@@ -346,18 +348,21 @@ class SpecGenerator(object):
 
         # Stay there if environment is changing
         stay_there_explanation = "React immediately to the target moving."
-        stay_there_safeties = always(implies(not_(next_(sys_(FOLLOW_STATIONARY))), self._frag_stay()))
-        stay_there_lines = SpecChunk(stay_there_explanation, [stay_there_safeties], SpecChunk.SYS,
-                                     command)
+        stay_there_safeties = \
+            always(implies(not_(next_(sys_(FOLLOW_STATIONARY))), self._frag_stay()))
+        stay_there_lines = \
+            SpecChunk(stay_there_explanation, [stay_there_safeties], SpecChunk.SYS, command)
 
         # Match the sensor location to ours
         follow_goals = \
-          [SpecChunk("Follow the target to {!r}.".format(region),
-            [always_eventually(implies(and_((sys_(FOLLOW_STATIONARY), env(region))), sys_(region)))],
-            SpecChunk.SYS, command) for region in self.regions]
+            [SpecChunk("Follow the target to {!r}.".format(region),
+             [always_eventually(
+              implies(and_((sys_(FOLLOW_STATIONARY), env(region))), sys_(region)))],
+             SpecChunk.SYS, command) for region in self.regions]
         follow_env = SpecChunk("Target must obey map topology.",
                                [FOLLOW_SENSORS], SpecChunk.ENV, command)
-        return ([stationary_lines, stay_there_lines] + follow_goals, [follow_env], [FOLLOW_STATIONARY], [])
+        return ([stationary_lines, stay_there_lines] + follow_goals, [follow_env],
+                [FOLLOW_STATIONARY], [])
 
     def _gen_conditional(self, command):
         """Generate a conditional action"""
@@ -368,9 +373,11 @@ class SpecGenerator(object):
                 raise KeyError("Cannot understand condition:\n{}".format(command.condition))
             condition = command.condition.theme.name
             if condition not in self.sensors:
-                raise KeyError("No sensor to detect condition {!r}".format(command.condition.theme.name))
+                raise KeyError(
+                    "No sensor to detect condition {!r}".format(command.condition.theme.name))
             if command.condition.sensor != SEE_ACTION:
-                raise KeyError("Cannot use action {!r} as a condition".format(command.condition.action))
+                raise KeyError(
+                    "Cannot use action {!r} as a condition".format(command.condition.action))
             condition_frag = env(condition)
             explanation = "To react to {!r},".format(condition)
         elif isinstance(command.condition, Assertion):
@@ -413,7 +420,7 @@ class SpecGenerator(object):
 
             # Negation is easy, so we take a shortcut
             if ((action == GO_ACTION and command.negation) or
-                (action == AVOID_ACTION and not command.negation)):
+                    (action == AVOID_ACTION and not command.negation)):
                 sys_statements.append(always(implies(next_(condition_frag),
                                                      not_(next_(sys_(destination))))))
                 explanation += " avoid {!r}.".format(command.location.name)
@@ -424,10 +431,10 @@ class SpecGenerator(object):
                 # Safety that persists
                 go_safety = \
                     always(iff(next_(reaction_prop),
-                                 or_([reaction_prop, next_(condition_frag)])))
+                               or_([reaction_prop, next_(condition_frag)])))
                 # Make sure we act immediately: []((!react & next(react) )-> stay_there)
                 stay_there = always(implies(and_((not_(reaction_prop), next_(reaction_prop))),
-                                              self._frag_stay()))
+                                            self._frag_stay()))
 
                 sys_statements.extend([go_goal, go_safety, stay_there])
                 explanation += " go to {!r}.".format(command.location.name)
@@ -522,7 +529,7 @@ class SpecGenerator(object):
         for region in regions:
             explanation = "Continuously visit {!r}.".format(region)
             sys_chunks.append(SpecChunk(explanation, [always_eventually(sys_(region))],
-                                       SpecChunk.SYS, command))
+                                        SpecChunk.SYS, command))
         return (sys_chunks, [], [], [])
 
     def _gen_go(self, command):
@@ -680,7 +687,8 @@ def _prop_actuator_done(actuator):
 
 def _format_command(command):
     """Format a command nicely for display."""
-    action = ("Action: {!r}" if not command.negation else "Action: do not {!r}").format(command.action)
+    action = ("Action: {!r}" if not command.negation else
+              "Action: do not {!r}").format(command.action)
     fields = [action]
     if command.theme:
         fields.append("Argument: {!r}".format(command.theme.name))
@@ -707,7 +715,6 @@ def _insert_or_before_goal(or_clause, statement):
 def _remove_comments(text):
     """Remove from the comment character to the end of the line."""
     return re.sub('#.*$', '', text).strip()
-
 
 
 def goal_to_chunk(goal_idx, spec_chunks):
@@ -770,20 +777,20 @@ def explain_conflict(conflicting_lines, gen_tree):
 
     # Now explain the other issues
     other_explanations = [(chunk.explanation, chunk.input) for chunk in conflicting_chunks
-                         if any(not isgoal(line) for line in chunk.lines)]
+                          if any(not isgoal(line) for line in chunk.lines)]
     other_problem = "The statements that cause the problem are:\n"
     # Group together sub-goals by the goal that generated them
     text_explains = defaultdict(list)
     for explanation, text in other_explanations:
         text_explains[text].append(explanation)
     other_template = "{!r} because of item(s): {}."
-    other_problem += "\n".join(other_template.format(text, ", ".join(repr(ex) for ex in explanations))
-                               for text, explanations in sorted(text_explains.items()))
+    other_problem += \
+        "\n".join(other_template.format(text, ", ".join(repr(ex) for ex in explanations))
+                  for text, explanations in sorted(text_explains.items()))
 
     explanation = goal_problem + "\n" + other_problem
 
     return explanation, gen_tree
-
 
 
 def respond_nocommand():
@@ -794,7 +801,6 @@ def respond_nocommand():
 def respond_okay(action):
     """Respond that we will perform the action."""
     return GOTIT.format(action)
-
 
 
 def _test():

@@ -39,7 +39,6 @@ SERVICE_NAME = "upenn_nlp_pipeline_service"
 
 class PipelineService():
     """Provides a connection to the pipeline via a ROS service."""
-    name = "pipelinehost"
     
     def __init__(self):
         init_pipes()

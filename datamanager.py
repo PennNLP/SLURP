@@ -50,5 +50,5 @@ def unzip(filepath, destpath='.'):
         zfile = zipfile.ZipFile(filepath, 'r')
     except (IOError, zipfile.BadZipfile):
         raise IOError("The zip file %s could not be opened." % repr(filepath))
-    
+
     zfile.extractall(destpath)

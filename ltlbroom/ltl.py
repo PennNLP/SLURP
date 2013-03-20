@@ -27,6 +27,7 @@ OR = "|"
 ROBOT_STATE = "s."
 ENV_STATE = "e."
 
+
 def space(text):
     """Wrap text in spaces."""
     return " " + text + " "
@@ -80,8 +81,8 @@ def next_(text):
 def mutex_(items):
     """Create a system proposition mutex over the given items."""
     return always(or_([and_([next_(item1)] +
-                             [not_(next_(item2)) for item2 in items if item2 != item1])
-                    for item1 in items], "\n    "))
+                            [not_(next_(item2)) for item2 in items if item2 != item1])
+                       for item1 in items], "\n    "))
 
 
 def iff(prop1, prop2):

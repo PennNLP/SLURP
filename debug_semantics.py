@@ -11,6 +11,7 @@ from pipelinehost import PipelineClient
 semantics.parsing.EXTRACT_DEBUG = True
 TEST_CASES_FILE = 'semantics/test_cases.txt'
 
+
 def from_stdin(kb):
     """Test semantics by processing text from stdin"""
     while True:
@@ -20,6 +21,7 @@ def from_stdin(kb):
             break
         if not process_input(text, kb):
             break
+
 
 def process_input(text, kb, verbose=True):
     """Send given text to the semantics component"""
@@ -37,6 +39,7 @@ def process_input(text, kb, verbose=True):
     else:
         print 'Connection to server closed.'
         return False
+
 
 def run_test_cases(kb):
     semantics.parsing.EXTRACT_DEBUG = False

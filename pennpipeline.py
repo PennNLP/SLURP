@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Functions for accessing the Penn NLP Pipeline.
 
-Depends on the nlpipeline, sed, and java."""
+Depends on the nlpipeline, sed, and Java."""
 
 import sys
 import os
@@ -11,91 +11,106 @@ import shlex
 
 ## Global constants for system configuration
 # Paths
-NULL = "NUL" if sys.platform == "win32" else "/dev/null"
 CLASSPATH_SEP = ";" if sys.platform == "win32" else ":"
-root_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'nlpipeline')
-if not os.path.exists(root_dir):
+ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'nlpipeline')
+if not os.path.exists(ROOT_DIR):
     raise ImportError("The nlpipeline must be placed in the module directory %s "
-                      "to use the Penn NLP pipeline. Run download.py to download it." % root_dir)
-tool_dir = os.path.join(root_dir, "tools")
-parse_props = os.path.join(root_dir, "models", "eatb3.properties")
-parse_model = os.path.join(root_dir, "models", "wsjall.obj")
-parser_dir = os.path.join(root_dir, "dbparser-0.9.9c-modified")
-ecrestore_dir = os.path.join(root_dir, "addnulls-mod") 
+                      "to use the Penn NLP pipeline. Run download.py to download it." % ROOT_DIR)
+TOOL_DIR = os.path.join(ROOT_DIR, "tools")
+PARSE_PROPS = os.path.join(ROOT_DIR, "models", "eatb3.properties")
+PARSE_MODEL = os.path.join(ROOT_DIR, "models", "wsjall.obj")
+PARSER_DIR = os.path.join(ROOT_DIR, "dbparser-0.9.9c-modified")
+ECRESTORE_DIR = os.path.join(ROOT_DIR, "addnulls-mod")
 
-# Parser/java options
-java = "java"
-parser_class = "danbikel.parser.Parser"
-settings = "-Dparser.settingsFile=%s" % parse_props
-parser_classpath = (os.path.join(parser_dir, "dbparser.jar") + CLASSPATH_SEP + 
-                    os.path.join(parser_dir, "dbparser-ext.jar"))
+# Parser/JAVA options
+JAVA = "java"
+PARSER_CLASS = "danbikel.parser.Parser"
+PARSER_SETTINGS = "-Dparser.settingsFile=%s" % PARSE_PROPS
+PARSER_CLASSPATH = (os.path.join(PARSER_DIR, "dbparser.jar") + CLASSPATH_SEP +
+                    os.path.join(PARSER_DIR, "dbparser-ext.jar"))
 
-# EC Restore/java options
-ecrestore_classpath = ecrestore_dir + CLASSPATH_SEP + os.path.join(tool_dir, "mallet-0.4", "class")
+# EC Restore/JAVA options
+ECRESTORER_CLASSPATH = ECRESTORE_DIR + CLASSPATH_SEP + os.path.join(TOOL_DIR, "mallet-0.4", "class")
 
 # Pipeline commands
 SED = "sed -l" if sys.platform == "darwin" else "sed -u"
-tokenizer = SED +" -f " + os.path.join(tool_dir, "tokenizer.sed")
-tagger_jar = os.path.join(root_dir, "mxpost", "mxpost.jar")
-tagger_project = os.path.join(root_dir, "mxpost", "tagger.project")
-tagger = "java -Xmx128m -classpath %s tagger.TestTagger %s" % (tagger_jar, tagger_project)
-parser = "%s -Xmx1024m -cp %s %s %s -is %s  -sa - -out -" % \
-    (java, parser_classpath, settings, parser_class, parse_model)
-ecrestorer = "%s -Xmx256m -cp %s edu.upenn.cis.emptycategories.RestoreECs run - --perceptron --ante_perceptron --nptrace --whxp --wh --whxpdiscern --nptraceante --noante" \
-    % (java, ecrestore_classpath)
+TOKENIZER = SED + " -f " + os.path.join(TOOL_DIR, "tokenizer.sed")
+TAGGER_JAR = os.path.join(ROOT_DIR, "mxpost", "mxpost.jar")
+TAGGER_PROJECT = os.path.join(ROOT_DIR, "mxpost", "tagger.project")
+TAGGER = "%s -Xmx128m -classpath %s tagger.TestTagger %s" % (JAVA, TAGGER_JAR, TAGGER_PROJECT)
+PARSER = "%s -Xmx1024m -cp %s %s %s -is %s  -sa - -out -" % \
+    (JAVA, PARSER_CLASSPATH, PARSER_SETTINGS, PARSER_CLASS, PARSE_MODEL)
+ECRESTORER = ("%s -Xmx256m -cp %s edu.upenn.cis.emptycategories.RestoreECs "
+              "run - --perceptron --ante_perceptron --nptrace --whxp --wh "
+              "--whxpdiscern --nptraceante --noante") % (JAVA, ECRESTORER_CLASSPATH)
 
-token_proc = None
-tag_proc = None
-parse_proc = None
-ecrestore_proc = None
-null_out = None
-
-OUTER_PARENS_RE = re.compile("\(\s*(.+)\s*\)")
+# Pipeline constants
+OUTER_PARENS_RE = re.compile(r"\(\s*(.+)\s*\)")
 
 
-def init_pipes():
-    """Initialize the nl processing pipelines.
+class PennPipeline(object):
+    """Provide access to a pipeline of NLP tools."""
 
-    You must call this before calling any other functions"""
-    # pylint: disable=W0603
-    global token_proc, tag_proc, parse_proc, ecrestore_proc, null_out
+    def __init__(self):
+        # Set up the pipes
+        self.token_proc = _setup_pipe(TOKENIZER)
+        self.tag_proc = _setup_pipe(TAGGER)
+        self.parse_proc = _setup_pipe(PARSER)
+        self.ecrestore_proc = _setup_pipe(ECRESTORER, ECRESTORE_DIR)
 
-    # Set up the null sink and the pipes
-    null_out = open(NULL, 'w')
-    token_proc = setup_pipe(tokenizer)
-    tag_proc = setup_pipe(tagger)
-    parse_proc = setup_pipe(parser)
-    ecrestore_proc = setup_pipe(ecrestorer, ecrestore_dir)
+    def __del__(self):
+        """Terminate all pipelines."""
+        # This is possibly unnecessary, but doesn't do any harm.
+        for proc in (self.token_proc, self.tag_proc, self.parse_proc, self.ecrestore_proc):
+            _terminate_with_extreme_prejudice(proc)
 
+    def parse_text(self, text, force_nouns=None, force_verbs=None, correct_punc=True):
+        """Run the text through the pipelines."""
+        # Create default set arguments
+        if not force_nouns:
+            force_nouns = set()
+        if not force_verbs:
+            force_verbs = set()
 
-def close_pipes():
-    """Terminate all pipelines."""
-    for proc in (token_proc, tag_proc, parse_proc, ecrestore_proc):
-        _terminate_with_extreme_prejudice(proc)
-    null_out.close()
+        # Add in final punctuation if it's missing
+        if correct_punc and text[-1] not in ('.', '?', '!'):
+            text += '.'
+
+        token_sent = _process_pipe_filter(text, self.token_proc)
+        tagged_sent = _process_pipe_filter(token_sent, self.tag_proc)
+        clean_tagged_sent = _tag_convert(tagged_sent, force_nouns, force_verbs)
+        parsed_sent = _process_pipe_filter(clean_tagged_sent, self.parse_proc, "(")
+        # Wrap input to the null restorer as ( x) exactly as wrap-stream.pl used to do
+        restored_sent = _process_pipe_filter("( " + parsed_sent + ")", self.ecrestore_proc, "(")
+
+        # Remove extra parens from the parse with elements restored
+        final_parse = OUTER_PARENS_RE.match(restored_sent).group(1)
+
+        return final_parse
 
 
 def _terminate_with_extreme_prejudice(proc):
     """Terminate a process without any regard for exceptions."""
     try:
         proc.terminate()
+    # pylint: disable=W0702
     except:
         pass
 
 
-def setup_pipe(command, cwd=None):
+def _setup_pipe(command, cwd=None):
     """Set up a pipeline using the given command."""
     # Windows expects a string for the command, so only lex other systems
     if sys.platform != "win32":
         command = shlex.split(command)
-    
+
     try:
-        return Popen(command, stdin=PIPE, stdout=PIPE, stderr=null_out, cwd=cwd)
+        return Popen(command, stdin=PIPE, stdout=PIPE, stderr=open(os.devnull, 'w'), cwd=cwd)
     except OSError:
         raise OSError("Subprocess failed to run command: %s" % command)
 
 
-def process_pipe_filter(text, process, line_filter=""):
+def _process_pipe_filter(text, process, line_filter=""):
     """Run text through the pipe, returning the first output line starting with the filter."""
     print >> process.stdin, text
     process.stdin.flush()
@@ -103,38 +118,10 @@ def process_pipe_filter(text, process, line_filter=""):
         text = process.stdout.readline().strip()
         while not text.startswith(line_filter):
             text = process.stdout.readline().strip()
-    else: 
+    else:
         text = process.stdout.readline().strip()
 
     return text
-
-
-def parse_text(text, force_nouns=None, force_verbs=None, correct_punc=True):
-    """Run the text through the pipelines."""
-    if not all((token_proc, tag_proc, parse_proc, ecrestore_proc)):
-        raise ValueError("You must call init_pipes before parsing.")
-    
-    # Create default set arguments
-    if not force_nouns:
-        force_nouns = set()
-    if not force_verbs:
-        force_verbs = set()
-
-    # Add in final punctuation if it's missing
-    if correct_punc and text[-1] not in ('.', '?', '!'):
-        text += '.'
-
-    token_sent = process_pipe_filter(text, token_proc)
-    tagged_sent = process_pipe_filter(token_sent, tag_proc)
-    clean_tagged_sent = _tag_convert(tagged_sent, force_nouns, force_verbs)
-    parsed_sent = process_pipe_filter(clean_tagged_sent, parse_proc, "(")
-    # Wrap input to the null restorer as ( x) exactly as wrap-stream.pl used to do
-    restored_sent = process_pipe_filter("( " + parsed_sent + ")", ecrestore_proc, "(")
-
-    # Remove extra parens from the parse with elements restored
-    final_parse = OUTER_PARENS_RE.match(restored_sent).group(1)
-
-    return final_parse
 
 
 def _tag_convert(sent, force_nouns, force_verbs):
@@ -143,7 +130,7 @@ def _tag_convert(sent, force_nouns, force_verbs):
     # We use rsplit with one to make sure underscores in the token aren't harmed.
     token_tags = [token.rsplit('_', 1) for token in sent.rstrip().split()]
     # Coerce the tags
-    token_tags = [(word, _coerce_tag(word, tag, force_nouns, force_verbs)) 
+    token_tags = [(word, _coerce_tag(word, tag, force_nouns, force_verbs))
                   for word, tag in token_tags]
     # Bikel: (word (tag)), with () around the line
     return "(" + " ".join("(%s (%s))" % (word, tag) for word, tag in token_tags) + ")"
@@ -158,8 +145,7 @@ def _coerce_tag(word, tag, force_nouns, force_verbs):
 
 if __name__ == "__main__":
     print "Pipeline paths:"
-    print tokenizer
-    print tagger
-    print parser
-    print ecrestorer
-
+    print TOKENIZER
+    print TAGGER
+    print PARSER
+    print ECRESTORER
