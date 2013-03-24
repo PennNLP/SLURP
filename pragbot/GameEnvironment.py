@@ -1,7 +1,21 @@
 #!/usr/bin/env python
 
+import heapq
+import math
+
 ROW_DELIMITER = ';'
 DEFAULT_MAP = 'pragbot/Maps/ScenarioEnv.txt'
+
+class Node:
+    """"Node for A* pathing"""
+    def __init__(self, cell, goal, parent):
+        self.cell = cell
+        self.cum_cost = (parent.cum_cost + self.cell.distance(parent.cell) if parent else 0)
+        self.min_cost = self.cum_cost + self.cell.distance(goal)
+        self.parent = parent
+
+    def __cmp__(self, other):
+        return cmp(self.min_cost, other.min_cost)
 
 class Cell:
     """Class representing a cell in grid world"""
@@ -23,6 +37,9 @@ class Cell:
         """Returns the center of the cell in world coordinates"""
         return tuple(to_world_coordinate(c) for c in self.location)
 
+    def distance(self, other):
+        return math.sqrt(sum((c2 - c1) * (c2 - c1) for c1, c2 in zip(self.location, other.location)))
+    
     def __str__(self):
         return str(self.location)
 
@@ -49,61 +66,54 @@ class Agent:
         self.fix_location()
 
     def plan_path(self, goal):
-        """Breadth-first path search"""
-        # TODO: convert this to A*
-        parent_dict = {self.cell: None}
+        """A* search"""
         explored = set()
-        frontier = [self.cell]
-        while len(frontier) != 0:
-            current = frontier.pop(0)
-            if current is goal:
+        frontier = [Node(self.cell, goal, None)]
+        while len(frontier) > 0:
+            current = heapq.heappop(frontier)
+            print 'Exploring: %s (%d)' % (str(current.cell), current.min_cost)
+            if current.cell is goal:
                 self.waypoints = []
                 while current is not None:
-                    self.waypoints.append(current)
-                    current = parent_dict[current]
+                    self.waypoints.append(current.cell)
+                    current = current.parent
                 self.waypoints.reverse()
                 return True
-            explored.add(current)
-            for n in current.neighbors:
+            explored.add(current.cell)
+            for n in current.cell.neighbors:
                 if n not in explored:
-                    parent_dict[n] = current
-                    frontier.append(n)
+                    heapq.heappush(frontier, Node(n, goal, current))
         return False
 
 class GameEnvironment:
     """Class representing the game environment"""
-    def __init__(self, env_file=DEFAULT_MAP):
+    def __init__(self, env):
         self.grid = []
         self.rooms = []
-        self.original_lines = []
-        with open(env_file) as f:
-            for i, line in enumerate(f.readlines()):
-                line = line.rstrip('\r\n')
-                self.original_lines.append(line)
-                if line.startswith('r'):
-                    self.rooms.append(line)
-                else:
-                    self.grid.append([])
-                    for j, c in enumerate(line):
-                        new_cell = Cell((i, j), to_simple_cell(c))
-                        self.grid[-1].append(new_cell)
-                        if c == 'C':
-                            self.cmdr = Agent(new_cell)
-                        elif c == 'J':
-                            self.jr = Agent(new_cell)
+        for i, line in enumerate(env.split(ROW_DELIMITER)):
+            if line.startswith('r'):
+                self.rooms.append(line)
+            elif len(line.strip()) > 0:
+                self.grid.append([])
+                for j, c in enumerate(line):
+                    new_cell = Cell((i, j), to_simple_cell(c))
+                    self.grid[-1].append(new_cell)
+                    if c == 'C':
+                        self.cmdr = Agent(new_cell)
+                    elif c == 'J':
+                        self.jr = Agent(new_cell)
         for i, row in enumerate(self.grid):
             for j, cell in enumerate(row):
-                if i > 1:
+                if i > 0:
                     cell.add_neighbor(self.grid[i-1][j])
                 if i < len(self.grid) - 1:
                     cell.add_neighbor(self.grid[i+1][j])
-                if j > 1:
+                if j > 0:
                     cell.add_neighbor(self.grid[i][j-1])
                 if j < len(self.grid) - 1:
                     cell.add_neighbor(self.grid[i][j+1])
-    def to_fps_string(self):
-        """Returns the fps_string as understood by the client"""
-        return ROW_DELIMITER.join(self.original_lines)
+        print 'Created environment:'
+        print str(self)
 
     def update_cmdr(self, location):
         """Updates commander's location"""
@@ -115,9 +125,9 @@ class GameEnvironment:
 
     def cell_contents(self, cell):
         """Returns either the cell if empty or its contents"""
-        if cell == self.cmdr.cell:
+        if cell is self.cmdr.cell:
             return 'C'
-        elif cell == self.jr.cell:
+        elif cell is self.jr.cell:
             return 'J'
         else:
             return cell.celltype
@@ -136,16 +146,9 @@ def to_world_coordinate(c):
 
 def to_simple_cell(c):
     """Returns a cell's type as either dead or open space"""
-    if c in ('|', '-', '+', '%', '$'):
+    if c in ('|', '-', '+', '1', '2', '3', '4'):
         # Dead space
         return '-'
     else:
         # Open space
         return ' '
-
-# For testing purposes only
-if __name__ == '__main__':
-    ge = GameEnvironment()
-    print str(ge)
-    ge.jr.plan_path(ge.cmdr.cell)
-    print ge.jr.waypoints
