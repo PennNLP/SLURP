@@ -2,6 +2,7 @@
 
 import heapq
 import math
+import time
 
 ROW_DELIMITER = ';'
 DEFAULT_MAP = 'pragbot/Maps/ScenarioEnv.txt'
@@ -39,7 +40,20 @@ class Cell:
 
     def distance(self, other):
         return math.sqrt(sum((c2 - c1) * (c2 - c1) for c1, c2 in zip(self.location, other.location)))
-    
+
+    def world_distance(self, location):
+        # Given location is in world coordinates
+        return math.sqrt(sum((c2 - c1) * (c2 - c1) for c1, c2 in zip(self.to_world(), location)))
+
+    def closer_point(self, location):
+        """Returns a location that is slightly closer to
+        the cell than the given location"""
+        dist = self.world_distance(location)
+        if dist == 0:
+            return location
+        delta = tuple(0.2*(c1 - c2)/dist for c1, c2 in zip(self.to_world(), location))
+        return tuple(c1 + d for c1, d in zip(location, delta))
+
     def __str__(self):
         return str(self.location)
 
@@ -54,7 +68,22 @@ class Agent:
         self.location = location
         if not self.location:
             self.fix_location()
-        self.waypoints = []
+
+        # Causes initial position to be relayed
+        self.waypoints = [self.cell]
+
+    def follow_waypoints(self, callback):
+        """Take one step towards next waypoint"""
+        if len(self.waypoints) > 0:
+            if self.waypoints[0].world_distance(self.location) < 0.3:
+                # Make sure movement is only from center to center
+                # to prevent stuck-in-the wall bugs
+                callback('MOVE_PLAYER_CELL', ','.join(str(s) for s in (self.waypoints[0].location[0], self.cell.location[0], self.waypoints[0].location[1], self.cell.location[1])))
+                self.cell = self.waypoints.pop(0)
+                self.fix_location()
+            else:
+                self.location = self.waypoints[0].closer_point(self.location)
+            callback('PLAYER_MOVE_3D',','.join(str(s) for s in [self.location[0], 0, self.location[1]] + [0, 0, 1, 0, 1, 0, -1, 0, 0]))
 
     def fix_location(self):
         """Moves the agent to the center of its cell"""
@@ -114,7 +143,7 @@ class GameEnvironment:
                     cell.add_neighbor(self.grid[i][j+1])
         print 'Created environment:'
         print str(self)
-
+                
     def update_cmdr(self, location):
         """Updates commander's location"""
         self.cmdr.set_cell(self.grid[location[0]][location[1]])
