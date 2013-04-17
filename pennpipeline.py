@@ -70,6 +70,10 @@ class PennPipeline(object):
         if not text:
             return ""
 
+        # Replace any newlines or carriage returns with space
+        text = text.replace('\n', ' ')
+        text = text.replace('\r', ' ')
+
         # Create default set arguments
         if not force_nouns:
             force_nouns = set()
