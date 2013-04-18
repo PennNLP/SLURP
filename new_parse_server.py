@@ -11,13 +11,16 @@ import semantics.parsing
 import json
 import sys
 import threading
+import time
 
 SECRET_CODE = ",oO-i2De<2W5NVuJa6E"
+LOG_FILE = "parse_server_log.txt"
 
 class PipelineProtocol(protocol.Protocol):
     def __init__(self, kb, lock):
         self.kb = kb
         self.lock = lock
+
     def dataReceived(self, data):
         # Remove extra escape characters
         data = data.replace('\\','')
@@ -26,6 +29,9 @@ class PipelineProtocol(protocol.Protocol):
         knowledge_demo = data.startswith(SECRET_CODE)
         if knowledge_demo:
             data = data[len(SECRET_CODE):]
+
+        with open(LOG_FILE, 'a') as f:
+            f.write('%s | %s | "%s"\n' % (time.asctime(), str(self.transport.getPeer()), data))
 
         with self.lock:
             parse = PipelineClient().parse(data)
@@ -52,6 +58,7 @@ class PipelineFactory(protocol.Factory):
     def __init__(self):
         self.kb = KnowledgeBase(other_agents=['cmdr'])
         self.lock = threading.Lock()
+
     def buildProtocol(self, addr):
         return PipelineProtocol(self.kb, self.lock)
 
