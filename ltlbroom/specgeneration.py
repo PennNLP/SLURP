@@ -375,7 +375,7 @@ class SpecGenerator(object):
         return ([stationary_lines, stay_there_lines] + follow_goals, [follow_env],
                 [FOLLOW_STATIONARY], [])
 
-    def _gen_conditional(self, command, assume_eventual_relief=True):
+    def _gen_conditional(self, command, assume_eventual_relief=False):
         """Generate a conditional action"""
         # TODO: Properly document and condition assume_eventual_relief
 
