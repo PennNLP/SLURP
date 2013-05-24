@@ -246,6 +246,8 @@ class SpecGenerator(object):
             for command_spec_chunks in self.generation_trees.values():
                 for spec_chunks in command_spec_chunks.values():
                     for spec_chunk in spec_chunks:
+                        if not spec_chunk.issys():
+                            continue
                         spec_chunk.lines = [_insert_or_before_goal(reaction_or_frag, line)
                                             for line in spec_chunk.lines]
 
