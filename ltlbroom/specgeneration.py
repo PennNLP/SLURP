@@ -473,10 +473,9 @@ class SpecGenerator(object):
                 handler = self.NEG_REACTIONS[action]
             reaction_frag = handler(command)
             react = always(implies(next_(reaction_prop), reaction_frag))
-            react_immediately = always(implies(and_((not_(reaction_prop), next_(reaction_prop))),
-                                               self._frag_stay()))
-            stay_there = always(implies(reaction_prop, self._frag_stay()))
-            sys_statements.extend([react, react_immediately, stay_there])
+            stay_there = always(implies(or_([reaction_prop, next_(reaction_prop)]),
+                                       self._frag_stay()))
+            sys_statements.extend([react, stay_there])
 
         sys_chunk = SpecChunk(explanation, sys_statements, SpecChunk.SYS, command)
         return ([sys_chunk], env_chunks, new_props, [])
