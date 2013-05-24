@@ -25,7 +25,7 @@ from copy import deepcopy
 from semantics.lexical_constants import (
     SEARCH_ACTION, GO_ACTION, FOLLOW_ACTION, SEE_ACTION, BEGIN_ACTION,
     AVOID_ACTION, PATROL_ACTION, CARRY_ACTION, STAY_ACTION, ACTIVATE_ACTION,
-    DEACTIVATE_ACTION, DEFUSE_ACTION)
+    DEACTIVATE_ACTION, DEFUSE_ACTION, UNDERSTOOD_SENSES)
 from semantics.new_structures import Event, Assertion
 from semantics.parsing import process_parse_tree
 from pipelinehost import PipelineClient
@@ -293,6 +293,14 @@ class SpecGenerator(object):
 
     def _apply_metapar(self, command):
         """Generate a metapar for a command."""
+        # Patch up intransitives as activate if needed
+        # TODO: This has only been tested with defuse and may not work for other actions.
+        if (command.action not in self.GOALS and 
+            command.action in UNDERSTOOD_SENSES):
+            print "Changed action {} to an activate command.".format(command.action)
+            command.theme.name = command.action
+            command.action = "activate"
+
         try:
             handler = self.GOALS[command.action]
         except KeyError:
