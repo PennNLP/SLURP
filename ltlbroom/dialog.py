@@ -34,13 +34,17 @@ class DialogManager(object):
         self.user_history.append(text)
         # Return the English of the current goal
         if self.gen_tree and current_goal:
-            goal_spec_chunk = goal_to_chunk(current_goal, self.spec_lists)
-            if goal_spec_chunk:
-                response = "I'm currently trying to {!r}".format(goal_spec_chunk.explanation)
-            else:
-                response = "Sorry, but I don't know anything about goal {!r}.".format(current_goal)
+            response = self.explain_goal(current_goal)
         else:
             response = "Thank you for sharing."
 
         self.system_history.append(response)
         return response
+
+    def explain_goal(self, goal_idx):
+        """Explain what a goal number means."""
+        goal_spec_chunk = goal_to_chunk(goal_idx, self.spec_lists)
+        if goal_spec_chunk:
+            return "I'm currently trying to {!r}".format(goal_spec_chunk.explanation)
+        else:
+            return "Sorry, but I don't know anything about goal {!r}.".format(goal_idx)
