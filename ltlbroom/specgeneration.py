@@ -139,9 +139,8 @@ class SpecGenerator(object):
         self.sensors = None
         self.regions = None
         self.props = None
-        self.react_props = set()
+        self.react_props = None
         self.tag_dict = None
-        self.generation_trees = None
 
         # Knowledge base
         self.kbase = KnowledgeBase()
@@ -173,8 +172,9 @@ class SpecGenerator(object):
         results = []
         responses = []
         custom_props = set()
+        self.react_props = set()  # TODO: Make this a local
         custom_sensors = set()
-        self.generation_trees = OrderedDict()
+        generation_trees = OrderedDict()
         for line in text.split('\n'):
             # Strip the text before using it and ignore any comments
             line = line.strip()
@@ -188,7 +188,7 @@ class SpecGenerator(object):
 
             # Init the generation tree to the empty result
             generated_lines = defaultdict(list)
-            self.generation_trees[line] = generated_lines
+            generation_trees[line] = generated_lines
 
             print "Sending to remote parser:", repr(line)
             parse = parse_client.parse(line, force_nouns, force_verbs=force_verbs)
@@ -211,10 +211,11 @@ class SpecGenerator(object):
                     new_sys_lines, new_env_lines, new_custom_props, new_custom_sensors = \
                         self._apply_metapar(command)
                 except KeyError as err:
+                    cause = err.message
                     problem = \
-                        "Could not understand {!r} due to error {}.".format(command.action, err)
+                        "Could not understand {!r} due to error {}.".format(command.action, cause)
                     print "ERROR: " + problem
-                    command_responses.append(str(err))
+                    command_responses.append(cause)
                     success = False
                     continue
                 else:
@@ -243,7 +244,7 @@ class SpecGenerator(object):
             reaction_or_frag = or_([sys_(prop) for prop in self.react_props])
             # HACK: Rewrite all the goals!
             # TODO: Test again with reaction propositions other than defuse
-            for command_spec_chunks in self.generation_trees.values():
+            for command_spec_chunks in generation_trees.values():
                 for spec_chunks in command_spec_chunks.values():
                     for spec_chunk in spec_chunks:
                         if not spec_chunk.issys():
@@ -256,7 +257,7 @@ class SpecGenerator(object):
         sys_lines = []
         # The zeroth goal is always []<>(TRUE), so we skip it.
         goal_idx = 1
-        for input_text, command_spec_lines in self.generation_trees.items():
+        for input_text, command_spec_lines in generation_trees.items():
             for command, spec_lines_list in command_spec_lines.items():
                 for spec_lines in spec_lines_list:
                     if not spec_lines.issys():
@@ -270,7 +271,7 @@ class SpecGenerator(object):
 
         # Filter out any duplicates from the env_lines
         env_lines = OrderedDict()
-        for command_spec_lines in self.generation_trees.values():
+        for command_spec_lines in generation_trees.values():
             for spec_lines_list in command_spec_lines.values():
                 for spec_lines in spec_lines_list:
                     if not spec_lines.isenv():
@@ -290,9 +291,9 @@ class SpecGenerator(object):
         print "System lines:", sys_lines
         print "Custom props:", custom_props
         print "Custom sensors:", custom_sensors
-        print "Generation tree:", self.generation_trees
+        print "Generation trees:", generation_trees
         return (env_lines, sys_lines, custom_props, custom_sensors, results, responses,
-                self.generation_trees)
+                generation_trees)
 
     def _apply_metapar(self, command):
         """Generate a metapar for a command."""
@@ -557,6 +558,12 @@ class SpecGenerator(object):
             return self._gen_avoid(command)
 
         regions = [location.name for location in self._expand_argument(command.location, command)]
+        # Raise an error if any of the regions are bad.
+        for region in regions:
+            if region not in self.regions:
+                raise KeyError("Cannot go to location {!r} "
+                               "because it is not on the map.".format(region))
+
         sys_chunks = []
         mem_props = []
         for region in regions:
