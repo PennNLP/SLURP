@@ -146,7 +146,7 @@ class SpecGenerator(object):
         # Knowledge base
         self.kbase = KnowledgeBase()
 
-    def generate(self, text, sensors, regions, props, tag_dict, realizable_reactions=False):
+    def generate(self, text, sensors, regions, props, tag_dict, realizable_reactions=True):
         """Generate a logical specification from natural language and propositions."""
         # Clean unicode out of everything
         text = text.encode('ascii', 'ignore')
@@ -242,11 +242,12 @@ class SpecGenerator(object):
             # Dedupe and make an or over all the reaction properties
             reaction_or_frag = or_([sys_(prop) for prop in self.react_props])
             # HACK: Rewrite all the goals!
-            # TODO: Test again once we re-enable reaction propositions
-            for command_spec_lines in self.generation_trees.values():
-                for spec_lines in command_spec_lines.values():
-                    spec_lines.lines = [_insert_or_before_goal(reaction_or_frag, line)
-                                        for line in spec_lines.lines]
+            # TODO: Test again with reaction propositions other than defuse
+            for command_spec_chunks in self.generation_trees.values():
+                for spec_chunks in command_spec_chunks.values():
+                    for spec_chunk in spec_chunks:
+                        spec_chunk.lines = [_insert_or_before_goal(reaction_or_frag, line)
+                                            for line in spec_chunk.lines]
 
         # Aggregate all the propositions
         # Identify goal numbers as we loop over sys lines
@@ -295,7 +296,7 @@ class SpecGenerator(object):
         """Generate a metapar for a command."""
         # Patch up intransitives as activate if needed
         # TODO: This has only been tested with defuse and may not work for other actions.
-        if (command.action not in self.GOALS and 
+        if (command.action not in self.GOALS and
             command.action in UNDERSTOOD_SENSES):
             print "Changed action {} to an activate command.".format(command.action)
             command.theme.name = command.action
@@ -372,9 +373,11 @@ class SpecGenerator(object):
         return ([stationary_lines, stay_there_lines] + follow_goals, [follow_env],
                 [FOLLOW_STATIONARY], [])
 
-    def _gen_conditional(self, command):
+    def _gen_conditional(self, command, assume_eventual_relief=True):
         """Generate a conditional action"""
+        # TODO: Properly document and condition assume_eventual_relief
 
+        env_chunks = []
         if isinstance(command.condition, Event):
             # Validate the condition
             if not command.condition.theme:
@@ -388,6 +391,11 @@ class SpecGenerator(object):
                     "Cannot use action {!r} as a condition".format(command.condition.action))
             condition_frag = env(condition)
             explanation = "To react to {!r},".format(condition)
+            if assume_eventual_relief:
+                relief_explanation = "Assume {!r} eventually goes away.".format(condition)
+                relief = always_eventually(not_(condition_frag))
+                relief_chunk = SpecChunk(relief_explanation, [relief], SpecChunk.ENV, command)
+                env_chunks.append(relief_chunk)
         elif isinstance(command.condition, Assertion):
             # TODO: Add support for assertions not about "you". Ex: If there is a hostage...
             # Validate the condition
@@ -463,12 +471,13 @@ class SpecGenerator(object):
                 handler = self.NEG_REACTIONS[action]
             reaction_frag = handler(command)
             react = always(implies(next_(reaction_prop), reaction_frag))
-            stay_there = always(implies(and_((not_(reaction_prop), next_(reaction_prop))),
-                                        self._frag_stay()))
-            sys_statements.extend([react, stay_there])
+            react_immediately = always(implies(and_((not_(reaction_prop), next_(reaction_prop))),
+                                               self._frag_stay()))
+            stay_there = always(implies(reaction_prop, self._frag_stay()))
+            sys_statements.extend([react, react_immediately, stay_there])
 
         sys_chunk = SpecChunk(explanation, sys_statements, SpecChunk.SYS, command)
-        return ([sys_chunk], [], new_props, [])
+        return ([sys_chunk], env_chunks, new_props, [])
 
     def _gen_stay(self, command):
         """Generate statements to stay exactly where you are."""
