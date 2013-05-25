@@ -37,6 +37,7 @@ from ltlbroom.ltl import (
 
 # Debug constants
 SEMANTICS_DEBUG = False
+COMMAND_DEBUG = False
 
 # Semantics constants
 LOCATION = "location"
@@ -202,7 +203,8 @@ class SpecGenerator(object):
             print "Sending to remote parser:", repr(line)
             parse = parse_client.parse(line, force_nouns, force_verbs=force_verbs)
             print "Response from parser:", repr(parse)
-            frames, new_commands, kb_response = process_parse_tree(parse, line, self.kbase)
+            frames, new_commands, kb_response = \
+                process_parse_tree(parse, line, self.kbase, quiet=True)
 
             if SEMANTICS_DEBUG:
                 print "Returned values from semantics:"
@@ -216,6 +218,9 @@ class SpecGenerator(object):
             success = bool(new_commands) or bool(kb_response)
             command_responses = [kb_response] if kb_response else []
             for command in new_commands:
+                if COMMAND_DEBUG:
+                    print "Processing command:"
+                    print command
                 try:
                     new_sys_lines, new_env_lines, new_custom_props, new_custom_sensors = \
                         self._apply_metapar(command)
@@ -246,6 +251,13 @@ class SpecGenerator(object):
             results.append(success)
             responses.append(' '.join(command_responses))
             print
+
+        if COMMAND_DEBUG:
+            print "Generation trees:"
+            for line, output in generation_trees.items():
+                print line
+                print output
+                print
 
         # We need to modify non-reaction goals to be or'd with the reactions
         if realizable_reactions and self.react_props:
