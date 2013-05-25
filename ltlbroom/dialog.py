@@ -49,8 +49,10 @@ class DialogManager(object):
 
     def explain_goal(self, goal_idx):
         """Explain what a goal number means."""
-        goal_spec_chunk = goal_to_chunk(goal_idx, self._spec_lists)
-        if goal_spec_chunk:
-            return "I'm currently trying to carry out {!r}".format(goal_spec_chunk.explanation)
-        else:
-            return "Sorry, but I don't know anything about goal {!r}.".format(goal_idx)
+        if self._spec_lists:
+            goal_spec_chunk = goal_to_chunk(goal_idx, self._spec_lists)
+            if goal_spec_chunk:
+                return "I'm currently trying to carry out {!r}".format(goal_spec_chunk.explanation)
+
+        # If we can't find anything, give up.
+        return "Sorry, but I don't know anything about goal {!r}.".format(goal_idx)
