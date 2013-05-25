@@ -420,14 +420,12 @@ class SpecGenerator(object):
         if action in self.props:
             # Simple actuator
             reaction_prop = action
-        elif action == STAY_ACTION:
-            reaction_prop = STAY_THERE
         else:
             # Reaction proposition
             reaction_prop_name = REACT + "_" + condition
             reaction_prop = sys_(reaction_prop_name)
-            self.react_props.add(reaction_prop_name)
             new_props.append(reaction_prop_name)
+            self.react_props.add(reaction_prop_name)
 
         # Generate the response
         sys_statements = []
@@ -458,7 +456,8 @@ class SpecGenerator(object):
                 sys_statements.extend([go_goal, go_safety, stay_there])
                 explanation += " go to {!r}.".format(command.location.name)
         elif action == STAY_ACTION:
-            sys_statements.append(always(implies(condition_frag, reaction_prop)))
+            sys_statements.append(always(iff(next_(condition_frag), next_(reaction_prop))))
+            sys_statements.append(always(implies(or_([reaction_prop, next_(reaction_prop)]), STAY_THERE)))
             explanation += " stay there."
         else:
             if command.theme.name not in self.props:
