@@ -146,7 +146,8 @@ class SpecGenerator(object):
         # Knowledge base
         self.kbase = KnowledgeBase()
 
-    def generate(self, text, sensors, regions, props, tag_dict, realizable_reactions=True):
+    def generate(self, text, sensors, regions, props, tag_dict, realizable_reactions=True,
+                 quiet=False):
         """Generate a logical specification from natural language and propositions."""
         # Clean unicode out of everything
         text = text.encode('ascii', 'ignore')
@@ -157,13 +158,14 @@ class SpecGenerator(object):
                          [value.encode('ascii', 'ignore') for value in values]
                          for key, values in tag_dict.items()}
 
-        print "NL->LTL Generation called on:"
-        print "Sensors:", self.sensors
-        print "Props:", self.props
-        print "Regions:", self.regions
-        print "Tag dict:", self.tag_dict
-        print "Text:", repr(text)
-        print
+        if not quiet:
+            print "NL->LTL Generation called on:"
+            print "Sensors:", self.sensors
+            print "Props:", self.props
+            print "Regions:", self.regions
+            print "Tag dict:", self.tag_dict
+            print "Text:", repr(text)
+            print
 
         # Make lists for POS conversions, including the metapar keywords
         force_nouns = list(self.regions) + list(self.sensors)
@@ -180,8 +182,8 @@ class SpecGenerator(object):
 
         # Add the actuator mutex
         generation_trees["Safety assumptions"] = \
-            {"Safety assumptions": 
-             [SpecChunk("Robot can perform only one action at a time.", 
+            {"Safety assumptions":
+             [SpecChunk("Robot can perform only one action at a time.",
                         [mutex_([sys_(prop) for prop in self.props], True)],
                         SpecChunk.SYS, None)]}
 
@@ -200,9 +202,11 @@ class SpecGenerator(object):
             generated_lines = OrderedDict()
             generation_trees[line] = generated_lines
 
-            print "Sending to remote parser:", repr(line)
+            if not quiet:
+                print "Sending to remote parser:", repr(line)
             parse = parse_client.parse(line, force_nouns, force_verbs=force_verbs)
-            print "Response from parser:", repr(parse)
+            if not quiet:
+                print "Response from parser:", repr(parse)
             frames, new_commands, kb_response = \
                 process_parse_tree(parse, line, self.kbase, quiet=True)
 
@@ -309,14 +313,15 @@ class SpecGenerator(object):
         custom_props = list(custom_props)
         custom_sensors = list(custom_sensors)
 
-        print "Spec generation complete."
-        print "Results:", results
-        print "Responses:", responses
-        print "Environment lines:", env_lines
-        print "System lines:", sys_lines
-        print "Custom props:", custom_props
-        print "Custom sensors:", custom_sensors
-        print "Generation trees:", generation_trees
+        if not quiet:
+            print "Spec generation complete."
+            print "Results:", results
+            print "Responses:", responses
+            print "Environment lines:", env_lines
+            print "System lines:", sys_lines
+            print "Custom props:", custom_props
+            print "Custom sensors:", custom_sensors
+            print "Generation trees:", generation_trees
         return (env_lines, sys_lines, custom_props, custom_sensors, results, responses,
                 generation_trees)
 
