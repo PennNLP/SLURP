@@ -32,7 +32,7 @@ from pipelinehost import PipelineClient
 from semantics.new_knowledge import KnowledgeBase
 from ltlbroom.ltl import (
     env, and_, or_, sys_, not_, iff, next_, always, always_eventually, implies,
-    space, ALWAYS, EVENTUALLY, OR)
+    space, mutex_, ALWAYS, EVENTUALLY, OR)
 
 
 # Debug constants
@@ -168,6 +168,7 @@ class SpecGenerator(object):
         force_nouns = list(self.regions) + list(self.sensors)
         force_verbs = list(self.props) + self.GOALS.keys()
 
+        # Set up
         parse_client = PipelineClient()
         results = []
         responses = []
@@ -175,6 +176,14 @@ class SpecGenerator(object):
         self.react_props = set()  # TODO: Make this a local
         custom_sensors = set()
         generation_trees = OrderedDict()
+
+        # Add the actuator mutex
+        generation_trees["Safety assumptions"] = \
+            {"Safety assumptions": 
+             [SpecChunk("Robot can perform only one action at a time.", 
+                        [mutex_([sys_(prop) for prop in self.props], True)],
+                        SpecChunk.SYS, None)]}
+
         for line in text.split('\n'):
             # Strip the text before using it and ignore any comments
             line = line.strip()
@@ -712,6 +721,9 @@ def _prop_actuator_done(actuator):
 
 def _format_command(command):
     """Format a command nicely for display."""
+    if not command:
+        return "No command."
+
     action = ("Action: {!r}" if not command.negation else
               "Action: do not {!r}").format(command.action)
     fields = [action]
