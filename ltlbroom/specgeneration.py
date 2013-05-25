@@ -264,8 +264,9 @@ class SpecGenerator(object):
         # Aggregate all the propositions
         # Identify goal numbers as we loop over sys lines
         sys_lines = []
-        # The zeroth goal is always []<>(TRUE), so we skip it.
-        goal_idx = 1
+        # At the moment, there are no useless goals in specs, so we
+        # begin at 0
+        goal_idx = 0
         for input_text, command_spec_lines in generation_trees.items():
             for command, spec_lines_list in command_spec_lines.items():
                 for spec_lines in spec_lines_list:
