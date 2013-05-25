@@ -25,7 +25,7 @@ from copy import deepcopy
 from semantics.lexical_constants import (
     SEARCH_ACTION, GO_ACTION, FOLLOW_ACTION, SEE_ACTION, BEGIN_ACTION,
     AVOID_ACTION, PATROL_ACTION, CARRY_ACTION, STAY_ACTION, ACTIVATE_ACTION,
-    DEACTIVATE_ACTION, DEFUSE_ACTION, UNDERSTOOD_SENSES)
+    DEACTIVATE_ACTION, UNDERSTOOD_SENSES)
 from semantics.new_structures import Event, Assertion
 from semantics.parsing import process_parse_tree
 from pipelinehost import PipelineClient
@@ -457,7 +457,8 @@ class SpecGenerator(object):
                 explanation += " go to {!r}.".format(command.location.name)
         elif action == STAY_ACTION:
             sys_statements.append(always(iff(next_(condition_frag), next_(reaction_prop))))
-            sys_statements.append(always(implies(or_([reaction_prop, next_(reaction_prop)]), STAY_THERE)))
+            sys_statements.append(always(implies(or_([reaction_prop, next_(reaction_prop)]),
+                                                 STAY_THERE)))
             explanation += " stay there."
         else:
             if command.theme.name not in self.props:
@@ -486,7 +487,7 @@ class SpecGenerator(object):
                               SpecChunk.SYS, command)
         return ([sys_lines], [], [], [])
 
-    def _frag_stay(self, command=None):
+    def _frag_stay(self, command=None):  # pylint: disable=W0613
         """Generate fragments to reactively go somewhere."""
         return STAY_THERE
 
@@ -829,6 +830,7 @@ def respond_okay(action):
 
 def _test():
     """Test spec generation."""
+    # pylint: disable=W0612
     specgen = SpecGenerator()
     env_lines, sys_lines, custom_props, custom_sensors, results, responses, gen_tree = \
         specgen.generate('\n'.join(sys.argv[1:]), ("bomb", "hostage", "badguy", "monkey"),
