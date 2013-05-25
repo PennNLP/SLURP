@@ -311,7 +311,8 @@ class SpecGenerator(object):
         if (command.action not in self.GOALS and
             command.action in UNDERSTOOD_SENSES):
             print "Changed action {} to an activate command.".format(command.action)
-            command.theme.name = command.action
+            if command.theme:
+                command.theme.name = command.action
             command.action = "activate"
 
         try:
