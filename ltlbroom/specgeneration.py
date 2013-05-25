@@ -197,7 +197,7 @@ class SpecGenerator(object):
                 continue
 
             # Init the generation tree to the empty result
-            generated_lines = defaultdict(list)
+            generated_lines = OrderedDict()
             generation_trees[line] = generated_lines
 
             print "Sending to remote parser:", repr(line)
@@ -236,8 +236,11 @@ class SpecGenerator(object):
                     command_responses.append(respond_okay(command.action))
 
                 # Add in the new lines
-                generated_lines[_format_command(command)].extend(new_sys_lines)
-                generated_lines[_format_command(command)].extend(new_env_lines)
+                command_key = _format_command(command)
+                if command_key not in generated_lines:
+                    generated_lines[command_key] = []
+                generated_lines[command_key].extend(new_sys_lines)
+                generated_lines[command_key].extend(new_env_lines)
 
                 # Add custom props/sensors
                 custom_props.update(new_custom_props)
@@ -866,7 +869,8 @@ def _test():
     specgen = SpecGenerator()
     env_lines, sys_lines, custom_props, custom_sensors, results, responses, gen_tree = \
         specgen.generate('\n'.join(sys.argv[1:]), ("bomb", "hostage", "badguy", "monkey"),
-                         ("r1", "r2", "r3", "r4"), ("defuse", "pickup", "drop", "banana"),
+                         ("r1", "r2", "r3", "r4", "office", "classroom1", "classroom2"),
+                         ("defuse", "pickup", "drop", "banana"),
                          {'odd': ['r1', 'r3']})
     for line in env_lines + sys_lines:
         print line
