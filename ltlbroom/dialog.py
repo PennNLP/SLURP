@@ -24,23 +24,22 @@ class DialogManager(object):
 
     def __init__(self, generation_tree=None):
         # Store the logic generation tree if it is provided.
-        self._spec_lists = None
         self._gen_tree = None
-        self.gen_tree = generation_tree
+        self._spec_lists = None
+        self.set_gen_tree(generation_tree)
         self._user_history = []
         self._system_history = []
 
-    @property
-    def gen_tree(self, gen_tree):
+    def set_gen_tree(self, gen_tree):
         """Set the generation tree."""
         self._gen_tree = gen_tree
-        self._spec_lists = chunks_from_gentree(self.gen_tree) if self.gen_tree else None
+        self._spec_lists = chunks_from_gentree(self._gen_tree) if self._gen_tree else None
 
     def tell(self, text, current_goal=None):
         """Tell the system something and return its response."""
         self._user_history.append(text)
         # Return the English of the current goal
-        if self.gen_tree and current_goal:
+        if self._gen_tree and current_goal:
             response = self.explain_goal(current_goal)
         else:
             response = "I'm not sure what to say, but thank you for sharing."
