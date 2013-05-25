@@ -36,7 +36,7 @@ class DialogManager(object):
         if self.gen_tree and current_goal:
             response = self.explain_goal(current_goal)
         else:
-            response = "Thank you for sharing."
+            response = "I'm not sure what to say, but thank you for sharing."
 
         self.system_history.append(response)
         return response
@@ -45,6 +45,6 @@ class DialogManager(object):
         """Explain what a goal number means."""
         goal_spec_chunk = goal_to_chunk(goal_idx, self.spec_lists)
         if goal_spec_chunk:
-            return "I'm currently trying to {!r}".format(goal_spec_chunk.explanation)
+            return "I'm currently trying to carry out {!r}".format(goal_spec_chunk.explanation)
         else:
             return "Sorry, but I don't know anything about goal {!r}.".format(goal_idx)
