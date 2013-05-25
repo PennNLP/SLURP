@@ -318,7 +318,7 @@ class SpecGenerator(object):
         try:
             handler = self.GOALS[command.action]
         except KeyError:
-            raise KeyError('Unknown action {0}'.format(command.action))
+            raise KeyError('Unknown action {0}.'.format(command.action))
 
         if command.condition:
             return self._gen_conditional(command)
@@ -330,7 +330,10 @@ class SpecGenerator(object):
         """Return a list of the arguments created by expanding the argument if its quantified."""
         # What to return if quantification fails
         default_return = [argument]
-        quant = argument.quantifier.type
+        try:
+            quant = argument.quantifier.type
+        except AttributeError:
+            return default_return
         if quant == "all" or (command.negation and quant == "any"):
             # TODO: Handle more than one tag
             try:
@@ -567,7 +570,10 @@ class SpecGenerator(object):
         if command.negation:
             return self._gen_avoid(command)
 
-        regions = [location.name for location in self._expand_argument(command.location, command)]
+        try:
+            regions = [location.name for location in self._expand_argument(command.location, command)]
+        except AttributeError:
+            raise KeyError("Could not understand location for 'go' command.")
         # Raise an error if any of the regions are bad.
         for region in regions:
             if region not in self.regions:
