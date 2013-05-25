@@ -25,7 +25,8 @@ class DialogManager(object):
     def __init__(self, generation_tree=None):
         # Store the logic generation tree if it is provided.
         self._spec_lists = None
-        self._gen_tree = generation_tree
+        self._gen_tree = None
+        self.gen_tree = generation_tree
         self._user_history = []
         self._system_history = []
 
