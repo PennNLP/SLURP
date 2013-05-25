@@ -24,26 +24,32 @@ class DialogManager(object):
 
     def __init__(self, generation_tree=None):
         # Store the logic generation tree if it is provided.
-        self.gen_tree = generation_tree
-        self.spec_lists = chunks_from_gentree(self.gen_tree) if self.gen_tree else None
-        self.user_history = []
-        self.system_history = []
+        self._spec_lists = None
+        self._gen_tree = generation_tree
+        self._user_history = []
+        self._system_history = []
+
+    @property
+    def gen_tree(self, gen_tree):
+        """Set the generation tree."""
+        self._gen_tree = gen_tree
+        self._spec_lists = chunks_from_gentree(self.gen_tree) if self.gen_tree else None
 
     def tell(self, text, current_goal=None):
         """Tell the system something and return its response."""
-        self.user_history.append(text)
+        self._user_history.append(text)
         # Return the English of the current goal
         if self.gen_tree and current_goal:
             response = self.explain_goal(current_goal)
         else:
             response = "I'm not sure what to say, but thank you for sharing."
 
-        self.system_history.append(response)
+        self._system_history.append(response)
         return response
 
     def explain_goal(self, goal_idx):
         """Explain what a goal number means."""
-        goal_spec_chunk = goal_to_chunk(goal_idx, self.spec_lists)
+        goal_spec_chunk = goal_to_chunk(goal_idx, self._spec_lists)
         if goal_spec_chunk:
             return "I'm currently trying to carry out {!r}".format(goal_spec_chunk.explanation)
         else:
