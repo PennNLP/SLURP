@@ -181,11 +181,12 @@ class SpecGenerator(object):
         generation_trees = OrderedDict()
 
         # Add the actuator mutex
-        generation_trees["Safety assumptions"] = \
-            {"Safety assumptions":
-             [SpecChunk("Robot can perform only one action at a time.",
-                        [mutex_([sys_(prop) for prop in self.props], True)],
-                        SpecChunk.SYS, None)]}
+        if self.props:
+            generation_trees["Safety assumptions"] = \
+                {"Safety assumptions":
+                 [SpecChunk("Robot can perform only one action at a time.",
+                            [mutex_([sys_(prop) for prop in self.props], True)],
+                            SpecChunk.SYS, None)]}
 
         for line in text.split('\n'):
             # Strip the text before using it and ignore any comments
