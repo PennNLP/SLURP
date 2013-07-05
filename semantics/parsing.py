@@ -220,7 +220,8 @@ def create_semantic_structures(frame_semantic_list):
         elif frames.is_yn_question(str(frame[1])):
             if 'Theme' in item_to_entity and 'Location' in item_to_entity:
                 semantic_representation_list.append(YNQuery(item_to_entity['Theme'], item_to_entity['Location']))
-        # If it's a conditional statement, the first statement is an event or an assertion
+        # If it's a conditional statement, it is modifying 
+        # either the previous or next structure
         elif conditional:
             if 'Stimulus' in item_to_entity:
                 condition = Event(item_to_entity['Stimulus'], action)
@@ -228,11 +229,15 @@ def create_semantic_structures(frame_semantic_list):
                 condition = Assertion(item_to_entity.get('Theme', None),\
                                           item_to_entity.get('Location', None),\
                                           'ex' in frame[2])
+
             if len(semantic_representation_list) > 0 and isinstance(semantic_representation_list[-1], Command):
                 semantic_representation_list[-1].condition = condition
             else:
-                # Dangling condition (shouldn't happen)
+                # Save it for later
                 semantic_representation_list.append(condition)
+            
+            # Consume the conditional
+            conditional = False
         # It's a regular command
         elif action is not None and action not in  ('is', 'are', 'be'):
             theme = item_to_entity.get('Theme', None)
@@ -244,6 +249,9 @@ def create_semantic_structures(frame_semantic_list):
             source = item_to_entity.get('Source', None)
             destination = item_to_entity.get('Destination', None)
             current_command = Command(agent, theme, patient, location, source, destination, action, negation=frame[5])
+            # Try to pick up the previous condition
+            if len(semantic_representation_list) > 0 and (isinstance(semantic_representation_list[-1], Event) or isinstance(semantic_representation_list[-1], Assertion)):
+                current_command.condition = semantic_representation_list.pop()
             semantic_representation_list.append(current_command)
         # It's an assertion
         else:
