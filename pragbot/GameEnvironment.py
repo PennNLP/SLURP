@@ -120,7 +120,7 @@ class GameEnvironment:
         self.grid = []
         self.rooms = []
         for i, line in enumerate(env.split(ROW_DELIMITER)):
-            if line.startswith('r'):
+            if line.startswith('r') or line.startswith('h'):
                 self.rooms.append(line)
             elif len(line.strip()) > 0:
                 self.grid.append([])
