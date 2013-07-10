@@ -58,7 +58,7 @@ class PragbotFactory(ClientFactory):
         return PragbotProtocol()
 
 if __name__ == '__main__':
-    port = int(sys.argv[1]) if len(sys.argv) == 2 else 1235    
+    port = int(sys.argv[1]) if len(sys.argv) == 2 else 10006    
     print 'Initializing pragbot client...'
     reactor.connectTCP('localhost', port, PragbotFactory())    
     reactor.run()
