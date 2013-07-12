@@ -27,7 +27,7 @@ class PipelineProtocol(protocol.Protocol):
             data = data[len(SECRET_CODE):]
 
         with self.lock:
-            parse = PipelineClient().parse(data)
+            parse = PipelineClient(verbose=True).parse(data)
 
         response = {}
         frames, new_commands, kb_response = process_parse_tree(parse, data, self.kb if knowledge_demo else None, quiet=True)

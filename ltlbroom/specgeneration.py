@@ -35,9 +35,6 @@ from ltlbroom.ltl import (
     space, ALWAYS, EVENTUALLY, OR)
 
 
-# Debug constants
-SEMANTICS_DEBUG = False
-
 # Semantics constants
 LOCATION = "location"
 UNDERSPECIFIED = "*"
@@ -146,7 +143,8 @@ class SpecGenerator(object):
         # Knowledge base
         self.kbase = KnowledgeBase()
 
-    def generate(self, text, sensors, regions, props, tag_dict, realizable_reactions=False):
+    def generate(self, text, sensors, regions, props, tag_dict, realizable_reactions=False,
+                 verbose=True):
         """Generate a logical specification from natural language and propositions."""
         # Clean unicode out of everything
         text = text.encode('ascii', 'ignore')
@@ -157,13 +155,14 @@ class SpecGenerator(object):
                          [value.encode('ascii', 'ignore') for value in values]
                          for key, values in tag_dict.items()}
 
-        print "NL->LTL Generation called on:"
-        print "Sensors:", self.sensors
-        print "Props:", self.props
-        print "Regions:", self.regions
-        print "Tag dict:", self.tag_dict
-        print "Text:", repr(text)
-        print
+        if verbose:
+            print "NL->LTL Generation called on:"
+            print "Sensors:", self.sensors
+            print "Props:", self.props
+            print "Regions:", self.regions
+            print "Tag dict:", self.tag_dict
+            print "Text:", repr(text)
+            print
 
         # Make lists for POS conversions, including the metapar keywords
         force_nouns = list(self.regions) + list(self.sensors)
@@ -190,16 +189,21 @@ class SpecGenerator(object):
             generated_lines = defaultdict(list)
             self.generation_trees[line] = generated_lines
 
-            print "Sending to remote parser:", repr(line)
+            if verbose:
+                print "Sending to remote parser:", repr(line)
             parse = parse_client.parse(line, force_nouns, force_verbs=force_verbs)
-            print "Response from parser:", repr(parse)
-            frames, new_commands, kb_response = process_parse_tree(parse, line, self.kbase)
+            if verbose:
+                print "Response from parser:", repr(parse)
 
-            if SEMANTICS_DEBUG:
+            frames, new_commands, kb_response = process_parse_tree(parse, line, self.kbase,
+                                                                   quiet=not verbose)
+            if verbose:
                 print "Returned values from semantics:"
                 print "Semantics results:"
                 for frame in frames:
                     print "\t" + str(frame)
+                if frames:
+                    print
                 print "New commands:", new_commands
 
             # Build the metapars
@@ -213,7 +217,8 @@ class SpecGenerator(object):
                 except KeyError as err:
                     problem = \
                         "Could not understand {!r} due to error {}.".format(command.action, err)
-                    print "ERROR: " + problem
+                    if verbose:
+                        print >> sys.stderr, "Error: " + problem
                     command_responses.append(str(err))
                     success = False
                     continue
@@ -235,7 +240,9 @@ class SpecGenerator(object):
             # Add responses and successes
             results.append(success)
             responses.append(' '.join(command_responses))
-            print
+            # Add some space between coomands
+            if verbose:
+                print
 
         # We need to modify non-reaction goals to be or'd with the reactions
         if realizable_reactions and self.react_props:
@@ -281,14 +288,15 @@ class SpecGenerator(object):
         custom_props = list(custom_props)
         custom_sensors = list(custom_sensors)
 
-        print "Spec generation complete."
-        print "Results:", results
-        print "Responses:", responses
-        print "Environment lines:", env_lines
-        print "System lines:", sys_lines
-        print "Custom props:", custom_props
-        print "Custom sensors:", custom_sensors
-        print "Generation tree:", self.generation_trees
+        if verbose:
+            print "Spec generation complete."
+            print "Results:", results
+            print "Responses:", responses
+            print "Environment lines:", env_lines
+            print "System lines:", sys_lines
+            print "Custom props:", custom_props
+            print "Custom sensors:", custom_sensors
+            print "Generation tree:", self.generation_trees
         return (env_lines, sys_lines, custom_props, custom_sensors, results, responses,
                 self.generation_trees)
 
@@ -315,7 +323,7 @@ class SpecGenerator(object):
             try:
                 tag = argument.description[0]
             except (IndexError, TypeError):
-                print "Error: Could not get description of argument {}.".format(argument)
+                print >> sys.stderr, "Error: Could not get description of {}.".format(argument)
                 return default_return
 
             try:
@@ -724,7 +732,7 @@ def goal_to_chunk(goal_idx, spec_chunks):
     if len(chunks) == 1:
         return chunks[0]
     elif len(chunks) > 1:
-        print "Error: Found multiple chunks for goal {}.".format(goal_idx)
+        print >> sys.stderr, "Error: Found multiple chunks for goal {}.".format(goal_idx)
     # Zero length case returns None without printing an error
     return None
 

@@ -32,12 +32,15 @@ DEFAULT_PORT = 9001
 
 def _socket_parse(**kwargs):
     """Send a remote parsing request and get a response."""
-    # Get the socket out of kwargs and send over the rest
+    # Get the socket and verbose out of kwargs and send over the rest
     sock = kwargs.pop('asocket')
+    verbose = kwargs.pop('verbose')
     msg = json.dumps(kwargs) + MSG_SEP
-    print "Sending:", repr(msg)
+    if verbose:
+        print "Sending:", repr(msg)
     sock.sendall(msg)
-    print "Waiting for response..."
+    if verbose:
+        print "Waiting for response..."
     buff = sock.recv(4096)
     msg, buff = _parse_msg(buff, MSG_SEP)
     return msg
@@ -47,7 +50,8 @@ class PipelineHost(CallbackSocket):
     """Provides a connection to pipeline over a listening socket."""
     name = "pipelinehost"
 
-    def __init__(self, port, local=False):
+    def __init__(self, port=DEFAULT_PORT, local=False, verbose=False):
+        self.verbose = verbose
         # Set up callback
         CallbackSocket.__init__(self, port, MSG_SEP, local)
         self.register_callback(self.parse_text)
@@ -61,18 +65,21 @@ class PipelineHost(CallbackSocket):
         except ValueError:
             # Make a default set of arguments
             data = {'text': message}
-        print "Message:", repr(data)
-        print "Parsing..."
+        if self.verbose:
+            print "Message:", repr(data)
+            print "Parsing..."
         # pylint: disable=W0142,E1101
         response = self.pipeline.parse_text(**data)
-        print "Sending:", repr(response)
+        if self.verbose:
+            print "Sending:", repr(response)
         self.send(response)
 
 
 class PipelineClient(object):
     """Provides a client to the PipelineHost."""
 
-    def __init__(self, port=DEFAULT_PORT, hostname='localhost'):
+    def __init__(self, port=DEFAULT_PORT, hostname='localhost', verbose=False):
+        self.verbose = verbose
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             self.sock.connect((hostname, port))
@@ -87,7 +94,7 @@ class PipelineClient(object):
         text = text.strip().lower()
         # Wrap in kwargs
         return _socket_parse(asocket=self.sock, text=text, force_nouns=force_nouns,
-                             force_verbs=force_verbs)
+                             force_verbs=force_verbs, verbose=self.verbose)
 
     def close(self):
         """Close the connection to the pipeline host.
@@ -101,7 +108,7 @@ class PipelineClient(object):
 
 def main():
     """Start the parsing server and leave it up until KeyboardInterrupt."""
-    PipelineHost(DEFAULT_PORT, True)
+    PipelineHost(DEFAULT_PORT, True, True)
     try:
         while True:
             raw_input()
