@@ -7,7 +7,9 @@ import curses.textpad
 import signal
 
 from pipelinehost import PipelineClient
-from semantics import knowledge, tree
+from semantics.parsing import process_parse_tree
+from semantics.tree import Tree
+from semantics.new_knowledge import KnowledgeBase
 
 MIN_HEIGHT = 35
 
@@ -80,11 +82,9 @@ def interactive_mode(window, first_input):
     """Interactively get input from the user and parse it."""
     input_frame, input_win, parse_win, semantic_win = setup_windows(window)
 
-    # Initialize pipeline
+    # Initialize pipeline and knowledge base
     pipeline = PipelineClient()
-
-    # Set up semantics module
-    world_knowledge = knowledge.Knowledge()
+    kb = KnowledgeBase()
 
     # Send some data through the pipeline
     result = pipeline.parse("This is a test.")
@@ -127,7 +127,7 @@ def interactive_mode(window, first_input):
 
         # Run the parse pipeline
         result = pipeline.parse(text)
-        result_tree = tree.Tree(result)
+        result_tree = Tree(result)
 
         # Output the longest parse that will fit. We try to draw the
         # possible output in order of decreasing length.
@@ -156,33 +156,27 @@ def interactive_mode(window, first_input):
         semantic_win.clear()
         semantic_win.addstr(text)
         semantic_win.addstr('\nPerforming semantic analysis...')
-
         semantic_win.refresh()
 
-        process_result = world_knowledge.process_parse_tree(result, text)
-        semantic_answer, frame_trees = process_result[0], process_result[1]
-        if frame_trees is not None:
-            modified_trees = [str(modified_parse_tree[1]) for modified_parse_tree in frame_trees
-                              if (len(modified_parse_tree) > 1 and
-                                  isinstance(modified_parse_tree[1], tree.Tree))]
-            # TODO: Remove after dupes stop coming in
-            modified_trees = list(set(modified_trees))
-            frames = [str(frame_dict) for frame_dict in [frame[0] for frame in frame_trees
-                                                         if not isinstance(frame, str)]]
-            semantics = "Modified trees: " + "\n".join(modified_trees) + \
-                        "\nFrames: " + "\n".join(frames) + "\nResponse: " + str(semantic_answer)
-        else:
-            semantics = str(semantic_answer)
-
-        # Clear the status and output the result, it's easiest to just
-        # clear and echo the input again
+        frames, new_commands, kb_response = process_parse_tree(result, text, kb)
         semantic_win.clear()
         try:
-            semantic_win.addstr(text + '\n')
-            semantic_win.addstr(semantics)
+            if frames:
+                semantic_win.addstr("Frames matched:\n")
+                for frame in frames:
+                    semantic_win.addstr("\t" + str(frame) + "\n")
+            if new_commands:
+                semantic_win.addstr("New commands:\n")
+                for command in new_commands:
+                    semantic_win.addstr(str(command) + "\n")
+            if kb_response:
+                semantic_win.addstr("KB response:\n")
+                semantic_win.addstr(str(kb_response) + "\n")
+            if not any((frames, new_commands, kb_response)):
+                semantic_win.addstr("No frames matched.\n")
         except _curses.error:
             semantic_win.clear()
-            semantic_win.addstr("Semantics representation too large to show.")
+            semantic_win.addstr("Semantic representation too large to show.")
         semantic_win.refresh()
 
     return
