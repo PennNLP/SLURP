@@ -36,7 +36,6 @@ from ltlbroom.ltl import (
 
 
 # Debug constants
-SEMANTICS_DEBUG = False
 COMMAND_DEBUG = False
 
 # Semantics constants
@@ -147,7 +146,7 @@ class SpecGenerator(object):
         self.kbase = KnowledgeBase()
 
     def generate(self, text, sensors, regions, props, tag_dict, realizable_reactions=True,
-                 quiet=False):
+                 verbose=True):
         """Generate a logical specification from natural language and propositions."""
         # Clean unicode out of everything
         text = text.encode('ascii', 'ignore')
@@ -158,7 +157,7 @@ class SpecGenerator(object):
                          [value.encode('ascii', 'ignore') for value in values]
                          for key, values in tag_dict.items()}
 
-        if not quiet:
+        if verbose:
             print "NL->LTL Generation called on:"
             print "Sensors:", self.sensors
             print "Props:", self.props
@@ -203,19 +202,23 @@ class SpecGenerator(object):
             generated_lines = OrderedDict()
             generation_trees[line] = generated_lines
 
-            if not quiet:
+            if verbose:
                 print "Sending to remote parser:", repr(line)
             parse = parse_client.parse(line, force_nouns, force_verbs=force_verbs)
-            if not quiet:
+            if verbose:
                 print "Response from parser:", repr(parse)
             frames, new_commands, kb_response = \
                 process_parse_tree(parse, line, self.kbase, quiet=True)
 
-            if SEMANTICS_DEBUG:
+            frames, new_commands, kb_response = process_parse_tree(parse, line, self.kbase,
+                                                                   quiet=not verbose)
+            if verbose:
                 print "Returned values from semantics:"
                 print "Semantics results:"
                 for frame in frames:
                     print "\t" + str(frame)
+                if frames:
+                    print
                 print "New commands:", new_commands
 
             # Build the metapars
@@ -233,7 +236,8 @@ class SpecGenerator(object):
                     cause = err.message
                     problem = \
                         "Could not understand {!r} due to error {}.".format(command.action, cause)
-                    print "ERROR: " + problem
+                    if verbose:
+                        print >> sys.stderr, "Error: " + problem
                     command_responses.append(cause)
                     success = False
                     continue
@@ -258,7 +262,9 @@ class SpecGenerator(object):
             # Add responses and successes
             results.append(success)
             responses.append(' '.join(command_responses))
-            print
+            # Add some space between commands
+            if verbose:
+                print
 
         if COMMAND_DEBUG:
             print "Generation trees:"
@@ -314,7 +320,7 @@ class SpecGenerator(object):
         custom_props = list(custom_props)
         custom_sensors = list(custom_sensors)
 
-        if not quiet:
+        if verbose:
             print "Spec generation complete."
             print "Results:", results
             print "Responses:", responses
@@ -323,6 +329,7 @@ class SpecGenerator(object):
             print "Custom props:", custom_props
             print "Custom sensors:", custom_sensors
             print "Generation trees:", generation_trees
+
         return (env_lines, sys_lines, custom_props, custom_sensors, results, responses,
                 generation_trees)
 
@@ -361,7 +368,7 @@ class SpecGenerator(object):
             try:
                 tag = argument.description[0]
             except (IndexError, TypeError):
-                print "Error: Could not get description of argument {}.".format(argument)
+                print >> sys.stderr, "Error: Could not get description of {}.".format(argument)
                 return default_return
 
             try:
@@ -552,7 +559,7 @@ class SpecGenerator(object):
         drop_chunk = SpecChunk(drop_explanation, drop_lines, SpecChunk.SYS, command)
 
         stay_explanation = "Stay where you are when picking up and dropping."
-        stay_lines = [always(implies(or_([next_(sys_(PICKUP)), next_(sys_(DROP))]),
+        stay_lines = [always(implies(or_([sys_(PICKUP), sys_(DROP)]),
                                      self._frag_stay()))]
         stay_chunk = SpecChunk(stay_explanation, stay_lines, SpecChunk.SYS, command)
 
@@ -789,7 +796,7 @@ def goal_to_chunk(goal_idx, spec_chunks):
     if len(chunks) == 1:
         return chunks[0]
     elif len(chunks) > 1:
-        print "Error: Found multiple chunks for goal {}.".format(goal_idx)
+        print >> sys.stderr, "Error: Found multiple chunks for goal {}.".format(goal_idx)
     # Zero length case returns None without printing an error
     return None
 

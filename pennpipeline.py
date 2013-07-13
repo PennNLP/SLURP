@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-"""Functions for accessing the Penn NLP Pipeline.
+"""Functions for accessing the SUBTLE MURI NLP Pipeline.
 
-Depends on the nlpipeline, sed, and Java."""
+Depends on the SUBTLE Pipeline and Java."""
 
 import sys
 import os
@@ -9,40 +9,57 @@ import re
 from subprocess import Popen, PIPE
 import shlex
 
-## Global constants for system configuration
+
+## Global constants for configuration
+# Current version, which must match the downloaded pipeline
+CURRENT_VERSION = "1.1.0"
 # Paths
+PIPELINE_NAME = "SUBTLEPipeline-master"
 CLASSPATH_SEP = ";" if sys.platform == "win32" else ":"
-ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'nlpipeline')
+JAVA = "java"
+ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), PIPELINE_NAME)
+
+# Check for up-to-date pipeline
 if not os.path.exists(ROOT_DIR):
-    raise ImportError("The nlpipeline must be placed in the module directory %s "
-                      "to use the Penn NLP pipeline. Run download.py to download it." % ROOT_DIR)
-TOOL_DIR = os.path.join(ROOT_DIR, "tools")
+    raise ImportError("The folder for the SUBTLE Pipeline %s does not exist. "
+                      "Run download.py in the root of the SLURP repository to automatically "
+                      "download and decompress the current version." %  ROOT_DIR)
+PIPELINE_VERSION = "unknown"
+try:
+    PIPELINE_VERSION = open(os.path.join(ROOT_DIR, "VERSION")).read().strip()
+    if PIPELINE_VERSION != CURRENT_VERSION:
+        raise IOError
+except IOError:
+    raise ImportError("The copy of the SUBTLE Pipeline in %s (version %s) is not the same version "
+                      "as pennpipeline.py (version %s). You should merge the latest updates from "
+                      "the PennNLP/SLURP GitHub repository to update pennpipeline.py "
+                      "and/or run download.py in the root of the SLURP repository "
+                      "to update the SUBTLE Pipeline." % (ROOT_DIR, PIPELINE_VERSION, CURRENT_VERSION))
+
+# Tagger
+TAGGER_NAME = "stanford-postagger-streaminterface"
+TAGGER_JAR = os.path.join(ROOT_DIR, TAGGER_NAME, TAGGER_NAME + ".jar")
+TAGGER_MODEL = os.path.join(ROOT_DIR, TAGGER_NAME, "models", "english-caseless-left3words-distsim.tagger")
+
+# Parser
 PARSE_PROPS = os.path.join(ROOT_DIR, "models", "eatb3.properties")
 PARSE_MODEL = os.path.join(ROOT_DIR, "models", "wsjall.obj")
 PARSER_DIR = os.path.join(ROOT_DIR, "dbparser-0.9.9c-modified")
-ECRESTORE_DIR = os.path.join(ROOT_DIR, "addnulls-mod")
-
-# Parser/JAVA options
-JAVA = "java"
 PARSER_CLASS = "danbikel.parser.Parser"
 PARSER_SETTINGS = "-Dparser.settingsFile=%s" % PARSE_PROPS
 PARSER_CLASSPATH = (os.path.join(PARSER_DIR, "dbparser.jar") + CLASSPATH_SEP +
                     os.path.join(PARSER_DIR, "dbparser-ext.jar"))
 
-# EC Restore/JAVA options
-ECRESTORER_CLASSPATH = ECRESTORE_DIR + CLASSPATH_SEP + os.path.join(TOOL_DIR, "mallet-0.4", "class")
+# EC Restorer
+ECRESTORER_DIR = os.path.join(ROOT_DIR, "restore-ecs")
+ECRESTORER_JAR = os.path.join(ECRESTORER_DIR, "restore-ecs.jar")
 
 # Pipeline commands
-SED = "sed -l" if sys.platform == "darwin" else "sed -u"
-TOKENIZER = SED + " -f " + os.path.join(TOOL_DIR, "tokenizer.sed")
-TAGGER_JAR = os.path.join(ROOT_DIR, "mxpost", "mxpost.jar")
-TAGGER_PROJECT = os.path.join(ROOT_DIR, "mxpost", "tagger.project")
-TAGGER = "%s -Xmx128m -classpath %s tagger.TestTagger %s" % (JAVA, TAGGER_JAR, TAGGER_PROJECT)
+TAGGER = "%s -Xmx256m -jar %s  %s" % (JAVA, TAGGER_JAR, TAGGER_MODEL)
 PARSER = "%s -Xmx1024m -cp %s %s %s -is %s  -sa - -out -" % \
     (JAVA, PARSER_CLASSPATH, PARSER_SETTINGS, PARSER_CLASS, PARSE_MODEL)
-ECRESTORER = ("%s -Xmx256m -cp %s edu.upenn.cis.emptycategories.RestoreECs "
-              "run - --perceptron --ante_perceptron --nptrace --whxp --wh "
-              "--whxpdiscern --nptraceante --noante") % (JAVA, ECRESTORER_CLASSPATH)
+ECRESTORER = ("%s -Xmx256m -jar %s "
+              "run - --perceptron --ante_perceptron") % (JAVA, ECRESTORER_JAR)
 
 # Pipeline constants
 OUTER_PARENS_RE = re.compile(r"\(\s*(.+)\s*\)")
@@ -53,15 +70,14 @@ class PennPipeline(object):
 
     def __init__(self):
         # Set up the pipes
-        self.token_proc = _setup_pipe(TOKENIZER)
         self.tag_proc = _setup_pipe(TAGGER)
         self.parse_proc = _setup_pipe(PARSER)
-        self.ecrestore_proc = _setup_pipe(ECRESTORER, ECRESTORE_DIR)
+        self.ecrestore_proc = _setup_pipe(ECRESTORER, ECRESTORER_DIR)
 
     def __del__(self):
         """Terminate all pipelines."""
         # This is possibly unnecessary, but doesn't do any harm.
-        for proc in (self.token_proc, self.tag_proc, self.parse_proc, self.ecrestore_proc):
+        for proc in (self.tag_proc, self.parse_proc, self.ecrestore_proc):
             _terminate_with_extreme_prejudice(proc)
 
     def parse_text(self, text, force_nouns=None, force_verbs=None, correct_punc=True):
@@ -84,8 +100,8 @@ class PennPipeline(object):
         if correct_punc and text[-1] not in ('.', '?', '!'):
             text += '.'
 
-        token_sent = _process_pipe_filter(text, self.token_proc)
-        tagged_sent = _process_pipe_filter(token_sent, self.tag_proc)
+        # TODO: Deal with multiple sentences
+        tagged_sent = _process_pipe_filter(text, self.tag_proc, read_until_empty=True)
         clean_tagged_sent = _tag_convert(tagged_sent, force_nouns, force_verbs)
         parsed_sent = _process_pipe_filter(clean_tagged_sent, self.parse_proc, "(")
         # Wrap input to the null restorer as ( x) exactly as wrap-stream.pl used to do
@@ -118,7 +134,7 @@ def _setup_pipe(command, cwd=None):
         raise OSError("Subprocess failed to run command: %s" % command)
 
 
-def _process_pipe_filter(text, process, line_filter=""):
+def _process_pipe_filter(text, process, line_filter="", read_until_empty=False):
     """Run text through the pipe, returning the first output line starting with the filter."""
     print >> process.stdin, text
     process.stdin.flush()
@@ -128,6 +144,12 @@ def _process_pipe_filter(text, process, line_filter=""):
             text = process.stdout.readline().strip()
     else:
         text = process.stdout.readline().strip()
+
+    # Read additional lines until we get a blank one
+    if read_until_empty:
+        while True:
+            if not process.stdout.readline().strip():
+                break
 
     return text
 
@@ -153,7 +175,6 @@ def _coerce_tag(word, tag, force_nouns, force_verbs):
 
 if __name__ == "__main__":
     print "Pipeline paths:"
-    print TOKENIZER
     print TAGGER
     print PARSER
     print ECRESTORER

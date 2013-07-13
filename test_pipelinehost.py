@@ -6,11 +6,11 @@ from pipelinehost import PipelineClient
 
 def test():
     """Test by parsing some text."""
-    client = PipelineClient()
+    client = PipelineClient(verbose=True)
     while True:
         try:
             text = raw_input('> ')
-        except KeyboardInterrupt:
+        except (KeyboardInterrupt, EOFError):
             break
         msg = client.parse(text)
         if not msg:

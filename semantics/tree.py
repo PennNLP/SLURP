@@ -6,6 +6,15 @@
 #         Nathan Bodenstab <bodenstab@cslu.ogi.edu> (tree transforms)
 # URL: <http://www.nltk.org/>
 # For license information, see LICENSE.TXT
+#
+# This has been modified from the version distributed in NLTK in the
+# following ways:
+#
+# 1. Methods with dependencies outside of the Python standard library
+# have been removed.
+#
+# 2. Tree.pprint has been modified to allow forcing printing over
+# multiple lines.
 
 """
 Class for representing hierarchical language structures, such as
@@ -584,7 +593,8 @@ class Tree(list):
     def __str__(self):
         return self.pprint()
     
-    def pprint(self, margin=70, indent=0, nodesep='', parens='()', quotes=False):
+    def pprint(self, margin=70, indent=0, nodesep='', parens='()', quotes=False,
+               force_multiline=False):
         """
         @return: A pretty-printed string representation of this tree.
         @rtype: C{string}
@@ -599,10 +609,11 @@ class Tree(list):
             trees like C{(S: (NP: I) (VP: (V: saw) (NP: it)))}.
         """
 
-        # Try writing it on one line.
-        s = self._pprint_flat(nodesep, parens, quotes)
-        if len(s)+indent < margin:
-            return s
+        if not force_multiline:
+            # Try writing it on one line.
+            s = self._pprint_flat(nodesep, parens, quotes)
+            if len(s)+indent < margin:
+                return s
 
         # If it doesn't fit on one line, then write it on multi-lines.
         if isinstance(self.node, basestring): 
@@ -612,7 +623,8 @@ class Tree(list):
         for child in self:
             if isinstance(child, Tree):
                 s += '\n'+' '*(indent+2)+child.pprint(margin, indent+2,
-                                                  nodesep, parens, quotes)
+                                                  nodesep, parens, quotes,
+                                                  force_multiline and len(child) > 1)
             elif isinstance(child, tuple):
                 s += '\n'+' '*(indent+2)+ "/".join(child)
             elif isinstance(child, basestring) and not quotes:

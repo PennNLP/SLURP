@@ -6,8 +6,10 @@ import _curses
 import curses.textpad
 import signal
 
-from pennpipeline import PennPipeline
-from semantics import knowledge, tree
+from pipelinehost import PipelineClient
+from semantics.parsing import process_parse_tree
+from semantics.tree import Tree
+from semantics.new_knowledge import KnowledgeBase
 
 MIN_HEIGHT = 35
 
@@ -34,9 +36,9 @@ def setup_windows(master_window):
                                   "Resize to at least %d lines " % MIN_HEIGHT +
                                   "and try again.")
 
-    # Calculate window heights, top 1/4 is input, middle half is parse, remainder is semantics
+    # Calculate window heights
     input_height = screen_height / 6
-    parse_height = screen_height / 6
+    parse_height = (screen_height - input_height) / 2
     semantic_height = screen_height - input_height - parse_height
 
     # Build input frame
@@ -73,31 +75,39 @@ def setup_windows(master_window):
 
 def get_input(input_win):
     """Get user input from a window."""
-    input_win.erase()
-    input_win.refresh()
     return curses.textpad.Textbox(input_win, insert_mode=True).edit().rstrip()
 
 
-def interactive_mode(window):
+def interactive_mode(window, first_input):
     """Interactively get input from the user and parse it."""
     input_frame, input_win, parse_win, semantic_win = setup_windows(window)
 
-    # Initialize pipeline
-    pipeline = PennPipeline()
-
-    # Set up semantics module
-    world_knowledge = knowledge.Knowledge()
+    # Initialize pipeline and knowledge base
+    pipeline = PipelineClient()
+    kb = KnowledgeBase()
 
     # Send some data through the pipeline
-    result = pipeline.parse_text("This is a test.")
+    result = pipeline.parse("This is a test.")
     input_frame.addstr(1, 1, 'Enter your input, then press Ctrl+G. '
                        'Enter "quit" or press Ctrl+C to exit.')
     input_frame.refresh()
 
     # Until the input is q/quit, process data
+    last_input = first_input
     while True:
+        # Display the first input if needed
+        input_win.erase()
+        input_win.refresh()
+        if last_input:
+            input_win.addstr(0, 0, last_input)
+
         # Get text from the input box, removing any embedded newlines
-        text = get_input(input_win).strip()
+        if first_input:
+            text = first_input
+            first_input = None
+        else:
+            text = get_input(input_win).replace("\n", "").strip()
+        last_input = text
 
         # Quit if needed
         if text == "q" or text == "quit":
@@ -116,17 +126,29 @@ def interactive_mode(window):
         semantic_win.refresh()
 
         # Run the parse pipeline
-        result = pipeline.parse_text(text)
+        result = pipeline.parse(text)
+        result_tree = Tree(result)
 
-        # Clear the status and output the result, it's easiest to just
-        # clear and echo the input again
-        parse_win.clear()
-        try:
-            parse_win.addstr(text + '\n')
-            parse_win.addstr(result)
-        except _curses.error:
+        # Output the longest parse that will fit. We try to draw the
+        # possible output in order of decreasing length.
+        parse_max_width = parse_win.getmaxyx()[1]
+        possible_formats = (result_tree.pprint(margin=parse_max_width, force_multiline=True),
+                            result_tree.pprint(margin=parse_max_width),
+                            result)
+
+        for formatted_result in possible_formats:
             parse_win.clear()
-            semantic_win.addstr("Parse too large to show.""")
+            try:
+                parse_win.addstr(text + '\n')
+                parse_win.addstr(formatted_result)
+            except _curses.error:
+                continue
+            else:
+                # We've successfully printed, stop trying formats
+                break
+        else:
+            parse_win.clear()
+            parse_win.addstr("Parse too large to show.\n")
         parse_win.refresh()
 
         # Do the same for semantics
@@ -134,45 +156,39 @@ def interactive_mode(window):
         semantic_win.clear()
         semantic_win.addstr(text)
         semantic_win.addstr('\nPerforming semantic analysis...')
-
         semantic_win.refresh()
 
-        process_result = world_knowledge.process_parse_tree(result, text)
-        semantic_answer, frame_trees = process_result[0], process_result[1]
-        if frame_trees is not None:
-            modified_trees = [str(modified_parse_tree[1]) for modified_parse_tree in frame_trees
-                              if (len(modified_parse_tree) > 1 and
-                                  isinstance(modified_parse_tree[1], tree.Tree))]
-            # TODO: Remove after dupes stop coming in
-            modified_trees = list(set(modified_trees))
-            frames = [str(frame_dict) for frame_dict in [frame[0] for frame in frame_trees
-                                                         if not isinstance(frame, str)]]
-            semantics = "Modified trees: " + "\n".join(modified_trees) + \
-                        "\nFrames: " + "\n".join(frames) + "\nResponse: " + str(semantic_answer)
-        else:
-            semantics = str(semantic_answer)
-
-        # Clear the status and output the result, it's easiest to just
-        # clear and echo the input again
+        frames, new_commands, kb_response = process_parse_tree(result, text, kb)
         semantic_win.clear()
         try:
-            semantic_win.addstr(text + '\n')
-            semantic_win.addstr(semantics)
+            if frames:
+                semantic_win.addstr("Frames matched:\n")
+                for frame in frames:
+                    semantic_win.addstr("\t" + str(frame) + "\n")
+            if new_commands:
+                semantic_win.addstr("New commands:\n")
+                for command in new_commands:
+                    semantic_win.addstr(str(command) + "\n")
+            if kb_response:
+                semantic_win.addstr("KB response:\n")
+                semantic_win.addstr(str(kb_response) + "\n")
+            if not any((frames, new_commands, kb_response)):
+                semantic_win.addstr("No frames matched.\n")
         except _curses.error:
             semantic_win.clear()
-            semantic_win.addstr("Semantics representation too large to show.""")
+            semantic_win.addstr("Semantic representation too large to show.")
         semantic_win.refresh()
 
     return
 
 
-def main():
+def main(first_input=None):
     """Get input and process it in a loop."""
 
     # Get input from user interactively
     signal.signal(signal.SIGWINCH, sigwinch_handler)
     try:
-        curses.wrapper(interactive_mode)
+        curses.wrapper(interactive_mode, first_input)
     except WindowTooSmallError as exc:
         print >> sys.stderr, exc
         sys.exit(1)
@@ -180,7 +196,8 @@ def main():
 
 if __name__ == "__main__":
     try:
-        main()
+        # If there's one argument, pass it as the first input string
+        main(sys.argv[1] if len(sys.argv) == 2 else None)
     except KeyboardInterrupt:
         # This is just to handle ctrl+c gracefully without a callstack
         pass

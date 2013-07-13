@@ -34,7 +34,7 @@ class PipelineProtocol(protocol.Protocol):
             f.write('%s | %s | "%s"\n' % (time.asctime(), str(self.transport.getPeer()), data))
 
         with self.lock:
-            parse = PipelineClient().parse(data)
+            parse = PipelineClient(verbose=True).parse(data)
 
         response = {}
         frames, new_commands, kb_response = process_parse_tree(parse, data, self.kb if knowledge_demo else None, quiet=True)
