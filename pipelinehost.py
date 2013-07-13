@@ -90,8 +90,8 @@ class PipelineClient(object):
 
     def parse(self, text, force_nouns=None, force_verbs=None):
         """Parse text using a remote pipeline."""
-        # Lowercase and strip any trailing punctuation.
-        text = text.strip().lower()
+        # Strip any trailing punctuation.
+        text = text.strip()
         # Wrap in kwargs
         return _socket_parse(asocket=self.sock, text=text, force_nouns=force_nouns,
                              force_verbs=force_verbs, verbose=self.verbose)

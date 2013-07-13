@@ -10,8 +10,10 @@ ltlgen.aut
 ltlgen.debug
 .DS_Store
 .settings
-nlpipeline
-nlpipeline.zip
+/SUBTLEPipeline-master
+/SUBTLEPipeline-master.zip
+/nlpipeline
+/nlpipeline.zip
 build
 CMakeFiles
 CMakeCache.txt
