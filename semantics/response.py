@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Generates a response"""
 
-from semantics.knowledge import ACTION_ALIASES
+from semantics.lexical_constants import ACTION_ALIASES
 
 # Semantics constants
 KNOWN_ACTIONS = set(ACTION_ALIASES.values())
