@@ -24,19 +24,19 @@ Getting started
 - If you cannot use git, click "Downloads" above and download a .zip/.tar.gz.
 
 ## Dependencies:
-- Java SDK 1.6 (newer versions will almost certainly work but have
-never been tested)
-- sed
-- Python 2.6 or 2.7 (not 3.x)
+- Java JRE 1.6 or 1.7
+- Python 2.7 (not 3.x)
 
 ## Setup
 
 - You need to download the Penn Pipeline by running `python
 download.py`.  If you can't run that script on a machine with internet access,
-download `http://www.seas.upenn.edu/~lignos/data/nlpipeline.zip` and unzip it
-in the root of the repository.
+download `https://github.com/PennNLP/SUBTLEPipeline/archive/master.zip` and unzip
+it in the root of the repository. You then need to decompress the parser model
+located at `SUBTLEPipeline-master/models/wsjall.obj.gz` to `wsjall.obj` in the
+same folder.
 - You will need to configure all the dependencies so
-that the executable are on your PATH (i.e., java, sed, python).
+that the executable are on your PATH (i.e., java, python).
 
 ## Testing the pipeline
 

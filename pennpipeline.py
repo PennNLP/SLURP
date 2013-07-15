@@ -6,7 +6,7 @@ Depends on the SUBTLE Pipeline and Java."""
 import sys
 import os
 import re
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, check_call
 import shlex
 
 
@@ -46,7 +46,7 @@ PARSE_PROPS = os.path.join(ROOT_DIR, "models", "eatb3.properties")
 PARSE_MODEL = os.path.join(ROOT_DIR, "models", "wsjall.obj")
 PARSER_DIR = os.path.join(ROOT_DIR, "dbparser-0.9.9c-modified")
 PARSER_CLASS = "danbikel.parser.Parser"
-PARSER_SETTINGS = "-Dparser.settingsFile=%s" % PARSE_PROPS
+PARSER_SETTINGS = '-Dparser.settingsFile="%s"' % PARSE_PROPS
 PARSER_CLASSPATH = (os.path.join(PARSER_DIR, "dbparser.jar") + CLASSPATH_SEP +
                     os.path.join(PARSER_DIR, "dbparser-ext.jar"))
 
@@ -55,10 +55,10 @@ ECRESTORER_DIR = os.path.join(ROOT_DIR, "restore-ecs")
 ECRESTORER_JAR = os.path.join(ECRESTORER_DIR, "restore-ecs.jar")
 
 # Pipeline commands
-TAGGER = "%s -Xmx256m -jar %s  %s" % (JAVA, TAGGER_JAR, TAGGER_MODEL)
-PARSER = "%s -Xmx1024m -cp %s %s %s -is %s  -sa - -out -" % \
+TAGGER = '%s -Xmx256m -jar "%s" "%s"' % (JAVA, TAGGER_JAR, TAGGER_MODEL)
+PARSER = '%s -Xmx1024m -cp "%s" %s %s -is "%s" -sa - -out -' % \
     (JAVA, PARSER_CLASSPATH, PARSER_SETTINGS, PARSER_CLASS, PARSE_MODEL)
-ECRESTORER = ("%s -Xmx256m -jar %s "
+ECRESTORER = ('%s -Xmx256m -jar "%s" '
               "run - --perceptron --ante_perceptron") % (JAVA, ECRESTORER_JAR)
 
 # Pipeline constants
@@ -70,6 +70,7 @@ class PennPipeline(object):
 
     def __init__(self):
         # Set up the pipes
+        self.tag_proc, self.parse_proc, self.ecrestore_proc = (None, None, None)
         self.tag_proc = _setup_pipe(TAGGER)
         self.parse_proc = _setup_pipe(PARSER)
         self.ecrestore_proc = _setup_pipe(ECRESTORER, ECRESTORER_DIR)
@@ -131,7 +132,8 @@ def _setup_pipe(command, cwd=None):
     try:
         return Popen(command, stdin=PIPE, stdout=PIPE, stderr=open(os.devnull, 'w'), cwd=cwd)
     except OSError:
-        raise OSError("Subprocess failed to run command: %s" % command)
+        print >> sys.stderr, "Subprocess failed to run command: %s" % command
+        raise
 
 
 def _process_pipe_filter(text, process, line_filter="", read_until_empty=False):
@@ -175,6 +177,15 @@ def _coerce_tag(word, tag, force_nouns, force_verbs):
 
 if __name__ == "__main__":
     print "Pipeline paths:"
+    print "Tagger:"
     print TAGGER
+    print "Parser:"
     print PARSER
+    print "EC Restorer:"
     print ECRESTORER
+    print
+
+    # Try to run dependencies
+    print "Trying to run dependencies..."
+    print "Testing {!r}...".format(JAVA)
+    check_call("{} -version".format(JAVA))
