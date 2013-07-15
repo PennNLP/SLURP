@@ -5,18 +5,22 @@ from pipelinehost import PipelineClient
 from twisted.internet import protocol, reactor
 from semantics.new_knowledge import KnowledgeBase
 from semantics.parsing import process_parse_tree
+from semantics.response import make_response
 from semantics import tree
 import semantics.parsing
 import json
 import sys
 import threading
+import time
 
 SECRET_CODE = ",oO-i2De<2W5NVuJa6E"
+LOG_FILE = "parse_server_log.txt"
 
 class PipelineProtocol(protocol.Protocol):
     def __init__(self, kb, lock):
         self.kb = kb
         self.lock = lock
+
     def dataReceived(self, data):
         # Remove extra escape characters
         data = data.replace('\\','')
@@ -25,6 +29,9 @@ class PipelineProtocol(protocol.Protocol):
         knowledge_demo = data.startswith(SECRET_CODE)
         if knowledge_demo:
             data = data[len(SECRET_CODE):]
+
+        with open(LOG_FILE, 'a') as f:
+            f.write('%s | %s | "%s"\n' % (time.asctime(), str(self.transport.getPeer()), data))
 
         with self.lock:
             parse = PipelineClient(verbose=True).parse(data)
@@ -43,7 +50,7 @@ class PipelineProtocol(protocol.Protocol):
         else:
             response['trees'] = []
             response['frames'] = []
-        response['response'] = kb_response # TODO: Add command-based response
+        response['response'] = make_response(new_commands, kb_response)
         response['structures'] = '\n\n'.join(str(c) for c in new_commands)
         self.transport.write(json.dumps(response))
 
@@ -51,6 +58,7 @@ class PipelineFactory(protocol.Factory):
     def __init__(self):
         self.kb = KnowledgeBase(other_agents=['cmdr'])
         self.lock = threading.Lock()
+
     def buildProtocol(self, addr):
         return PipelineProtocol(self.kb, self.lock)
 

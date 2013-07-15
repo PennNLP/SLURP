@@ -15,6 +15,8 @@ Utility functions for semantics.
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+PRONOUNS = set(('i', 'me', 'you', 'he', 'him', 'she', 'her', 'it', 'they', 'them'))
+
 def text2int(textnum):
     """From recursive at
     http://stackoverflow.com/questions/493174/is-there-a-way-to-convert-number-words-to-integers-python
@@ -54,4 +56,4 @@ def text2int(textnum):
     return result + current
 
 def is_pronoun(word):
-    return word in ('it', 'them', 'him', 'her')
+    return word.lower() in PRONOUNS

@@ -25,15 +25,18 @@ from copy import deepcopy
 from semantics.lexical_constants import (
     SEARCH_ACTION, GO_ACTION, FOLLOW_ACTION, SEE_ACTION, BEGIN_ACTION,
     AVOID_ACTION, PATROL_ACTION, CARRY_ACTION, STAY_ACTION, ACTIVATE_ACTION,
-    DEACTIVATE_ACTION, DEFUSE_ACTION)
+    DEACTIVATE_ACTION, UNDERSTOOD_SENSES)
 from semantics.new_structures import Event, Assertion
 from semantics.parsing import process_parse_tree
 from pipelinehost import PipelineClient
 from semantics.new_knowledge import KnowledgeBase
 from ltlbroom.ltl import (
     env, and_, or_, sys_, not_, iff, next_, always, always_eventually, implies,
-    space, ALWAYS, EVENTUALLY, OR)
+    space, mutex_, ALWAYS, EVENTUALLY, OR)
 
+
+# Debug constants
+COMMAND_DEBUG = False
 
 # Semantics constants
 LOCATION = "location"
@@ -136,14 +139,13 @@ class SpecGenerator(object):
         self.sensors = None
         self.regions = None
         self.props = None
-        self.react_props = set()
+        self.react_props = None
         self.tag_dict = None
-        self.generation_trees = None
 
         # Knowledge base
         self.kbase = KnowledgeBase()
 
-    def generate(self, text, sensors, regions, props, tag_dict, realizable_reactions=False,
+    def generate(self, text, sensors, regions, props, tag_dict, realizable_reactions=True,
                  verbose=True):
         """Generate a logical specification from natural language and propositions."""
         # Clean unicode out of everything
@@ -168,12 +170,23 @@ class SpecGenerator(object):
         force_nouns = list(self.regions) + list(self.sensors)
         force_verbs = list(self.props) + self.GOALS.keys()
 
+        # Set up
         parse_client = PipelineClient()
         results = []
         responses = []
         custom_props = set()
+        self.react_props = set()  # TODO: Make this a local
         custom_sensors = set()
-        self.generation_trees = OrderedDict()
+        generation_trees = OrderedDict()
+
+        # Add the actuator mutex
+        if self.props:
+            generation_trees["Safety assumptions"] = \
+                {"Safety assumptions":
+                 [SpecChunk("Robot can perform only one action at a time.",
+                            [mutex_([sys_(prop) for prop in self.props], True)],
+                            SpecChunk.SYS, None)]}
+
         for line in text.split('\n'):
             # Strip the text before using it and ignore any comments
             line = line.strip()
@@ -186,14 +199,16 @@ class SpecGenerator(object):
                 continue
 
             # Init the generation tree to the empty result
-            generated_lines = defaultdict(list)
-            self.generation_trees[line] = generated_lines
+            generated_lines = OrderedDict()
+            generation_trees[line] = generated_lines
 
             if verbose:
                 print "Sending to remote parser:", repr(line)
             parse = parse_client.parse(line, force_nouns, force_verbs=force_verbs)
             if verbose:
                 print "Response from parser:", repr(parse)
+            frames, new_commands, kb_response = \
+                process_parse_tree(parse, line, self.kbase, quiet=True)
 
             frames, new_commands, kb_response = process_parse_tree(parse, line, self.kbase,
                                                                    quiet=not verbose)
@@ -211,23 +226,30 @@ class SpecGenerator(object):
             success = bool(new_commands) or bool(kb_response)
             command_responses = [kb_response] if kb_response else []
             for command in new_commands:
+                if COMMAND_DEBUG:
+                    print "Processing command:"
+                    print command
                 try:
                     new_sys_lines, new_env_lines, new_custom_props, new_custom_sensors = \
                         self._apply_metapar(command)
                 except KeyError as err:
+                    cause = err.message
                     problem = \
-                        "Could not understand {!r} due to error {}.".format(command.action, err)
+                        "Could not understand {!r} due to error {}.".format(command.action, cause)
                     if verbose:
                         print >> sys.stderr, "Error: " + problem
-                    command_responses.append(str(err))
+                    command_responses.append(cause)
                     success = False
                     continue
                 else:
                     command_responses.append(respond_okay(command.action))
 
                 # Add in the new lines
-                generated_lines[_format_command(command)].extend(new_sys_lines)
-                generated_lines[_format_command(command)].extend(new_env_lines)
+                command_key = _format_command(command)
+                if command_key not in generated_lines:
+                    generated_lines[command_key] = []
+                generated_lines[command_key].extend(new_sys_lines)
+                generated_lines[command_key].extend(new_env_lines)
 
                 # Add custom props/sensors
                 custom_props.update(new_custom_props)
@@ -240,8 +262,15 @@ class SpecGenerator(object):
             # Add responses and successes
             results.append(success)
             responses.append(' '.join(command_responses))
-            # Add some space between coomands
+            # Add some space between commands
             if verbose:
+                print
+
+        if COMMAND_DEBUG:
+            print "Generation trees:"
+            for line, output in generation_trees.items():
+                print line
+                print output
                 print
 
         # We need to modify non-reaction goals to be or'd with the reactions
@@ -249,11 +278,14 @@ class SpecGenerator(object):
             # Dedupe and make an or over all the reaction properties
             reaction_or_frag = or_([sys_(prop) for prop in self.react_props])
             # HACK: Rewrite all the goals!
-            # TODO: Test again once we re-enable reaction propositions
-            for command_spec_lines in self.generation_trees.values():
-                for spec_lines in command_spec_lines.values():
-                    spec_lines.lines = [_insert_or_before_goal(reaction_or_frag, line)
-                                        for line in spec_lines.lines]
+            # TODO: Test again with reaction propositions other than defuse
+            for command_spec_chunks in generation_trees.values():
+                for spec_chunks in command_spec_chunks.values():
+                    for spec_chunk in spec_chunks:
+                        if not spec_chunk.issys():
+                            continue
+                        spec_chunk.lines = [_insert_or_before_goal(reaction_or_frag, line)
+                                            for line in spec_chunk.lines]
 
         # Aggregate all the propositions
         # Identify goal numbers as we loop over sys lines
@@ -261,7 +293,7 @@ class SpecGenerator(object):
         # At the moment, there are no useless goals in specs, so we
         # begin at 0
         goal_idx = 0
-        for input_text, command_spec_lines in self.generation_trees.items():
+        for input_text, command_spec_lines in generation_trees.items():
             for command, spec_lines_list in command_spec_lines.items():
                 for spec_lines in spec_lines_list:
                     if not spec_lines.issys():
@@ -275,7 +307,7 @@ class SpecGenerator(object):
 
         # Filter out any duplicates from the env_lines
         env_lines = OrderedDict()
-        for command_spec_lines in self.generation_trees.values():
+        for command_spec_lines in generation_trees.values():
             for spec_lines_list in command_spec_lines.values():
                 for spec_lines in spec_lines_list:
                     if not spec_lines.isenv():
@@ -296,16 +328,26 @@ class SpecGenerator(object):
             print "System lines:", sys_lines
             print "Custom props:", custom_props
             print "Custom sensors:", custom_sensors
-            print "Generation tree:", self.generation_trees
+            print "Generation trees:", generation_trees
+
         return (env_lines, sys_lines, custom_props, custom_sensors, results, responses,
-                self.generation_trees)
+                generation_trees)
 
     def _apply_metapar(self, command):
         """Generate a metapar for a command."""
+        # Patch up intransitives as activate if needed
+        # TODO: This has only been tested with defuse and may not work for other actions.
+        if (command.action not in self.GOALS and
+            command.action in UNDERSTOOD_SENSES):
+            print "Changed action {} to an activate command.".format(command.action)
+            if command.theme:
+                command.theme.name = command.action
+            command.action = "activate"
+
         try:
             handler = self.GOALS[command.action]
         except KeyError:
-            raise KeyError('Unknown action {0}'.format(command.action))
+            raise KeyError('Unknown action {0}.'.format(command.action))
 
         if command.condition:
             return self._gen_conditional(command)
@@ -317,7 +359,10 @@ class SpecGenerator(object):
         """Return a list of the arguments created by expanding the argument if its quantified."""
         # What to return if quantification fails
         default_return = [argument]
-        quant = argument.quantifier.type
+        try:
+            quant = argument.quantifier.type
+        except AttributeError:
+            return default_return
         if quant == "all" or (command.negation and quant == "any"):
             # TODO: Handle more than one tag
             try:
@@ -373,9 +418,11 @@ class SpecGenerator(object):
         return ([stationary_lines, stay_there_lines] + follow_goals, [follow_env],
                 [FOLLOW_STATIONARY], [])
 
-    def _gen_conditional(self, command):
+    def _gen_conditional(self, command, assume_eventual_relief=False):
         """Generate a conditional action"""
+        # TODO: Properly document and condition assume_eventual_relief
 
+        env_chunks = []
         if isinstance(command.condition, Event):
             # Validate the condition
             if not command.condition.theme:
@@ -389,6 +436,11 @@ class SpecGenerator(object):
                     "Cannot use action {!r} as a condition".format(command.condition.action))
             condition_frag = env(condition)
             explanation = "To react to {!r},".format(condition)
+            if assume_eventual_relief:
+                relief_explanation = "Assume {!r} eventually goes away.".format(condition)
+                relief = always_eventually(not_(condition_frag))
+                relief_chunk = SpecChunk(relief_explanation, [relief], SpecChunk.ENV, command)
+                env_chunks.append(relief_chunk)
         elif isinstance(command.condition, Assertion):
             # TODO: Add support for assertions not about "you". Ex: If there is a hostage...
             # Validate the condition
@@ -410,14 +462,12 @@ class SpecGenerator(object):
         if action in self.props:
             # Simple actuator
             reaction_prop = action
-        elif action == STAY_ACTION:
-            reaction_prop = STAY_THERE
         else:
             # Reaction proposition
             reaction_prop_name = REACT + "_" + condition
             reaction_prop = sys_(reaction_prop_name)
-            self.react_props.add(reaction_prop_name)
             new_props.append(reaction_prop_name)
+            self.react_props.add(reaction_prop_name)
 
         # Generate the response
         sys_statements = []
@@ -448,7 +498,9 @@ class SpecGenerator(object):
                 sys_statements.extend([go_goal, go_safety, stay_there])
                 explanation += " go to {!r}.".format(command.location.name)
         elif action == STAY_ACTION:
-            sys_statements.append(always(implies(condition_frag, reaction_prop)))
+            sys_statements.append(always(iff(next_(condition_frag), next_(reaction_prop))))
+            sys_statements.append(always(implies(or_([reaction_prop, next_(reaction_prop)]),
+                                                 STAY_THERE)))
             explanation += " stay there."
         else:
             if command.theme.name not in self.props:
@@ -464,12 +516,12 @@ class SpecGenerator(object):
                 handler = self.NEG_REACTIONS[action]
             reaction_frag = handler(command)
             react = always(implies(next_(reaction_prop), reaction_frag))
-            stay_there = always(implies(and_((not_(reaction_prop), next_(reaction_prop))),
-                                        self._frag_stay()))
+            stay_there = always(implies(or_([reaction_prop, next_(reaction_prop)]),
+                                       self._frag_stay()))
             sys_statements.extend([react, stay_there])
 
         sys_chunk = SpecChunk(explanation, sys_statements, SpecChunk.SYS, command)
-        return ([sys_chunk], [], new_props, [])
+        return ([sys_chunk], env_chunks, new_props, [])
 
     def _gen_stay(self, command):
         """Generate statements to stay exactly where you are."""
@@ -477,7 +529,7 @@ class SpecGenerator(object):
                               SpecChunk.SYS, command)
         return ([sys_lines], [], [], [])
 
-    def _frag_stay(self, command=None):
+    def _frag_stay(self, command=None):  # pylint: disable=W0613
         """Generate fragments to reactively go somewhere."""
         return STAY_THERE
 
@@ -547,7 +599,16 @@ class SpecGenerator(object):
         if command.negation:
             return self._gen_avoid(command)
 
-        regions = [location.name for location in self._expand_argument(command.location, command)]
+        try:
+            regions = [location.name for location in self._expand_argument(command.location, command)]
+        except AttributeError:
+            raise KeyError("Could not understand location for 'go' command.")
+        # Raise an error if any of the regions are bad.
+        for region in regions:
+            if region not in self.regions:
+                raise KeyError("Cannot go to location {!r} "
+                               "because it is not on the map.".format(region))
+
         sys_chunks = []
         mem_props = []
         for region in regions:
@@ -696,6 +757,9 @@ def _prop_actuator_done(actuator):
 
 def _format_command(command):
     """Format a command nicely for display."""
+    if not command:
+        return "No command."
+
     action = ("Action: {!r}" if not command.negation else
               "Action: do not {!r}").format(command.action)
     fields = [action]
@@ -814,10 +878,12 @@ def respond_okay(action):
 
 def _test():
     """Test spec generation."""
+    # pylint: disable=W0612
     specgen = SpecGenerator()
     env_lines, sys_lines, custom_props, custom_sensors, results, responses, gen_tree = \
         specgen.generate('\n'.join(sys.argv[1:]), ("bomb", "hostage", "badguy", "monkey"),
-                         ("r1", "r2", "r3", "r4"), ("defuse", "pickup", "drop", "banana"),
+                         ("r1", "r2", "r3", "r4", "office", "classroom1", "classroom2"),
+                         ("defuse", "pickup", "drop", "banana"),
                          {'odd': ['r1', 'r3']})
     for line in env_lines + sys_lines:
         print line

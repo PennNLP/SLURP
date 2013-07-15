@@ -58,7 +58,7 @@ class PipelineHost(CallbackSocket):
         # Start up the pipeline
         self.pipeline = PennPipeline()
 
-    def parse_text(self, message):
+    def parse_text(self, message, client):
         """Receive a parse request for the pipeline."""
         try:
             data = json.loads(message)
@@ -72,7 +72,7 @@ class PipelineHost(CallbackSocket):
         response = self.pipeline.parse_text(**data)
         if self.verbose:
             print "Sending:", repr(response)
-        self.send(response)
+        client.send(response)
 
 
 class PipelineClient(object):
@@ -102,7 +102,10 @@ class PipelineClient(object):
         If you need the connection closed promptly, it's wise to call this, but garbage collection
         will accomplish the same purpose.
         """
-        self.sock.shutdown(socket.SHUT_RDWR)
+        try:
+            self.sock.shutdown(socket.SHUT_RDWR)
+        except socket.error:
+            pass
         self.sock.close()
 
 
