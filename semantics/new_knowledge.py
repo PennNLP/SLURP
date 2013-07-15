@@ -39,8 +39,7 @@ class KnowledgeBase:
                 response = self.query(structure)
             # Assertions, Commands have themes and locations that 
             # may be referenced later
-            if isinstance(structure, Assertion) or \
-                    isinstance(structure, Command):
+            if isinstance(structure, Command):
                 # Only replace resolved object 
                 # (theme has priority over condition)
                 if structure.theme and not is_pronoun(structure.theme.name):
@@ -57,6 +56,11 @@ class KnowledgeBase:
                         structure.condition.location and \
                         structure.condition.location.name != 'there':
                     self.last_location = structure.condition.location
+            elif isinstance(structure, Assertion):
+                if structure.theme and not is_pronoun(structure.theme.name):
+                    self.last_object = structure.theme
+                if structure.location and structure.location.name != 'there':
+                    self.last_location = structure.location
         return response
 
     def assimilate(self, assertion, source):

@@ -180,19 +180,20 @@ def create_semantic_structures(frame_semantic_list):
     """Take in the list of VerbNet frames and generate the semantic
     representation structures from them."""
     semantic_representation_list = []
-    conditional = False
+    isConditionalNext = False
+    hasConditional = False # Whether there is a conditional in the semantic representation list waiting to be picked up
+
     # Frame semantic list is a list of conjunction strings and tuples, where the
     # first element of the tuple is the frame semantics, the second element is
     # the original tree branch it came from, the third is a list of tags, and
     # the fourth is the sense.
-
     for frame in frame_semantic_list:
         # Check that this is a VerbNet frame and not a conjunction
         try:
             frame_items = frame[0].items()
         except AttributeError:
             if 'if' in str(frame):
-                conditional = True
+                isConditionalNext = True
             frame_items = None
             #semantic_representation_list.append(frame)
             continue
@@ -222,22 +223,23 @@ def create_semantic_structures(frame_semantic_list):
                 semantic_representation_list.append(YNQuery(item_to_entity['Theme'], item_to_entity['Location']))
         # If it's a conditional statement, it is modifying 
         # either the previous or next structure
-        elif conditional:
+        elif isConditionalNext:
             if 'Stimulus' in item_to_entity:
                 condition = Event(item_to_entity['Stimulus'], action)
             else:
                 condition = Assertion(item_to_entity.get('Theme', None),\
                                           item_to_entity.get('Location', None),\
                                           'ex' in frame[2])
-
+                
             if len(semantic_representation_list) > 0 and isinstance(semantic_representation_list[-1], Command):
+                # Found the command to which this condition belongs
                 semantic_representation_list[-1].condition = condition
             else:
                 # Save it for later
                 semantic_representation_list.append(condition)
-            
+                hasConditional = True
             # Consume the conditional
-            conditional = False
+            isConditionalNext = False
         # It's a regular command
         elif action is not None and action not in  ('is', 'are', 'be'):
             theme = item_to_entity.get('Theme', None)
@@ -250,8 +252,9 @@ def create_semantic_structures(frame_semantic_list):
             destination = item_to_entity.get('Destination', None)
             current_command = Command(agent, theme, patient, location, source, destination, action, negation=frame[5])
             # Try to pick up the previous condition
-            if len(semantic_representation_list) > 0 and (isinstance(semantic_representation_list[-1], Event) or isinstance(semantic_representation_list[-1], Assertion)):
+            if hasConditional:
                 current_command.condition = semantic_representation_list.pop()
+                hasConditional = False
             semantic_representation_list.append(current_command)
         # It's an assertion
         else:
