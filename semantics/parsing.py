@@ -29,7 +29,7 @@ from semantics.lexical_constants import ACTION_ALIASES
 EXTRACT_DEBUG = False
 
 
-def extract_frames_from_parse(parse_tree_string):
+def extract_frames_from_parse(parse_tree_string, verbose=False):
     """Take a string representing the parse tree as input, and print the
     semantic parse. The result list consists of a list of tuples, with each
     tuple containing the VerbNet frame and its associated tree."""
@@ -42,15 +42,20 @@ def extract_frames_from_parse(parse_tree_string):
         print "Warning: semantics could not parse tree", repr(parse_tree_string)
         return result_list
 
+    # Temporarily (and maybe permanently) disabled features:
+    # 1. Clause splitting: we have not found any example where it does something
+    # 2. Activizing clauses: for now, passives do not matter.
+
     # Split clauses to handle them separately
-    split_clause_dict = split_clauses(parse_tree)
+    #split_clause_dict = split_clauses(parse_tree)
 
     # Activize clauses
-    for key, (clause, conjunction) in split_clause_dict.items():
-        activized_clause = activize_clause(clause)
-        split_clause_dict[key] = (activized_clause, conjunction)
+    #for key, (clause, conjunction) in split_clause_dict.items():
+    #    activized_clause = activize_clause(clause)
+    #    split_clause_dict[key] = (activized_clause, conjunction)
 
-    for (clause, conjunction) in split_clause_dict.values():
+    #for (clause, conjunction) in split_clause_dict.values():
+    for clause, conjunction in ((parse_tree, ''),):
         # Split conjunctions and duplicate arguments if necessary
         split_tree_dict = split_conjunctions(clause)
 
