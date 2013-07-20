@@ -119,6 +119,7 @@ def extract_frames_from_parse(parse_tree_string, verbose=False):
                     if EXTRACT_DEBUG:
                         print 'Chose: '
                         if best_match:
+                            print sense
                             for a, b in best_match.items():
                                 print a, str(b)
                         else:
