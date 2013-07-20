@@ -68,6 +68,8 @@ class PipelineHost(CallbackSocket):
         if self.verbose:
             print "Message:", repr(data)
             print "Parsing..."
+        # Add verbose flag to args
+        data['verbose'] = self.verbose
         # pylint: disable=W0142,E1101
         response = self.pipeline.parse_text(**data)
         if self.verbose:
@@ -99,8 +101,8 @@ class PipelineClient(object):
     def close(self):
         """Close the connection to the pipeline host.
 
-        If you need the connection closed promptly, it's wise to call this, but garbage collection
-        will accomplish the same purpose.
+        If you need the connection closed promptly, it's wise to call
+        this, but garbage collection will accomplish the same purpose.
         """
         try:
             self.sock.shutdown(socket.SHUT_RDWR)
