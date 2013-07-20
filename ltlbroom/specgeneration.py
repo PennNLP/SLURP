@@ -180,7 +180,7 @@ class SpecGenerator(object):
         generation_trees = OrderedDict()
 
         # Add the actuator mutex
-        if self.props:
+        if len(self.props) > 1:
             generation_trees["Safety assumptions"] = \
                 {"Safety assumptions":
                  [SpecChunk("Robot can perform only one action at a time.",
