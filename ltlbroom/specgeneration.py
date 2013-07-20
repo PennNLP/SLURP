@@ -168,7 +168,7 @@ class SpecGenerator(object):
 
         # Make lists for POS conversions, including the metapar keywords
         force_nouns = list(self.regions) + list(self.sensors)
-        force_verbs = list(self.props) + self.GOALS.keys()
+        force_verbs = self.GOALS.keys()
 
         # Set up
         parse_client = PipelineClient()
