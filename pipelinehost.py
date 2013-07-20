@@ -53,7 +53,10 @@ class PipelineHost(CallbackSocket):
     def __init__(self, port=DEFAULT_PORT, local=False, verbose=False):
         self.verbose = verbose
         # Set up callback
-        CallbackSocket.__init__(self, port, MSG_SEP, local)
+        try:
+            CallbackSocket.__init__(self, port, MSG_SEP, local)
+        except socket.error:
+            raise IOError("Port {} requested by PipelineHost is already in use".format(port))
         self.register_callback(self.parse_text)
         # Start up the pipeline
         self.pipeline = PennPipeline()
