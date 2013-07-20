@@ -674,12 +674,12 @@ class SpecGenerator(object):
             for region in regions:
                 # Generate a location-restricted action
                 explanation = "{} activate {!r} in {!r}.".format(when, actuator, region)
-                formula = always(implies(next_(sys_(region)), next_(actuator_frag)))
+                formula = always(implies(sys_(region), actuator_frag))
                 chunks.append(SpecChunk(explanation, [formula], SpecChunk.SYS, command))
         else:
             # Always activate
             explanation = "{} activate {!r}.".format(when, actuator)
-            formula = always(next_(actuator_frag))
+            formula = always(actuator_frag)
             chunks.append(SpecChunk(explanation, [formula], SpecChunk.SYS, command))
 
         return (chunks, [], [], [])

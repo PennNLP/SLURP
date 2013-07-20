@@ -80,10 +80,10 @@ def next_(text):
 
 def mutex_(items, include_all_off=False):
     """Create a system proposition mutex over the given items."""
-    return always(or_([and_([next_(item1)] +
-                            [not_(next_(item2)) for item2 in items if item2 != item1])
+    return always(or_([and_([item1] +
+                            [not_(item2) for item2 in items if item2 != item1])
                        for item1 in items] +
-                      ([and_([not_(next_(item)) for item in items])] if include_all_off else [])))
+                      ([and_([not_(item) for item in items])] if include_all_off else [])))
 
 
 def iff(prop1, prop2):

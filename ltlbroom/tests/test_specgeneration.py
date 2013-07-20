@@ -38,8 +38,8 @@ class TestSpecGenerator(unittest.TestCase):
         enl, syl = self.lines_from_gen(text)
         self.assertEqual(enl, [])
         self.assertEqual(syl, [
-            '([](((next(s.camera) & !next(s.radio)) | (next(s.radio) & !next(s.camera)) '
-            '| (!next(s.camera) & !next(s.radio)))))'
+            '([](((s.camera & !s.radio) | (s.radio & !s.camera) '
+            '| (!s.camera & !s.radio))))'
             ])
         
     def test_activate(self):
@@ -48,7 +48,7 @@ class TestSpecGenerator(unittest.TestCase):
         text = "Activate your camera."""
         enl, syl = self.lines_from_gen(text)
         self.assertEqual(enl, [])
-        self.assertEqual(syl, ['([](next(s.camera)))'])
+        self.assertEqual(syl, ['([](s.camera))'])
 
     def test_activate_conditional(self):
         """Test a conditional activate command."""
@@ -56,7 +56,7 @@ class TestSpecGenerator(unittest.TestCase):
         text = "Activate your camera in the hallway."""
         enl, syl = self.lines_from_gen(text)
         self.assertEqual(enl, [])
-        self.assertEqual(syl, ['([]((next(s.hallway) -> next(s.camera))))'])
+        self.assertEqual(syl, ['([]((s.hallway -> s.camera)))'])
 
     def lines_from_gen(self, text):
         """Return [env_lines, sys_lines] from a default generate call."""

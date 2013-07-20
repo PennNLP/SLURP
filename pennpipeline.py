@@ -12,7 +12,7 @@ import shlex
 
 ## Global constants for configuration
 # Current version, which must match the downloaded pipeline
-CURRENT_VERSION = "1.1.0"
+CURRENT_VERSION = "1.1.1"
 # Paths
 PIPELINE_NAME = "SUBTLEPipeline-master"
 CLASSPATH_SEP = ";" if sys.platform == "win32" else ":"
