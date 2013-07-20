@@ -16,23 +16,40 @@
 # You should have received a copy of the GNU General Public License
 # along with SLURP.  If not, see <http://www.gnu.org/licenses/>.
 
-from time import sleep
-
+import random
+import string
+from multiprocessing import Process
 
 from pipelinehost import PipelineClient
 
 
 def stress():
     """Stress the pipeline."""
-    parser = PipelineClient()
-    while True:
-        try:
-            parser.parse("This is the tremendously violent stress test of doom.")
-            sleep(.1)
-        except KeyboardInterrupt:
-            break
+    try:
+        while True:
+            parser = PipelineClient()
+            word = ''.join(random.choice(string.ascii_letters) for _ in range(10))
+            parser.parse("This is the tremendously violent stress test of {}.".format(word))
+            parser.close()
+    except KeyboardInterrupt:
+        pass
 
-    parser.close()
 
 if __name__ == "__main__":
-    stress()
+    procs = []
+    print "Starting processes..."
+    for _ in range(10):
+        proc = Process(target=stress)
+        proc.daemon = True
+        proc.start()
+        procs.append(proc)
+    
+    print "Running..."
+    # Join on an arbitrary process
+    try:
+        procs[0].join()
+    except KeyboardInterrupt:
+        # Just exit
+        pass
+
+    print "Exited..."
