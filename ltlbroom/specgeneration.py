@@ -212,15 +212,6 @@ class SpecGenerator(object):
 
             frames, new_commands, kb_response = process_parse_tree(parse, line, self.kbase,
                                                                    quiet=not verbose)
-            if verbose:
-                print "Returned values from semantics:"
-                print "Semantics results:"
-                for frame in frames:
-                    print "\t" + str(frame)
-                if frames:
-                    print
-                print "New commands:", new_commands
-
             # Build the metapars
             # For now, assume success if there were commands or a kb_response
             success = bool(new_commands) or bool(kb_response)
