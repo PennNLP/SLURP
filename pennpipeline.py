@@ -81,7 +81,8 @@ class PennPipeline(object):
         for proc in (self.tag_proc, self.parse_proc, self.ecrestore_proc):
             _terminate_with_extreme_prejudice(proc)
 
-    def parse_text(self, text, force_nouns=None, force_verbs=None, correct_punc=True):
+    def parse_text(self, text, force_nouns=None, force_verbs=None, correct_punc=True,
+                   verbose=False):
         """Run the text through the pipelines."""
         # Check for empty text
         if not text:
@@ -103,7 +104,15 @@ class PennPipeline(object):
 
         # TODO: Deal with multiple sentences
         tagged_sent = _process_pipe_filter(text, self.tag_proc, read_until_empty=True)
+        if verbose:
+            # Show the tags without any forced tags
+            display_tagged_sent = _tag_convert(tagged_sent, set(), set())
+            print "Original tags:"
+            print display_tagged_sent
         clean_tagged_sent = _tag_convert(tagged_sent, force_nouns, force_verbs)
+        if verbose and (force_nouns or force_verbs) and (clean_tagged_sent != display_tagged_sent):
+            print "Modified tags:"
+            print clean_tagged_sent
         parsed_sent = _process_pipe_filter(clean_tagged_sent, self.parse_proc, "(")
         # Wrap input to the null restorer as ( x) exactly as wrap-stream.pl used to do
         restored_sent = _process_pipe_filter("( " + parsed_sent + ")", self.ecrestore_proc, "(")
