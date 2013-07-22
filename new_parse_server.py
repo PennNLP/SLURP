@@ -40,7 +40,8 @@ class PipelineProtocol(protocol.Protocol):
         frames, new_commands, kb_response = process_parse_tree(parse, data, self.kb if knowledge_demo else None, quiet=True)
         response['parse'] = parse
         if frames is not None:
-            modified_trees = [str(modified_parse_tree[1])
+            # We do a join and split to make sure all whitespace becomes single spaces
+            modified_trees = [" ".join(str(modified_parse_tree[1]).split())
                               for modified_parse_tree in frames
                               if (len(modified_parse_tree) > 1 and
                                   isinstance(modified_parse_tree[1], tree.Tree))]
