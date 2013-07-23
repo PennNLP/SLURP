@@ -16,13 +16,15 @@ Takes a parse tree string and creates semantic structures to be read by Knowledg
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from semantics.frames import split_clauses, activize_clause, is_existential, invert_clause, \
-    get_wh_question_type, is_yn_question, pick_best_match, existential_there_insertion, \
-    wh_movement, split_conjunctions, find_verbs, create_VerbFrameObjects
+from semantics.frames import (
+    split_clauses, activize_clause, is_existential, invert_clause,
+    get_wh_question_type, is_yn_question, pick_best_match, existential_there_insertion,
+    wh_movement, split_conjunctions, find_verbs, create_VerbFrameObjects)
 from semantics.tree import Tree
 from semantics.wntools import morphy
-from semantics.new_structures import Location, ObjectEntity, YNQuery, StatusQuery, \
-    EntityQuery, Command, LocationQuery, Assertion, Event
+from semantics.new_structures import (
+    Location, ObjectEntity, YNQuery, StatusQuery,
+    EntityQuery, Command, LocationQuery, Assertion, Event)
 from semantics.lexical_constants import ACTION_ALIASES
 
 
@@ -47,14 +49,14 @@ def extract_frames_from_parse(parse_tree_string, verbose=False):
     # 2. Activizing clauses: for now, passives do not matter.
 
     # Split clauses to handle them separately
-    #split_clause_dict = split_clauses(parse_tree)
+    # split_clause_dict = split_clauses(parse_tree)
 
     # Activize clauses
-    #for key, (clause, conjunction) in split_clause_dict.items():
-    #    activized_clause = activize_clause(clause)
-    #    split_clause_dict[key] = (activized_clause, conjunction)
+    # for key, (clause, conjunction) in split_clause_dict.items():
+    #     activized_clause = activize_clause(clause)
+    #     split_clause_dict[key] = (activized_clause, conjunction)
 
-    #for (clause, conjunction) in split_clause_dict.values():
+    # for (clause, conjunction) in split_clause_dict.values():
     for clause, conjunction in ((parse_tree, ''),):
         # Split conjunctions and duplicate arguments if necessary
         split_tree_dict = split_conjunctions(clause)
@@ -126,14 +128,16 @@ def extract_frames_from_parse(parse_tree_string, verbose=False):
                             print str(None)
                         print '\n\n'
                     if not best_match is None:
-                        result_list.append((best_match, tree, tag_list, sense, verb, negation))
+                        result_list.append(
+                            (best_match, tree, tag_list, sense, verb, negation))
 
     return result_list
 
 
 def extract_entity(parse_tree, semantic_role=''):
     """Creates an entity object given a snippet of a parse tree."""
-    entity = Location() if semantic_role in ('Location', 'Source', 'Destination') else ObjectEntity()
+    entity = Location() if semantic_role in (
+        'Location', 'Source', 'Destination') else ObjectEntity()
 
     # print 'Extracting from:'
     # print str(parse_tree)
@@ -156,7 +160,8 @@ def extract_entity(parse_tree, semantic_role=''):
         if subtree is not parse_tree and 'NP' in node:
             entity.merge(extract_entity(subtree))
             # ignore_positions should be relative to parse_tree
-            ignore_positions.extend(position + subposition for subposition in subtree.treepositions())
+            ignore_positions.extend(
+                position + subposition for subposition in subtree.treepositions())
         # A determiner cardinal node adds some information for the quantifier
         if 'DT' in node:
             entity.quantifier.fill_determiner(leaves)
@@ -171,8 +176,10 @@ def extract_entity(parse_tree, semantic_role=''):
         elif ('PP' in node and entity.name) or node in ('SBAR', 'JJ'):
             entity.description.append(leaves)
             # ignore_positions should be relative to parse_tree
-            ignore_positions.extend(position + subposition for subposition in subtree.treepositions())
-        elif 'NN' in node and previous_node and 'NN' in previous_node and entity.name == previous_leaves:
+            ignore_positions.extend(
+                position + subposition for subposition in subtree.treepositions())
+        elif ('NN' in node and previous_node and
+              'NN' in previous_node and entity.name == previous_leaves):
             entity.description.append(previous_leaves)
             entity.name = leaves
         elif 'NN' in node or node == '-NONE-':
@@ -191,7 +198,8 @@ def create_semantic_structures(frame_semantic_list):
     representation structures from them."""
     semantic_representation_list = []
     isConditionalNext = False
-    # Whether there is a conditional in the semantic representation list waiting to be picked up
+    # Whether there is a conditional in the semantic representation list
+    # waiting to be picked up
     hasConditional = False
 
     # Frame semantic list is a list of conjunction strings and tuples, where the
@@ -206,7 +214,7 @@ def create_semantic_structures(frame_semantic_list):
             if 'if' in str(frame):
                 isConditionalNext = True
             frame_items = None
-            #semantic_representation_list.append(frame)
+            # semantic_representation_list.append(frame)
             continue
 
         sense = frame[3].split('-')[0]
@@ -214,24 +222,29 @@ def create_semantic_structures(frame_semantic_list):
         # If such a mapping does not exist, use the original verb
         action = ACTION_ALIASES.get(sense, frame[4])
 
-        item_to_entity = {key: extract_entity(value, key) for key, value in frame_items}
+        item_to_entity = {key: extract_entity(value, key)
+                          for key, value in frame_items}
 
         wh_question_type = get_wh_question_type(str(frame[1]))
 
-        # If it's a WH-question, find the type of question it is and add the object
+        # If it's a WH-question, find the type of question it is and add the
+        # object
         if wh_question_type is not None:
             if wh_question_type == 'Status':
                 semantic_representation_list.append(StatusQuery())
             elif 'Theme' in item_to_entity:
                 if wh_question_type == 'Location':
-                    semantic_representation_list.append(LocationQuery(item_to_entity['Theme']))
+                    semantic_representation_list.append(
+                        LocationQuery(item_to_entity['Theme']))
                 elif wh_question_type in ('People', 'Entity'):
-                    semantic_representation_list.append(EntityQuery(item_to_entity['Location']))
+                    semantic_representation_list.append(
+                        EntityQuery(item_to_entity['Location']))
 
         # If it's a yes-no question, add the theme and location of the question
         elif is_yn_question(str(frame[1])):
             if 'Theme' in item_to_entity and 'Location' in item_to_entity:
-                semantic_representation_list.append(YNQuery(item_to_entity['Theme'], item_to_entity['Location']))
+                semantic_representation_list.append(
+                    YNQuery(item_to_entity['Theme'], item_to_entity['Location']))
         # If it's a conditional statement, it is modifying
         # either the previous or next structure
         elif isConditionalNext:
@@ -242,7 +255,8 @@ def create_semantic_structures(frame_semantic_list):
                                       item_to_entity.get('Location', None),
                                       'ex' in frame[2])
 
-            if len(semantic_representation_list) > 0 and isinstance(semantic_representation_list[-1], Command):
+            if (len(semantic_representation_list) > 0 and
+               isinstance(semantic_representation_list[-1], Command)):
                 # Found the command to which this condition belongs
                 semantic_representation_list[-1].condition = condition
             else:
@@ -261,7 +275,8 @@ def create_semantic_structures(frame_semantic_list):
             location = item_to_entity.get('Location', None)
             source = item_to_entity.get('Source', None)
             destination = item_to_entity.get('Destination', None)
-            current_command = Command(agent, theme, patient, location, source, destination, action, negation=frame[5])
+            current_command = Command(
+                agent, theme, patient, location, source, destination, action, negation=frame[5])
             # Try to pick up the previous condition
             if hasConditional:
                 current_command.condition = semantic_representation_list.pop()
@@ -269,9 +284,9 @@ def create_semantic_structures(frame_semantic_list):
             semantic_representation_list.append(current_command)
         # It's an assertion
         else:
-            semantic_representation_list.append(Assertion(item_to_entity.get('Theme', None),
-                                                          item_to_entity.get('Location', None),
-                                                          'ex' in frame[2]))
+            semantic_representation_list.append(
+                Assertion(item_to_entity.get('Theme', None),
+                          item_to_entity.get('Location', None), 'ex' in frame[2]))
     if EXTRACT_DEBUG:
         print 'Semantic representation list:'
         print semantic_representation_list
@@ -293,12 +308,14 @@ def process_parse_tree(parse_tree_input, text_input, knowledge_base=None, quiet=
 
     # Update KB
     if knowledge_base:
-        kb_response = knowledge_base.process_semantic_structures(semantic_structures, source='cmdr')
+        kb_response = knowledge_base.process_semantic_structures(
+            semantic_structures, source='cmdr')
     else:
         kb_response = ''
 
     # Extract commands.
-    new_commands = [item for item in semantic_structures if isinstance(item, Command)]
+    new_commands = [
+        item for item in semantic_structures if isinstance(item, Command)]
     if knowledge_base:
         knowledge_base.fill_commands(new_commands)
     if new_commands and not quiet:
