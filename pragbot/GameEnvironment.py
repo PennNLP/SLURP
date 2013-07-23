@@ -74,6 +74,7 @@ class Agent:
 
     def follow_waypoints(self, callback):
         """Take one step towards next waypoint"""
+        rotationmatrix = [0, 0, 1, 0, 1, 0, -1, 0, 0]
         if len(self.waypoints) > 0:
             if self.waypoints[0].world_distance(self.location) < 0.3:
                 # Make sure movement is only from center to center
@@ -82,8 +83,18 @@ class Agent:
                 self.cell = self.waypoints.pop(0)
                 self.fix_location()
             else:
-                self.location = self.waypoints[0].closer_point(self.location)
-            callback('PLAYER_MOVE_3D',','.join(str(s) for s in [self.location[0], 0, self.location[1]] + [0, 0, 1, 0, 1, 0, -1, 0, 0]))
+                newlocation = self.waypoints[0].closer_point(self.location)
+                deltaX = newlocation[0] - self.location[0]
+                deltaZ = 1 - (newlocation[1] - self.location[1])
+                angle = math.atan2(deltaZ, deltaX)
+                """rotationmatrix = [1,0,0,0,math.cos(angle),1-math.sin(angle),
+                                  0,math.sin(angle),math.cos(angle)]"""
+                                  
+                rotationmatrix = [math.cos(angle),0,math.sin(angle),0,1,0,
+                                  1-math.sin(angle),0,math.cos(angle)]
+                self.location = newlocation
+            """Ok, here's where I need to rotate Jr in the direction he is moving"""
+            callback('PLAYER_MOVE_3D',','.join(str(s) for s in [self.location[0], 0, self.location[1]] + rotationmatrix))
 
     def fix_location(self):
         """Moves the agent to the center of its cell"""
