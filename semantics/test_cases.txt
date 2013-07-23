@@ -4,7 +4,7 @@ Never go to the kitchen.
 Don't activate the camera in the bathroom.
 There is a bomb in the hallway.
 If you see it, defuse it.
-If you see hostages, rescue them.
+If you see hostages, save them.
 Two meals are in the kitchen.
 Carry them to the patient rooms.
 Where is the bomb?

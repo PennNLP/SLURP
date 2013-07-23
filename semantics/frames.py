@@ -26,6 +26,13 @@ WORD_SENSE_FILENAME = 'word_sense_mapping.pkl'
 MODULE_PATH = os.path.dirname(os.path.abspath(__file__))
 VERBNET_DIRECTORY = os.path.join(MODULE_PATH, 'Verbnet', 'verbnet-3.1')
 
+# Parse tree constants
+VP_TAG = "VP"
+S_TAG = "S"
+VERB_TAG = "VB"
+DO_WORD = "do"
+NOT_WORDS = set(("not", "n't"))
+
 
 class VerbFrameObject:
     """Object which contains elements of a frame in a list. Each element has
@@ -77,13 +84,7 @@ class VerbFrameObject:
         """Takes a Treebank parse tree compiled into NLTK's tree structure.
         Outputs a result dictionary mapping predicates to arguments"""
         result_dict = {}
-        subtree_list = []
-        subtrees = parse_tree.subtrees()
-
-        # We need a list of subtrees, not a generator
-        for subtree in subtrees:
-            subtree_list.append(subtree)
-
+        subtree_list = list(parse_tree.subtrees())
         current_subtree = 0
         matches = 0
 
@@ -330,40 +331,45 @@ def activize_clause(parse_tree_clause):
     return parse_tree_clause
 
 
-def find_verbs(parse_tree):
+def _first_leaf(tree):
+    """Return the first leaf of a tree with case normalized."""
+    return tree.leaves()[0].lower()
+
+
+def _immediate_children(tree):
+    """Return the leaves of from the children of a tree that have only a single leaf."""
+    return [_first_leaf(subtree) for subtree in tree if len(subtree.leaves()) == 1]
+
+
+def find_verbs(parse_tree, negated=False):
     """Returns the list of tuples: (verb, negation)"""
     results = []
-    ignore_positions = []
-    # Depth-first traversal
-    for position in parse_tree.treepositions():
-        if not isinstance(parse_tree[position], Tree):
-            continue
-        if position in ignore_positions:
-            continue
+
+    # Descend into the tree to find verbs
+    # If this is not rooted in an S, return nothing
+    if not (parse_tree.node.startswith(S_TAG) or parse_tree.node.startswith(VP_TAG)):
+        return results
+
+    # Find VP_TAG children and examine them
+    vps = [(child, parse_tree) for child in parse_tree if child.node.startswith(VP_TAG)]
+    for vp, parent in vps:
+        # TODO: Improve negation and re-enable never.
         # Check for do-insertion
-        if parse_tree[position].node == 'VP' and len(parse_tree[position]) >= 2 and parse_tree[position][0].node == 'VBP' \
-                and parse_tree[position][0][0].lower() == 'do' and parse_tree[position][-1].node == 'VP-A':
-            # Found a do-insertion
-            is_negated = parse_tree[position][1].node == 'RB' and parse_tree[
-                position][1][0].lower() in ('not', "n't")
-            results.append(
-                (parse_tree[position][-1][0][0].lower(), is_negated))
-            ignore_positions.extend(
-                position + subposition for subposition in parse_tree[position].treepositions())
-        # Check for 'Never X' structures
-        if isinstance(parse_tree[position][0], Tree) and parse_tree[position][0].node == 'ADVP-TMP' \
-                and parse_tree[position][0][0].node == 'RB' and parse_tree[position][0][0][0].lower() == 'never':
-            for child in parse_tree[position][1:]:
-                if child.node == 'VP':
-                    # Everything found in the VP should be negated
-                    results.extend((verb, True)
-                                   for verb, bad_negation in find_verbs(child))
-                    # Ignore the extracted verbs
-                    ignore_positions.extend(
-                        position + subposition for subposition in parse_tree[position].treepositions())
+        immed_children = _immediate_children(vp)
+        do_idx = immed_children.index(DO_WORD) if DO_WORD in immed_children else None
+        if do_idx is not None:
+            # Check for 'do not'
+            if do_idx + 1 < len(vp) and _first_leaf(vp[do_idx + 1]) in NOT_WORDS:
+                child_negated = True
+            # Recurse on this vp
+            results.extend(find_verbs(vp, child_negated))
+            break
+
         # Check for verbs
-        elif parse_tree[position].node[:2] == 'VB':
-            results.append((parse_tree[position][0].lower(), False))
+        for child in vp:
+            if child.node.startswith(VERB_TAG):
+                results.append((child[0].lower(), negated, parent))
+
     return results
 
 
@@ -582,7 +588,7 @@ def split_clauses(parse_tree):
     return clause_dict
 
 
-def create_VerbFrameObjects(word):
+def create_vfos(word):
     """Gets VerbNet data without using NLTK corpora browser."""
     vfo_list = []
     for class_id in word_sense_mapping[word]:

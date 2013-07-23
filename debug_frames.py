@@ -19,11 +19,12 @@ Interface for debugging semantic frame matching.
 
 import sys
 
-from semantics.frames import (split_clauses, activize_clause, is_existential, 
-    invert_clause,get_wh_question_type, is_yn_question, pick_best_match, 
-    existential_there_insertion,wh_movement, split_conjunctions, find_verbs,
-    create_VerbFrameObjects)
+from semantics.frames import (split_clauses, activize_clause, is_existential,
+    invert_clause, get_wh_question_type, is_yn_question, pick_best_match,
+    existential_there_insertion, wh_movement, split_conjunctions, find_verbs,
+    create_vfos)
 from semantics.tree import Tree
+from semantics.wntools import morphy
 from pipelinehost import PipelineClient
 
 
@@ -40,6 +41,37 @@ def process(parse):
     for split_parse, conjunction in split_trees.values():
         for subtree in split_parse:
             print_if_diff(subtree, parse, "Subtree ({})".format(conjunction))
+            process_subtree(subtree)
+
+
+def process_subtree(tree):
+    """Follow the transformations for an individual subparse."""
+    verbs = find_verbs(tree)
+    for verb, negation, subtree in verbs:
+        lemmatized_verb = morphy(verb, 'v')
+        vfo_list = create_vfos(lemmatized_verb)
+        match_list = []
+
+        print 'VFO list for %s:' % verb
+        print '\n'.join(str(vfo.frame_list) for vfo in vfo_list)
+
+        for vfo in vfo_list:
+            match = vfo.match_parse(subtree)
+
+            if match:
+                print 'Matched:'
+                print str(vfo.frame_list)
+                print str(tree)
+                print
+                match_list.append((match, vfo.classid))
+
+        print 'Match list:'
+        for m in match_list:
+            print 'Sense:', m[1]
+            for a, b in m[0].items():
+                print a, str(b)
+            print
+        print
 
 
 def print_if_diff(new_parse, old_parse, heading):
@@ -80,7 +112,7 @@ def main():
                 process(parse)
             else:
                 print "Connection to server closed."
-                break    
+                break
 
 
 if __name__ == "__main__":

@@ -19,7 +19,7 @@ Takes a parse tree string and creates semantic structures to be read by Knowledg
 from semantics.frames import (
     split_clauses, activize_clause, is_existential, invert_clause,
     get_wh_question_type, is_yn_question, pick_best_match, existential_there_insertion,
-    wh_movement, split_conjunctions, find_verbs, create_VerbFrameObjects)
+    wh_movement, split_conjunctions, find_verbs, create_vfos)
 from semantics.tree import Tree
 from semantics.wntools import morphy
 from semantics.new_structures import (
@@ -35,6 +35,7 @@ def extract_frames_from_parse(parse_tree_string, verbose=False):
     """Take a string representing the parse tree as input, and print the
     semantic parse. The result list consists of a list of tuples, with each
     tuple containing the VerbNet frame and its associated tree."""
+    # TODO: Use verbose argument
     result_list = []
 
     # In case we're handed an bad string, bail somewhat gracefully
@@ -87,9 +88,9 @@ def extract_frames_from_parse(parse_tree_string, verbose=False):
                 verbs = find_verbs(tree)
 
                 # Create VFOs for each verb, then match them to the parse tree
-                for verb, negation in verbs:
+                for verb, negation, subtree in verbs:
                     lemmatized_verb = morphy(verb, 'v')
-                    vfo_list = create_VerbFrameObjects(lemmatized_verb)
+                    vfo_list = create_vfos(lemmatized_verb)
                     match_list = []
 
                     if EXTRACT_DEBUG:
@@ -97,24 +98,24 @@ def extract_frames_from_parse(parse_tree_string, verbose=False):
                         print '\n'.join(str(vfo.frame_list) for vfo in vfo_list)
 
                     for vfo in vfo_list:
-                        match = vfo.match_parse(tree)
+                        match = vfo.match_parse(subtree)
 
                         if match:
                             if EXTRACT_DEBUG:
                                 print 'Matched:'
-                                print '\t', str(vfo.frame_list)
-                                print 'with'
-                                print '\t', str(tree)
+                                print str(vfo.frame_list)
+                                print str(tree)
+                                print
                             match_list.append((match, vfo.classid))
 
                     if EXTRACT_DEBUG:
                         print 'Match list:'
-
                         for m in match_list:
                             print 'Sense:', m[1]
                             for a, b in m[0].items():
                                 print a, str(b)
-                            print '\n\n'
+                            print
+                        print
 
                     (best_match, sense) = pick_best_match(match_list)
 
