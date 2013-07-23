@@ -12,11 +12,12 @@ import shlex
 
 ## Global constants for configuration
 # Current version, which must match the downloaded pipeline
-CURRENT_VERSION = "1.1.1"
+CURRENT_VERSION = "1.1.2"
 # Paths
 PIPELINE_NAME = "SUBTLEPipeline-master"
 CLASSPATH_SEP = ";" if sys.platform == "win32" else ":"
 JAVA = "java"
+TEST_COMMAND = "{} -version".format(JAVA)
 ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), PIPELINE_NAME)
 
 # Check for up-to-date pipeline
@@ -31,9 +32,10 @@ try:
         raise IOError
 except IOError:
     raise ImportError("The copy of the SUBTLE Pipeline in %s (version %s) is not the same version "
-                      "as pennpipeline.py (version %s). You should merge the latest updates from "
-                      "the PennNLP/SLURP GitHub repository to update pennpipeline.py "
-                      "and/or run download.py in the root of the SLURP repository "
+                      "as pennpipeline.py (version %s). You should:\n"
+                      "1. Make sure you have the latest updates from the PennNLP/SLURP GitHub "
+                      "repository.\n"
+                      "2.Run download.py in the root of the SLURP repository "
                       "to update the SUBTLE Pipeline." % (ROOT_DIR, PIPELINE_VERSION, CURRENT_VERSION))
 
 # Tagger
@@ -103,7 +105,11 @@ class PennPipeline(object):
             text += '.'
 
         # TODO: Deal with multiple sentences
-        tagged_sent = _process_pipe_filter(text, self.tag_proc, read_until_empty=True)
+        try:
+            tagged_sent = _process_pipe_filter(text, self.tag_proc, read_until_empty=True)
+        except IOError:
+            raise IOError("Tagger process has died. Make sure that the command\n{}\ncan "
+                          "be run successfully.".format(TAGGER))
         if verbose:
             # Show the tags without any forced tags
             display_tagged_sent = _tag_convert(tagged_sent, set(), set())
@@ -113,9 +119,17 @@ class PennPipeline(object):
         if verbose and (force_nouns or force_verbs) and (clean_tagged_sent != display_tagged_sent):
             print "Modified tags:"
             print clean_tagged_sent
-        parsed_sent = _process_pipe_filter(clean_tagged_sent, self.parse_proc, "(")
+        try:
+            parsed_sent = _process_pipe_filter(clean_tagged_sent, self.parse_proc, "(")
+        except IOError:
+            raise IOError("Parser process has died. Make sure that the command\n{}\ncan "
+                          "be run successfully.".format(PARSER))
         # Wrap input to the null restorer as ( x) exactly as wrap-stream.pl used to do
-        restored_sent = _process_pipe_filter("( " + parsed_sent + ")", self.ecrestore_proc, "(")
+        try:
+            restored_sent = _process_pipe_filter("( " + parsed_sent + ")", self.ecrestore_proc, "(")
+        except IOError:
+            raise IOError("ECRestorer process has died. Make sure that the command\n{}\ncan "
+                          "be run successfully in the {} directory.".format(ECRESTORER, ECRESTORER_DIR))
 
         # Remove extra parens from the parse with elements restored
         final_parse = OUTER_PARENS_RE.match(restored_sent).group(1)
@@ -197,4 +211,4 @@ if __name__ == "__main__":
     # Try to run dependencies
     print "Trying to run dependencies..."
     print "Testing {!r}...".format(JAVA)
-    check_call("{} -version".format(JAVA))
+    check_call(shlex.split(TEST_COMMAND) if sys.platform != "win32" else TEST_COMMAND)
