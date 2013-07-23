@@ -85,13 +85,13 @@ class Agent:
             else:
                 newlocation = self.waypoints[0].closer_point(self.location)
                 deltaX = newlocation[0] - self.location[0]
-                deltaZ = 1 - (newlocation[1] - self.location[1])
-                angle = math.atan2(deltaZ, deltaX)
+                deltaZ = newlocation[1] - self.location[1]
+                angle = math.atan2(deltaX*-1, -1*deltaZ)
                 """rotationmatrix = [1,0,0,0,math.cos(angle),1-math.sin(angle),
                                   0,math.sin(angle),math.cos(angle)]"""
                                   
                 rotationmatrix = [math.cos(angle),0,math.sin(angle),0,1,0,
-                                  1-math.sin(angle),0,math.cos(angle)]
+                                  -1*math.sin(angle),0,math.cos(angle)]
                 self.location = newlocation
             """Ok, here's where I need to rotate Jr in the direction he is moving"""
             callback('PLAYER_MOVE_3D',','.join(str(s) for s in [self.location[0], 0, self.location[1]] + rotationmatrix))
