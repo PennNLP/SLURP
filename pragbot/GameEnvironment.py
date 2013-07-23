@@ -84,9 +84,9 @@ class Agent:
                 self.fix_location()
             else:
                 newlocation = self.waypoints[0].closer_point(self.location)
-                deltaX = newlocation[0] - self.location[0]
-                deltaZ = newlocation[1] - self.location[1]
-                angle = math.atan2(deltaX*-1, -1*deltaZ)
+                deltaX = self.location[0] - newlocation[0]
+                deltaZ = self.location[1] - newlocation[1]
+                angle = math.atan2(deltaX, deltaZ)
                 """rotationmatrix = [1,0,0,0,math.cos(angle),1-math.sin(angle),
                                   0,math.sin(angle),math.cos(angle)]"""
                                   
