@@ -48,7 +48,7 @@ class LTLMoPTester(object):
                                                 logRequests=False, allow_none=True)
 
         # Register functions with the XML-RPC server
-        self.xmlrpc_server.register_function(self.handle_event)
+        self.xmlrpc_server.register_function(self.handleEvent)
 
         # Kick off the XML-RPC server thread
         self.xmlrpc_server_thread = threading.Thread(target=self.xmlrpc_server.serve_forever)
@@ -96,7 +96,7 @@ class LTLMoPTester(object):
         # Tell the user we are ready
         self.append_log("Hello.", "System")
 
-    def handle_event(self, event_type, event_data):
+    def handleEvent(self, event_type, event_data):
         """Processes messages from the controller, and updates the GUI accordingly"""
 
         if event_type in ["FREQ"]:  # Events to ignore
