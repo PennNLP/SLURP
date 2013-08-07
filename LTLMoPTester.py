@@ -157,12 +157,6 @@ class LTLMoPTester(object):
 
     def on_receive_reply(self, result):
         """ when the dialoguemanager has gotten back to us """
-        try:
-            result = result.get()
-        except IOError:
-            logging.exception("Could not connect to SLURP pipeline.")
-            result = None
-
         if result:
             self.append_log(result, "System")
 
