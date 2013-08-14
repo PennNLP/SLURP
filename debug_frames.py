@@ -59,8 +59,11 @@ def process_subtree(tree):
         print 'VFO list for %s:' % verb
         print '\n'.join(str(vfo.frame_list) for vfo in vfo_list)
 
+        strict = True
+        allow_leftovers = False
+
         for vfo in vfo_list:
-            match = vfo.match_parse(subtree)
+            match = vfo.match_parse(subtree, strict, allow_leftovers)
 
             if match:
                 print 'Matched:'
