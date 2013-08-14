@@ -473,8 +473,8 @@ def find_verbs(parse_tree, negated=False, subject=None):
         do_idx = immed_children.index(DO_WORD) if DO_WORD in immed_children else None
         if do_idx is not None:
             # Check for 'do not'
-            if do_idx + 1 < len(vp) and _first_leaf(vp[do_idx + 1]) in NOT_WORDS:
-                child_negated = True
+            child_negated = (do_idx + 1 < len(vp) and
+                             _first_leaf(vp[do_idx + 1]).lower() in NOT_WORDS)
 
             # Find the subject
             subject = _find_subject(parent)
