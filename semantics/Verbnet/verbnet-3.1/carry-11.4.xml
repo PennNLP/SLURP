@@ -149,69 +149,6 @@
             </SEMANTICS>
         </FRAME>
         <FRAME>
-            <DESCRIPTION descriptionNumber="0.2" primary="NP V NP PP.source" secondary="NP-PPSource-PP" xtag=""/>
-            <EXAMPLES>
-                <EXAMPLE>Amanda carried the package from home.</EXAMPLE>
-            </EXAMPLES>
-            <SYNTAX>
-                <NP value="Agent">
-                    <SYNRESTRS/>
-                </NP>
-                <VERB/>
-                <NP value="Theme">
-                    <SYNRESTRS/>
-                </NP>
-                <PREP>
-                    <SELRESTRS>
-                        <SELRESTR Value="+" type="src"/>
-                    </SELRESTRS>
-                </PREP>
-                <NP value="Source">
-                    <SYNRESTRS/>
-                </NP>
-            </SYNTAX>
-            <SEMANTICS>
-                <PRED value="motion">
-                    <ARGS>
-                        <ARG type="Event" value="during(E0)"/>
-                        <ARG type="ThemRole" value="Theme"/>
-                    </ARGS>
-                </PRED>
-                <PRED value="location">
-                    <ARGS>
-                        <ARG type="Event" value="start(E0)"/>
-                        <ARG type="ThemRole" value="Theme"/>
-                        <ARG type="ThemRole" value="Source"/>
-                    </ARGS>
-                </PRED>
-                <PRED value="equals">
-                    <ARGS>
-                        <ARG type="Event" value="E0"/>
-                        <ARG type="Event" value="E1"/>
-                    </ARGS>
-                </PRED>
-                <PRED value="motion">
-                    <ARGS>
-                        <ARG type="Event" value="during(E1)"/>
-                        <ARG type="ThemRole" value="Agent"/>
-                    </ARGS>
-                </PRED>
-                <PRED value="location">
-                    <ARGS>
-                        <ARG type="Event" value="start(E1)"/>
-                        <ARG type="ThemRole" value="Agent"/>
-                        <ARG type="ThemRole" value="Source"/>
-                    </ARGS>
-                </PRED>
-                <PRED value="cause">
-                    <ARGS>
-                        <ARG type="ThemRole" value="Agent"/>
-                        <ARG type="Event" value="E0"/>
-                    </ARGS>
-                </PRED>
-            </SEMANTICS>
-        </FRAME>
-        <FRAME>
             <DESCRIPTION descriptionNumber="0.2" primary="NP V NP PP.source PP.destination" secondary="NP-PP-PPSource-PP Goal-PP" xtag=""/>
             <EXAMPLES>
                 <EXAMPLE>Amanda carried the package from home to New York.</EXAMPLE>
