@@ -52,6 +52,10 @@ def process_subtree(tree):
         vfo_list = create_vfos(lemmatized_verb)
         match_list = []
 
+        print "Subtree for %s:" % verb
+        print subtree
+        print
+
         print 'VFO list for %s:' % verb
         print '\n'.join(str(vfo.frame_list) for vfo in vfo_list)
 
