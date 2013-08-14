@@ -1,6 +1,7 @@
 """Frames.py
 
 Ian Perera
+Modified by Eric Doty
 
 Converts parse tree representation into a tree that can be matched to Verbnet
 frames, and then returns the matching frames and their corresponding trees.
@@ -83,51 +84,163 @@ class VerbFrameObject:
     def match_parse(self, parse_tree):
         """Takes a Treebank parse tree compiled into NLTK's tree structure.
         Outputs a result dictionary mapping predicates to arguments"""
+
         result_dict = {}
-        subtree_list = list(parse_tree.subtrees())
-        current_subtree = 0
+        subtree_list = list(parse_tree.subtrees()) #depth first list of subtrees e.g. (1 (2 (3))(4 (5)))
+        current_subtree = 1
         matches = 0
 
-        # For each frame element, find the next subtree that matches
-        for frame_tag in self.frame_list:
-            # Go through the subtrees until you run out of subtrees
-            while current_subtree < len(subtree_list):
-                subtree = subtree_list[current_subtree]
+        #!!! Change these to parameters
+        strict = 2  # 1 for non-strict mode, 2 for strict, otherwise, original linear matching
+        no_leftovers = 1 #E: Added
 
-                # If there is no explicit NP for the Agent role, insert one
-                # NOTE: Assumes Agent role is the first in the frame, may not
-                # be true
-                if (current_subtree == 0 and frame_tag[1] == 'Agent' and not
-                        self.__match_subtree(subtree, frame_tag)):
-                    result_dict[frame_tag[1]] = Tree("(NP-SBJ-A (-NONE- *))")
-                    matches += 1
-                    break
+        # Strict mode
+        if strict == 2:
+            phrase_list = ['S', 'VP', 'VP-A', 'NP-PRD-A'] # nodes for which you look at their children
+            no_leftover_list = ['SBAR-A', 'S-INV' 'NP', 'NP-SBJ-A', 'NP-A', 'IN', 'TO'] # nodes that must be in frame output
+            current_frame_tag = 0
+            result_dict, current_frame_tag = self._traverse_subtree(parse_tree, phrase_list, result_dict, current_frame_tag)
+            if result_dict:
+                # Check that every frame is filled
+                if len(result_dict) == len(self.frame_list) and current_frame_tag == len(self.frame_list):
+                    if no_leftovers:
+                        # Count relevant tags in result_dict
+                        result_count=0
+                        original_count=0
+                        for frame_tree in result_dict.values():
+                            frame_subtrees = list(frame_tree.subtrees())
+                            for frame_subtree in frame_subtrees:
+                                for tag in no_leftover_list:
+                                    if tag == frame_subtree.node:
+                                        result_count+=1
+                                        #print frame_subtree.node
+                        # Count tags in original subtree
+                        for orig_subtree in subtree_list:
+                            for tag in no_leftover_list:
+                                if tag == orig_subtree.node:
+                                    original_count+=1
+                                    #print orig_subtree.node
+                        print result_dict
+                        print "Frame: " + str(result_count) + " Original: " + str(original_count)
+                        if result_count >= original_count:
+                            print "Match"
+                            return result_dict
+                    else:
+                        return result_dict
+            else:
+                return None
 
-                if self.__match_subtree(subtree, frame_tag):
-                    # print 'Match -> ' + str(frame_tag)
-                    # If the subtree matches, add role->phrase to the dictionary
-                    # result_dict[frame_tag[1]] = ' '.join(subtree.leaves())
-                    result_dict[frame_tag[1]] = subtree
-                    matches += 1
-                    break
+        # New Non-strict mode
+        elif strict == 1:
+            # For each frame element, find the next subtree that matches
+            for frame_tag in self.frame_list: #frame list from current VFO
+                # Go through the subtrees until you run out of subtrees
+                while current_subtree < len(subtree_list):
+                    subtree = subtree_list[current_subtree]
+                    current_subtree+=1
+                    if self.__match_subtree(subtree, frame_tag):
+                        # Verbs need to match (VB) subtree, whereas nouns take full NP because of ambiguous sentences and poor parses
+                            # e.g. "Shoot the people with force" you need to take whole NP-A
+                            # whereas "Shoot the people with guns"...
+                        result_dict[frame_tag[1]] = subtree
+                        matches += 1
+                        break
 
-                current_subtree += 1
+            if current_subtree == len(subtree_list):
+                return None
 
-        if current_subtree == len(subtree_list):
-            return None
-
-        # Only return something if every frame was matched
-        if matches == len(self.frame_list):
-            return result_dict
+            # Only return something if every frame was matched
+            if matches == len(self.frame_list):
+                return result_dict
+            else:
+                return None
+        # Linear matching mode
         else:
-            return None
+            # For each frame element, find the next subtree that matches
+            for frame_tag in self.frame_list: #frame list from current VFO
+                # Go through the subtrees until you run out of subtrees
+                while current_subtree < len(subtree_list):
+                    subtree = subtree_list[current_subtree]
+                    # If there is no explicit NP for the Agent role, insert one
+                    # NOTE: Assumes Agent role is the first in the frame, may not
+                    # be true
+                    # C: Why is this coming up with its own tree and shoving it somewhere?
+                    # E: If the agent is first in the frame...
+                    #if (current_subtree == 0 and frame_tag[1] == 'Agent' and not
+                    #        self.__match_subtree(subtree, frame_tag)): #E: Checks if first tag in frame is first tag in subtree
+                    #            #!!! E: This seems wrong. Because the first tag is 'S' and not an agent, it inserts a null element
+                    #            #!!! E: Apparently some trees start as VP and some as S, so that's an issue
+                    #    result_dict[frame_tag[1]] = Tree("(NP-SBJ-A (-NONE- *))")
+                    #    matches += 1
+                    #    break
+                    current_subtree += 1
+                    if self.__match_subtree(subtree, frame_tag):
+                        # Verbs need to match (VB) subtree, whereas nouns take full NP because of ambiguous sentences and poor parses
+                            # e.g. "Shoot the people with force" you need to take whole NP-A
+                            # whereas "Shoot the people with guns" you 
+                        # print 'Match -> ' + str(frame_tag)
+                        # If the subtree matches, add role->phrase to the dictionary
+                        # result_dict[frame_tag[1]] = ' '.join(subtree.leaves())
+                        result_dict[frame_tag[1]] = subtree
+                        matches += 1
+                        break
+
+            if current_subtree == len(subtree_list):
+                return None
+
+            # Only return something if every frame was matched
+            if matches == len(self.frame_list):
+                return result_dict
+            else:
+                return None
+
+    def _traverse_subtree(self, subtree, phrase_list, result_dict, current_frame_tag):
+        """Given a subtree, traverses its children, only expands those in phrase_list"""
+        # All frame tags matched
+        if current_frame_tag == len(self.frame_list):
+            return result_dict, current_frame_tag
+
+        frame_tag = self.frame_list[current_frame_tag]
+
+        # Adds null agent in case where there needs to be one (e.g. "Don't go in the hallway")
+            # Skips "ADVP-TMP" and "RB" for "never" and "always"
+        # This is kind of hack-y and there's probably a better way to do it
+        if frame_tag[1] == 'Agent' and not subtree.node == "S" and not subtree.node == "ADVP-TMP" \
+            and not subtree.node == "RB" and not self.__match_subtree(subtree, frame_tag):
+            result_dict[frame_tag[1]] = Tree("(NP-SBJ-A (-NONE- *))")
+            current_frame_tag+=1
+            if len(self.frame_list)>1: #E: This is probably unnecessary
+                frame_tag = self.frame_list[current_frame_tag]
+
+        # Check if current node matches frame
+        if self.__match_subtree(subtree, frame_tag):
+            result_dict[frame_tag[1]] = subtree
+            current_frame_tag+=1
+            return(result_dict, current_frame_tag)
+        # Otherwise, traverse down the tree to children if the current node is in the phrase list
+        elif subtree.node in phrase_list or (frame_tag[0]=='PREP' and 'PP' in subtree.node):
+            children_list = list(subtree)
+            for subtr in children_list:
+                if not subtr.__eq__(Tree("(VBP Do)")) and not subtr.__eq__(Tree("(VBP do)")) :       
+                    result_dict, current_frame_tag = self._traverse_subtree(subtr, phrase_list, result_dict, current_frame_tag)
+                if current_frame_tag == len(self.frame_list):
+                    break
+            return result_dict, current_frame_tag
+        elif ('NP' in subtree.node or 'PP' in subtree.node):
+            return None, len(self.frame_list)
+
+        return result_dict, current_frame_tag
 
     def __match_subtree(self, subtree, frame_tag):
         """Given a subtree, tries to match it to a frame element"""
         # Regex for POS tags
-        tag_match = re.compile(r'(?<=\()[A-Z][A-Z-]*')
+        # C: Get rid of regular expressions (maybe)
+        # E: Switch to using proper object-oriented stuff
+        # Don't convert things into strings and match them onto something
 
-        tags = tag_match.findall(str(subtree))
+        tag_match = re.compile(r'(?<=\()[A-Z][A-Z-]*')
+        tags = tag_match.findall(str(subtree)) #finds all tags in the subtree using regexp
+        #E: Converts frame tags to treebanks tags
 
         # Tag/Role -> Treebank map
         if ((frame_tag[0], frame_tag[1])) in tag_mapping.keys():
@@ -146,7 +259,7 @@ class VerbFrameObject:
 
         if len(tags) > 0:
             for tree_tag in tree_tags:
-                if tree_tag in tags[0]:
+                if tree_tag in tags[0]: #NEEDS TO BE EXACT MATCH
                     # Matched first word
                     if not frame_tag[3] == '':
                         # Now need to match a syntax restriction
@@ -172,10 +285,11 @@ class VerbFrameObject:
 
 # Mapping from Verbnet tags to Treebank tags
 tag_mapping = {'NP': ['NP'],
-               ('NP', 'Location'): ['PP-LOC', 'PP-DIR', 'PP-CLR', 'NN', 'ADVP-LOC',
-                                    'NP-A', 'WHADVP', 'ADVP-TMP', 'PP-PRD', 'ADVP-DIR'],
-               ('NP', 'Destination'): ['PP-LOC', 'PP-DIR', 'NN', 'NP-A',
-                                       'ADVP', 'PP-CLR', 'WHADVP', 'ADVP-DIR'],
+               #('NP', 'Location'): ['PP-LOC', 'PP-DIR', 'PP-CLR', 'NN', 'ADVP-LOC', 'NP-A', 'WHADVP', 'ADVP-TMP', 'PP-PRD', 'ADVP-DIR'],
+               #('NP', 'Destination'): ['PP-LOC', 'PP-DIR', 'NN', 'NP-A', 'ADVP', 'PP-CLR', 'WHADVP', 'ADVP-DIR'],
+               ('NP', 'Location'): ['NN', 'ADVP-LOC', 'NP-A', 'WHADVP', 'ADVP-TMP', 'ADVP-DIR'],
+               ('NP', 'Destination'): ['NN', 'NP-A', 'ADVP', 'WHADVP', 'ADVP-DIR'],
+               ('NP', 'Source'): ['NN', 'NP-A', 'ADVP', 'WHADVP', 'ADVP-DIR'], # Eric: added NP-A (Not sure why?)
                ('NP', 'Asset'): ['NP-A'],
                ('NP', 'Agent'): ['NP-SBJ-A', 'NP', 'NP-A'],
                ('NP', 'Beneficiary'): ['NP-A'],
@@ -187,7 +301,7 @@ tag_mapping = {'NP': ['NP'],
                                  'WHNP', 'WP'],
                ('PREP',): ['exact'],
                'PREP': ['IN', 'TO', 'ADVP-DIR'],
-               'VERB': ['VB']
+               'VERB': ['VB'] #, 'VBZ', 'VBP', 'VBD']
                }
 
 # Mapping from syntax restrictions to Treebank tags and matching conditions
