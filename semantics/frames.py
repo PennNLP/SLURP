@@ -30,6 +30,7 @@ VERBNET_DIRECTORY = os.path.join(MODULE_PATH, 'Verbnet', 'verbnet-3.1')
 # Parse tree constants
 VP_TAG = "VP"
 S_TAG = "S"
+SUBJ_TAG = "NP-SBJ"
 VERB_TAG = "VB"
 DO_WORD = "do"
 NOT_WORDS = set(("not", "n't"))
@@ -497,7 +498,7 @@ def find_verbs(parse_tree, negated=False, subject=None):
 
 def _find_subject(parse_tree):
     """Return our best guess for what the subject is at the top level of a tree."""
-    subjects = [child for child in parse_tree if child.node.startswith("NP-SBJ")]
+    subjects = [child for child in parse_tree if child.node.startswith(SUBJ_TAG)]
     return subjects[0] if subjects else None
 
 
