@@ -19,12 +19,13 @@ import execute
 # TODO: Refactor Config class into global variables
 class Config:
     # base_spec_file = os.path.join(ltlmop_root, "src", "examples", "gumbotest", "skeleton.spec")
-    base_spec_file = os.path.join("firefighting", "firefighting.spec")
+    # base_spec_file = os.path.join("firefighting", "firefighting.spec")
+    base_spec_file = os.path.join("pragbotscenario", "pragbot.spec")
     executor_listen_port = 20000
     ltlmop_listen_port = 20001
 
 
-class LTLMoPTester(object):
+class LTLMoPClient(object):
 
     def __init__(self):
         self.map_bitmap = None
@@ -54,7 +55,7 @@ class LTLMoPTester(object):
         self.xmlrpc_server_thread = threading.Thread(target=self.xmlrpc_server.serve_forever)
         self.xmlrpc_server_thread.daemon = True
         self.xmlrpc_server_thread.start()
-        print "LTLMoPTester listening for XML-RPC calls on \
+        print "LTLMoPClient listening for XML-RPC calls on \
                http://localhost:{} ...".format(Config.ltlmop_listen_port)
 
         # Connect to executor
@@ -143,7 +144,7 @@ class LTLMoPTester(object):
         else:
             print message
 
-    def get_input(self):  # wxGlade: LTLMoPTester.<event_handler>
+    def get_input(self):  # wxGlade: LTLMoPClient.<event_handler>
         user_text = raw_input('> ')
         if user_text == "":
             return
@@ -168,15 +169,15 @@ class LTLMoPTester(object):
         self.dialogue_manager.execute()
         event.Skip()
 
-# end of class LTLMoPTester
+# end of class LTLMoPClient
 
 
 class BarebonesDialogueManager(object):
-    def __init__(self, ltlmoptester, executor, base_spec=None):
+    def __init__(self, ltlmopclient, executor, base_spec=None):
         """ take reference to execution context and gui_window
             optionally initialize with some base spec text """
 
-        self.ltlmop = ltlmoptester
+        self.ltlmop = ltlmopclient
         self.executor = executor
 
         if base_spec is None:
@@ -254,6 +255,6 @@ class BarebonesDialogueManager(object):
 
 
 if __name__ == "__main__":
-    LTLMOPTESTER = LTLMoPTester()
+    LTLMOPCLIENT = LTLMoPClient()
     while True:
-        LTLMOPTESTER.get_input()
+        LTLMOPCLIENT.get_input()
