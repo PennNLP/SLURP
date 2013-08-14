@@ -52,7 +52,7 @@ def process_subtree(tree):
         vfo_list = create_vfos(lemmatized_verb)
         match_list = []
 
-        print "Subtree for %s:" % verb
+        print "Subtree for %s%s:" % (verb, " (negated)" if negation else "")
         print subtree
         print
 
