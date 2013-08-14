@@ -467,31 +467,38 @@ def find_verbs(parse_tree, negated=False, subject=None):
 
     # Find VP_TAG children and examine them
     vps = [(child, parse_tree) for child in parse_tree if child.node.startswith(VP_TAG)]
-    for vp, parent in vps:
-        # TODO: Improve negation and re-enable never.
-        # Check for do-insertion
-        immed_children = _immediate_children(vp)
-        do_idx = immed_children.index(DO_WORD) if DO_WORD in immed_children else None
-        if do_idx is not None:
-            # Check for 'do not'
-            child_negated = (do_idx + 1 < len(vp) and
-                             _first_leaf(vp[do_idx + 1]).lower() in NOT_WORDS)
+    # If there were no VPs, check for an embedded S
+    if not vps:
+        s_children = [child for child in parse_tree if child.node.startswith(S_TAG)]
+        # It's pretty weird to have multiple S children, but we might as well handle it
+        for s_child in s_children:
+            results.extend(find_verbs(s_child))
+    else:
+        for vp, parent in vps:
+            # TODO: Improve negation and re-enable never.
+            # Check for do-insertion
+            immed_children = _immediate_children(vp)
+            do_idx = immed_children.index(DO_WORD) if DO_WORD in immed_children else None
+            if do_idx is not None:
+                # Check for 'do not'
+                child_negated = (do_idx + 1 < len(vp) and
+                                 _first_leaf(vp[do_idx + 1]).lower() in NOT_WORDS)
 
-            # Find the subject
-            subject = _find_subject(parent)
-            if not subject:
-                print "Warning: could not find subject in %s" % parent
-                continue
+                # Find the subject
+                subject = _find_subject(parent)
+                if not subject:
+                    print "Warning: could not find subject in %s" % parent
+                    continue
 
-            # Recurse on this vp
-            results.extend(find_verbs(vp, negated=child_negated, subject=subject))
-            break
+                # Recurse on this vp
+                results.extend(find_verbs(vp, negated=child_negated, subject=subject))
+                break
 
-        # Check for verbs
-        for child in vp:
-            if child.node.startswith(VERB_TAG):
-                result_tree = (parent if not subject else Tree('S', [subject, vp]))
-                results.append((child[0].lower(), negated, result_tree))
+            # Check for verbs
+            for child in vp:
+                if child.node.startswith(VERB_TAG):
+                    result_tree = (parent if not subject else Tree('S', [subject, vp]))
+                    results.append((child[0].lower(), negated, result_tree))
 
     return results
 
