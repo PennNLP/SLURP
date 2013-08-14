@@ -98,7 +98,7 @@ class VerbFrameObject:
 
         # Strict mode
         if strict == 2:
-            phrase_list = ['S', 'VP', 'VP-A', 'NP-PRD-A'] # nodes for which you look at their children
+            phrase_list = ['S', 'S-A', 'VP', 'VP-A', 'NP-PRD-A']  # nodes for which you look at their children
             no_leftover_list = ['SBAR-A', 'S-INV' 'NP', 'NP-SBJ-A', 'NP-A', 'IN', 'TO'] # nodes that must be in frame output
             current_frame_tag = 0
             result_dict, current_frame_tag = self._traverse_subtree(parse_tree, phrase_list, result_dict, current_frame_tag)
@@ -207,7 +207,7 @@ class VerbFrameObject:
         # Adds null agent in case where there needs to be one (e.g. "Don't go in the hallway")
             # Skips "ADVP-TMP" and "RB" for "never" and "always"
         # This is kind of hack-y and there's probably a better way to do it
-        if frame_tag[1] == 'Agent' and not subtree.node == "S" and not subtree.node == "ADVP-TMP" \
+        if frame_tag[1] == 'Agent' and not (subtree.node == "S" or subtree.node == "S-A") and not subtree.node == "ADVP-TMP" \
             and not subtree.node == "RB" and not self.__match_subtree(subtree, frame_tag):
             result_dict[frame_tag[1]] = Tree("(NP-SBJ-A (-NONE- *))")
             current_frame_tag+=1
