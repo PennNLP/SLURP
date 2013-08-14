@@ -455,7 +455,7 @@ def _immediate_children(tree):
     return [_first_leaf(subtree) for subtree in tree if len(subtree.leaves()) == 1]
 
 
-def find_verbs(parse_tree, negated=False):
+def find_verbs(parse_tree, negated=False, subject=None):
     """Returns the list of tuples: (verb, negation)"""
     results = []
 
@@ -475,16 +475,30 @@ def find_verbs(parse_tree, negated=False):
             # Check for 'do not'
             if do_idx + 1 < len(vp) and _first_leaf(vp[do_idx + 1]) in NOT_WORDS:
                 child_negated = True
+
+            # Find the subject
+            subject = _find_subject(parent)
+            if not subject:
+                print "Warning: could not find subject in %s" % parent
+                continue
+
             # Recurse on this vp
-            results.extend(find_verbs(vp, child_negated))
+            results.extend(find_verbs(vp, negated=child_negated, subject=subject))
             break
 
         # Check for verbs
         for child in vp:
             if child.node.startswith(VERB_TAG):
-                results.append((child[0].lower(), negated, parent))
+                result_tree = (parent if not subject else Tree('S', [subject, vp]))
+                results.append((child[0].lower(), negated, result_tree))
 
     return results
+
+
+def _find_subject(parse_tree):
+    """Return our best guess for what the subject is at the top level of a tree."""
+    subjects = [child for child in parse_tree if child.node.startswith("NP-SBJ")]
+    return subjects[0] if subjects else None
 
 
 def wh_movement(parse_tree):
