@@ -33,6 +33,7 @@ S_TAG = "S"
 SUBJ_TAG = "NP-SBJ"
 VERB_TAG = "VB"
 DO_WORD = "do"
+SUPPORT_VERBS = set((DO_WORD, "please"))
 NOT_WORDS = set(("not", "n't"))
 
 
@@ -476,19 +477,25 @@ def find_verbs(parse_tree, negated=False, subject=None):
     else:
         for vp, parent in vps:
             # TODO: Improve negation and re-enable never.
-            # Check for do-insertion
+            # Check for support verbs (do, please)
             immed_children = _immediate_children(vp)
-            do_idx = immed_children.index(DO_WORD) if DO_WORD in immed_children else None
-            if do_idx is not None:
-                # Check for 'do not'
-                child_negated = (do_idx + 1 < len(vp) and
-                                 _first_leaf(vp[do_idx + 1]).lower() in NOT_WORDS)
+            support_verb = None
+            for idx, child in enumerate(immed_children):
+                if child in SUPPORT_VERBS:
+                    support_verb = (idx, child.lower())
+                    break
 
-                # Find the subject
-                subject = _find_subject(parent)
+            if support_verb:
+                idx, child = support_verb
+                # Check for 'do not'
+                child_negated = (child == DO_WORD and idx + 1 < len(vp) and
+                                 _first_leaf(vp[idx + 1]).lower() in NOT_WORDS)
+
+                # Find the subject if not specified already
                 if not subject:
-                    print "Warning: could not find subject in %s" % parent
-                    continue
+                    subject = _find_subject(parent)
+                    if not subject:
+                        continue
 
                 # Recurse on this vp
                 results.extend(find_verbs(vp, negated=child_negated, subject=subject))
