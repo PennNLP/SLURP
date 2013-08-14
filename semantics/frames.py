@@ -32,9 +32,11 @@ VP_TAG = "VP"
 S_TAG = "S"
 SUBJ_TAG = "NP-SBJ"
 VERB_TAG = "VB"
+ADVP_TAG = "ADVP"
 DO_WORD = "do"
 SUPPORT_VERBS = set((DO_WORD, "please"))
 NOT_WORDS = set(("not", "n't"))
+NEVER_WORD = "never"
 
 
 class VerbFrameObject:
@@ -476,7 +478,6 @@ def find_verbs(parse_tree, negated=False, subject=None):
             results.extend(find_verbs(s_child))
     else:
         for vp, parent in vps:
-            # TODO: Improve negation and re-enable never.
             # Check for support verbs (do, please)
             immed_children = _immediate_children(vp)
             support_verb = None
@@ -487,7 +488,7 @@ def find_verbs(parse_tree, negated=False, subject=None):
 
             if support_verb:
                 idx, child = support_verb
-                # Check for 'do not'
+                # Check for do not/don't
                 child_negated = (child == DO_WORD and idx + 1 < len(vp) and
                                  _first_leaf(vp[idx + 1]).lower() in NOT_WORDS)
 
@@ -500,12 +501,19 @@ def find_verbs(parse_tree, negated=False, subject=None):
                 # Recurse on this vp
                 results.extend(find_verbs(vp, negated=child_negated, subject=subject))
                 break
+            else:
+                # Check parent for negation
+                for child in parent:
+                    # Never looks like: (ADVP-TMP (RB Never))
+                    if child.node.startswith(ADVP_TAG) and _first_leaf(child) == NEVER_WORD:
+                        negated = True
+                        break
 
-            # Check for verbs
-            for child in vp:
-                if child.node.startswith(VERB_TAG):
-                    result_tree = (parent if not subject else Tree('S', [subject, vp]))
-                    results.append((child[0].lower(), negated, result_tree))
+                # Check for verbs
+                for child in vp:
+                    if child.node.startswith(VERB_TAG):
+                        result_tree = (parent if not subject else Tree('S', [subject, vp]))
+                        results.append((child[0].lower(), negated, result_tree))
 
     return results
 
