@@ -179,14 +179,20 @@ class SpecGenerator(object):
         custom_sensors = set()
         generation_trees = OrderedDict()
 
-        # Add the actuator mutex
-        if len(self.props) > 1:
-            actuator_mutex = mutex_([sys_(prop) for prop in self.props], True)
-            generation_trees["Safety assumptions"] = \
-                {"Safety assumptions":
-                 [SpecChunk("Robot can perform only one action at a time.",
-                            [actuator_mutex, always(actuator_mutex)],
-                            SpecChunk.SYS, None)]}
+        # If there are any actuators, the robot must stay there while performing them
+        if self.props:
+            actuator_stay = [always(implies(and_([not_(sys_(prop)), next_(sys_(prop))]), STAY_THERE))
+                            for prop in self.props]
+            safety_chunks = [SpecChunk("Robot cannot move while actuating.", actuator_stay,
+                                       SpecChunk.SYS, None)]
+            # Add the actuator mutex
+            if len(self.props) > 1:
+                actuator_mutex = mutex_([sys_(prop) for prop in self.props], True)
+                safety_chunks.append(SpecChunk("Robot can perform only one action at a time.",
+                                               [actuator_mutex, always(actuator_mutex)],
+                                               SpecChunk.SYS, None))
+            generation_trees["Safety assumptions"] = {"Safety assumptions": safety_chunks}
+
 
         for line in text.split('\n'):
             # Strip the text before using it and ignore any comments
@@ -665,7 +671,7 @@ class SpecGenerator(object):
 
         # If negation isn't set, allow the command to set it
         negated = negated or command.negation
-        actuator_frag = sys_(actuator) if not negated else not_(sys_(actuator))
+        actuator_frag = next_(sys_(actuator)) if not negated else not_(sys_(actuator))
         when = "Always" if not negated else "Never"
 
         chunks = []
@@ -675,7 +681,7 @@ class SpecGenerator(object):
             for region in regions:
                 # Generate a location-restricted action
                 explanation = "{} activate {!r} in {!r}.".format(when, actuator, region)
-                formula = always(implies(sys_(region), actuator_frag))
+                formula = always(implies(next_(sys_(region)), actuator_frag))
                 chunks.append(SpecChunk(explanation, [formula], SpecChunk.SYS, command))
         else:
             # Always activate
