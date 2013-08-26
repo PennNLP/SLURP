@@ -181,10 +181,11 @@ class SpecGenerator(object):
 
         # Add the actuator mutex
         if len(self.props) > 1:
+            actuator_mutex = mutex_([sys_(prop) for prop in self.props], True)
             generation_trees["Safety assumptions"] = \
                 {"Safety assumptions":
                  [SpecChunk("Robot can perform only one action at a time.",
-                            [mutex_([sys_(prop) for prop in self.props], True)],
+                            [actuator_mutex, always(actuator_mutex)],
                             SpecChunk.SYS, None)]}
 
         for line in text.split('\n'):

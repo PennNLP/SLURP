@@ -51,7 +51,7 @@ class Cell:
         dist = self.world_distance(location)
         if dist == 0:
             return location
-        delta = tuple(0.2*(c1 - c2)/dist for c1, c2 in zip(self.to_world(), location))
+        delta = tuple(0.2 * (c1 - c2) / dist for c1, c2 in zip(self.to_world(), location))
         return tuple(c1 + d for c1, d in zip(location, delta))
 
     def __str__(self):
@@ -89,12 +89,12 @@ class Agent:
                 angle = math.atan2(deltaX, deltaZ)
                 """rotationmatrix = [1,0,0,0,math.cos(angle),1-math.sin(angle),
                                   0,math.sin(angle),math.cos(angle)]"""
-                                  
-                rotationmatrix = [math.cos(angle),0,math.sin(angle),0,1,0,
-                                  -1*math.sin(angle),0,math.cos(angle)]
+
+                rotationmatrix = [math.cos(angle), 0, math.sin(angle), 0, 1, 0,
+                                  - 1 * math.sin(angle), 0, math.cos(angle)]
                 self.location = newlocation
             """Ok, here's where I need to rotate Jr in the direction he is moving"""
-            callback('PLAYER_MOVE_3D',','.join(str(s) for s in [self.location[0], 0, self.location[1]] + rotationmatrix))
+            callback('PLAYER_MOVE_3D', ','.join(str(s) for s in [self.location[0], 0, self.location[1]] + rotationmatrix))
 
     def fix_location(self):
         """Moves the agent to the center of its cell"""
@@ -125,14 +125,33 @@ class Agent:
                     heapq.heappush(frontier, Node(n, goal, current))
         return False
 
+class Room:
+    """Class representing rooms in map"""
+    def __init__(self, coords, name):
+        self.coords = coords
+        self.name = name
+        self.center = ((coords[2] - coords[0]) / 2, (coords[3] - coords[1]) / 2)
+
+    def __contains__(self, cell):
+        """Checks if x,z coordinates in a room"""
+        x_coords = cell[0] >= self.coords[0] and cell[0] <= self.coords[2]
+        y_coords = cell[1] >= self.coords[1] and cell[1] <= self.coords[3]
+        return x_coords and y_coords
+
+
 class GameEnvironment:
     """Class representing the game environment"""
     def __init__(self, env):
         self.grid = []
-        self.rooms = []
+        self.rooms = {}
         for i, line in enumerate(env.split(ROW_DELIMITER)):
             if line.startswith('r') or line.startswith('h'):
-                self.rooms.append(line)
+                room_data = line.split(":")
+                coords = room_data[0].split(" ")
+                coords = coords[1:]
+                coords = [int(item) for item in coords]
+                name = room_data[1]
+                self.rooms[name] = (Room(coords, name))
             elif len(line.strip()) > 0:
                 self.grid.append([])
                 for j, c in enumerate(line):
@@ -145,20 +164,20 @@ class GameEnvironment:
         for i, row in enumerate(self.grid):
             for j, cell in enumerate(row):
                 if i > 0:
-                    cell.add_neighbor(self.grid[i-1][j])
+                    cell.add_neighbor(self.grid[i - 1][j])
                 if i < len(self.grid) - 1:
-                    cell.add_neighbor(self.grid[i+1][j])
+                    cell.add_neighbor(self.grid[i + 1][j])
                 if j > 0:
-                    cell.add_neighbor(self.grid[i][j-1])
+                    cell.add_neighbor(self.grid[i][j - 1])
                 if j < len(self.grid) - 1:
-                    cell.add_neighbor(self.grid[i][j+1])
+                    cell.add_neighbor(self.grid[i][j + 1])
         print 'Created environment:'
         print str(self)
-                
+
     def update_cmdr(self, location):
         """Updates commander's location"""
         self.cmdr.set_cell(self.grid[location[0]][location[1]])
-        
+
     def update_jr(self, location):
         """Update junior's location"""
         self.jr.set_cell(self.grid[location[0]][location[1]])
@@ -178,11 +197,11 @@ class GameEnvironment:
 
 def to_cell_coordinate(c):
     """Continuous world to grid world"""
-    return int(c/4)
+    return int(c / 4)
 
 def to_world_coordinate(c):
     """Grid world to continuous world"""
-    return c*4
+    return c * 4
 
 def to_simple_cell(c):
     """Returns a cell's type as either dead or open space"""
