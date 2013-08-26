@@ -33,11 +33,13 @@ class PragbotProtocol(LineReceiver):
 
         self.kb = KnowledgeBase(other_agents=['cmdr'])
 
-    def receiveHandlerMessages(self, event_type, message):
+    def receiveHandlerMessages(self, event_type, message=None):
         if event_type == "Move":
             room = self.ge.rooms[message]
             destination = room.center
             self.ge.jr.plan_path(destination)
+        elif event_type == "Stop":
+            self.ge.jr.plan_path(self.ge.jr.cell)
         else:
             print event_type + " : " + message
 
