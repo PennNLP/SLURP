@@ -127,10 +127,9 @@ class Agent:
 
 class Room:
     """Class representing rooms in map"""
-    def __init__(self, coords, name, adj_rooms):
+    def __init__(self, coords, name):
         self.coords = coords
         self.name = name
-        self.adj_rooms = adj_rooms
         self.center = ((coords[2] - coords[0]) / 2, (coords[3] - coords[1]) / 2)
 
     def __contains__(self, cell):
@@ -147,11 +146,12 @@ class GameEnvironment:
         self.rooms = {}
         for i, line in enumerate(env.split(ROW_DELIMITER)):
             if line.startswith('r') or line.startswith('h'):
-                room_data = str.split(line, ":")
-                coords = str.split(room_data[0])
+                room_data = line.split(":")
+                coords = room_data[0].split(" ")
+                coords = coords[1:]
+                coords = [int(item) for item in coords]
                 name = room_data[1]
-                adj_rooms = str.split(room_data[2], ",")
-                self.rooms[name] = (Room(coords, name, adj_rooms))
+                self.rooms[name] = (Room(coords, name))
             elif len(line.strip()) > 0:
                 self.grid.append([])
                 for j, c in enumerate(line):

@@ -14,6 +14,8 @@ import sys
 import threading
 from SimpleXMLRPCServer import SimpleXMLRPCServer
 
+import ltlmop_client
+
 
 class PragbotProtocol(LineReceiver):
 
@@ -30,6 +32,7 @@ class PragbotProtocol(LineReceiver):
                http://localhost:{} ...".format(self.PRAGBOT_LISTEN_PORT)
 
         self.kb = KnowledgeBase(other_agents=['cmdr'])
+        self.ltlmop = ltlmop_client.LTLMoPClient()
 
     def receiveHandlerMessages(self, event_type, message=None):
         if event_type == "Move":
@@ -59,10 +62,7 @@ class PragbotProtocol(LineReceiver):
             if s.startswith('CHAT_MESSAGE_PREFIX'):
                 s = remove_prefix(s, 'CHAT_MESSAGE_PREFIX<Commander> ')
                 # TODO: multi-process lock
-                parse = PipelineClient().parse(s)
-                frames, new_commands, kb_response = process_parse_tree(parse, data, self.kb, quiet=True)
-                self.sendMessage('CHAT_MESSAGE_PREFIX', '<Junior> ' + make_response(new_commands, kb_response))
-                self.ge.jr.plan_path(self.ge.cmdr.cell)
+                self.ltlmop.get_input(s)
             elif s.startswith('MOVE_PLAYER_CELL'):
                 s = remove_prefix(s, 'MOVE_PLAYER_CELL')
                 new_x, old_x, new_y, old_y = s.split(',')

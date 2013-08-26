@@ -143,10 +143,7 @@ class LTLMoPClient(object):
         else:
             print message
 
-    def get_input(self):  # wxGlade: LTLMoPClient.<event_handler>
-        user_text = raw_input('> ')
-        if user_text == "":
-            return
+    def get_input(self, user_text):  # wxGlade: LTLMoPClient.<event_handler>
         # echo
         self.append_log(user_text, self.user_name)
         # response
