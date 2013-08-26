@@ -1,10 +1,10 @@
-{ "region_names": ["Office", "Classroom","Bathroom","Kitchen","Conservatory","Dining Room",
-                  "Computer Room","Billiard Room","Annex","Ballroom","Library","Lounge",
-                  "Cellar","Study","North Hallway","South Hallway","West Hallway","East Hallway"],
-  "adjacencies": [["Office","East Hallway"],["Classroom","East Hallway"],
-                 ["Bathroom","South Hallway"],["Kitchen","North Hallway"],
-                 ["Conservatory","North Hallway"],["Dining Room","West Hallway"],
-                 ["Computer Room","West Hallway"],["Billiard Room","South Hallway"],
-                 ["Annex","East Hallway"],["Ballroom","West Hallway"],["Library","East Hallway"],
-                 ["Lounge","West Hallway"],["Cellar","South Hallway"],["Study","South Hallway"]]
+{ "region_names": ["office", "classroom","bathroom","kitchen","conservatory","dining_room",
+                  "computer_room","billiard_room","annex","ballroom","library","lounge",
+                  "cellar","study","hallway1","hallway2","hallway3","hallway4"],
+  "adjacencies": [["office","hallway4"],["classroom","hallway4"],
+                 ["bathroom","hallway2"],["kitchen","hallway1"],
+                 ["conservatory","hallway1"],["dining_room","hallway3"],
+                 ["computer_room","hallway3"],["billiard_room","hallway2"],
+                 ["annex","hallway4"],["ballroom","hallway3"],["library","hallway4"],
+                 ["lounge","hallway3"],["cellar","hallway2"],["study","hallway2"]]
 }
