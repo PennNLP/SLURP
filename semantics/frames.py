@@ -85,157 +85,177 @@ class VerbFrameObject:
             else:
                 print str(element.tag)
 
-    def match_parse(self, parse_tree):
+    def match_parse(self, parse_tree, strict, allow_leftovers):
         """Takes a Treebank parse tree compiled into NLTK's tree structure.
         Outputs a result dictionary mapping predicates to arguments"""
 
         result_dict = {}
-        subtree_list = list(parse_tree.subtrees()) #depth first list of subtrees e.g. (1 (2 (3))(4 (5)))
-        current_subtree = 1
         matches = 0
+        skipped_NP = 0
 
-        #!!! Change these to parameters
-        strict = 2  # 1 for non-strict mode, 2 for strict, otherwise, original linear matching
-        no_leftovers = 1 #E: Added
+        # print "Trying: "
+        # print self.frame_list
+        # print
 
-        # Strict mode
-        if strict == 2:
-            phrase_list = ['S', 'S-A', 'VP', 'VP-A', 'NP-PRD-A']  # nodes for which you look at their children
-            no_leftover_list = ['SBAR-A', 'S-INV' 'NP', 'NP-SBJ-A', 'NP-A', 'IN', 'TO'] # nodes that must be in frame output
-            current_frame_tag = 0
-            result_dict, current_frame_tag = self._traverse_subtree(parse_tree, phrase_list, result_dict, current_frame_tag)
-            if result_dict:
-                # Check that every frame is filled
-                if len(result_dict) == len(self.frame_list) and current_frame_tag == len(self.frame_list):
-                    if no_leftovers:
-                        # Count relevant tags in result_dict
-                        result_count=0
-                        original_count=0
-                        for frame_tree in result_dict.values():
-                            frame_subtrees = list(frame_tree.subtrees())
-                            for frame_subtree in frame_subtrees:
-                                for tag in no_leftover_list:
-                                    if tag == frame_subtree.node:
-                                        result_count+=1
-                                        #print frame_subtree.node
-                        # Count tags in original subtree
-                        for orig_subtree in subtree_list:
-                            for tag in no_leftover_list:
-                                if tag == orig_subtree.node:
-                                    original_count+=1
-                                    #print orig_subtree.node
-                        print result_dict
-                        print "Frame: " + str(result_count) + " Original: " + str(original_count)
-                        if result_count >= original_count:
-                            print "Match"
-                            return result_dict
+        vp_idx = 0
+        pp_idx = 0
+        pp_subtree = None
+        vp_subtree = None
+        obj_location = None
+        first_NP = True
+        nonstrict_PP = False
+
+        for frame in self.frame_list:
+            if not vp_subtree or vp_idx < len(vp_subtree):  # vp_subtree is empty or isn't at its end
+
+                # TODO: This is a hacky solution. Makes first NP "subject."
+                simple_role = self._simple_frame(frame, first_NP)
+
+                # TODO: This only takes NP then VP. Do we want to take anything else from the S level?
+                if simple_role == "subject":
+                    first_NP = False
+                    subtrees = list(parse_tree)
+                    for subtree in subtrees:
+                        if self._simple_tag(subtree) == "NP":
+                            result_dict[frame[1]] = subtree
+                            matches += 1
+                        elif self._simple_tag(subtree) == "VP":
+                            vp_subtree = subtree
+                            obj_location = "VP"
+                            break
+
+                elif simple_role == "verb":
+                    if vp_subtree:
+                        if self._simple_tag(vp_subtree[0]).startswith("VB"):
+                            result_dict[frame[1]] = vp_subtree[0]
+                            matches += 1
+                            vp_idx += 1
+                        else:
+                            # TODO: Will first VP argument always be a verb?
+                            print "First VP argument not a verb"
                     else:
+                        break
+
+                elif simple_role == "prep":
+                    if vp_subtree:  # makes sure prep is inside VP (e.g. PP Location VERB Agent should(?)/will fail)
+                        for subtree in vp_subtree[vp_idx:]:  # go through arguments of VP looking for PP
+                            if self._simple_tag(subtree) == "PP":
+                                if self._simple_tag(subtree[0]) == "PP":  # if first tag in PP is another PP
+                                    if pp_subtree and pp_idx == len(pp_subtree):
+                                        pp_idx = 0
+                                    pp_subtree = subtree[pp_idx]
+                                    pp_idx += 1
+                                else:
+                                    pp_subtree = subtree
+
+                                if (frame[1] == "in" and pp_subtree[0].node == "IN" \
+                                    or frame[1] == "to towards" and pp_subtree[0].node == "TO" \
+                                    or frame[1] == "PREP"):
+                                        result_dict[frame[1]] = pp_subtree[0]
+                                        matches += 1
+                                        obj_location = "PP"
+                                        break
+                                else:
+                                    return None
+
+                    elif not strict and pp_subtree:
+                        if (frame[1] == "in" and pp_subtree[0].node == "IN" \
+                            or frame[1] == "to towards" and pp_subtree[0].node == "TO" \
+                            or frame[1] == "PREP"):
+                                result_dict[frame[1]] = pp_subtree[0]
+                                matches += 1
+                                obj_location = "PP"
+                        else:
+                            return None
+                    else:
+                        return None
+
+                elif simple_role == "object":
+                    if obj_location == "PP":
+                        if self._simple_tag(pp_subtree[1]) == "NP":
+                            matches += 1
+                            if not strict and not nonstrict_PP and vp_idx + 1 == len(vp_subtree) and self._simple_tag(pp_subtree[1][1]) == "PP" and matches < len(self.frame_list):
+                                result_dict[frame[1]] = pp_subtree[1][0]
+                                pp_subtree = pp_subtree[1][1]
+                                vp_subtree = None
+                                nonstrict_PP = True
+                                skipped_NP += 1
+                            else: 
+                                result_dict[frame[1]] = pp_subtree[1]
+                                if pp_idx == 0:
+                                    vp_idx += 1
+                                obj_location = "VP"
+                    elif obj_location == "VP":
+                        if self._simple_tag(vp_subtree[vp_idx]) == "NP":
+                            result_dict[frame[1]] = vp_subtree[vp_idx]
+                            matches += 1
+                            vp_idx += 1
+                        else:
+                            return None
+                else:
+                    print "Frame role " + frame[0] + " does not exist\n"
+                    # TODO: (?) Add existential "LEX" frame
+            else:
+                return None
+
+        # Check results
+        if result_dict:
+            # Check that every frame is filled
+            if len(result_dict) == len(self.frame_list) and matches == len(self.frame_list):
+                if not allow_leftovers:
+                    # Count relevant tags in result_dict
+                    no_leftover_list = ['SBAR-A', 'SINV', 'NP', 'NP-SBJ-A', 'NP-A', 'IN', 'TO']  # nodes that must be in frame output
+                    result_count = 0
+                    original_count = 0
+                    for frame_tree in result_dict.values():
+                        frame_subtrees = list(frame_tree.subtrees())
+                        for frame_subtree in frame_subtrees:
+                            for tag in no_leftover_list:
+                                if tag == frame_subtree.node:
+                                    result_count += 1
+                    # Count tags in original subtree
+                    original_subtree_list = list(parse_tree.subtrees())
+                    for orig_subtree in original_subtree_list:
+                        for tag in no_leftover_list:
+                            if tag == orig_subtree.node:
+                                original_count += 1
+                                # print orig_subtree.node
+                    # print result_dict
+                    # print "Frame: " + str(result_count) + " Original: " + str(original_count)
+                    if (result_count + skipped_NP) >= original_count:
                         return result_dict
-            else:
-                return None
-
-        # New Non-strict mode
-        elif strict == 1:
-            # For each frame element, find the next subtree that matches
-            for frame_tag in self.frame_list: #frame list from current VFO
-                # Go through the subtrees until you run out of subtrees
-                while current_subtree < len(subtree_list):
-                    subtree = subtree_list[current_subtree]
-                    current_subtree+=1
-                    if self.__match_subtree(subtree, frame_tag):
-                        # Verbs need to match (VB) subtree, whereas nouns take full NP because of ambiguous sentences and poor parses
-                            # e.g. "Shoot the people with force" you need to take whole NP-A
-                            # whereas "Shoot the people with guns"...
-                        result_dict[frame_tag[1]] = subtree
-                        matches += 1
-                        break
-
-            if current_subtree == len(subtree_list):
-                return None
-
-            # Only return something if every frame was matched
-            if matches == len(self.frame_list):
-                return result_dict
-            else:
-                return None
-        # Linear matching mode
+                else:
+                    return result_dict
         else:
-            # For each frame element, find the next subtree that matches
-            for frame_tag in self.frame_list: #frame list from current VFO
-                # Go through the subtrees until you run out of subtrees
-                while current_subtree < len(subtree_list):
-                    subtree = subtree_list[current_subtree]
-                    # If there is no explicit NP for the Agent role, insert one
-                    # NOTE: Assumes Agent role is the first in the frame, may not
-                    # be true
-                    # C: Why is this coming up with its own tree and shoving it somewhere?
-                    # E: If the agent is first in the frame...
-                    #if (current_subtree == 0 and frame_tag[1] == 'Agent' and not
-                    #        self.__match_subtree(subtree, frame_tag)): #E: Checks if first tag in frame is first tag in subtree
-                    #            #!!! E: This seems wrong. Because the first tag is 'S' and not an agent, it inserts a null element
-                    #            #!!! E: Apparently some trees start as VP and some as S, so that's an issue
-                    #    result_dict[frame_tag[1]] = Tree("(NP-SBJ-A (-NONE- *))")
-                    #    matches += 1
-                    #    break
-                    current_subtree += 1
-                    if self.__match_subtree(subtree, frame_tag):
-                        # Verbs need to match (VB) subtree, whereas nouns take full NP because of ambiguous sentences and poor parses
-                            # e.g. "Shoot the people with force" you need to take whole NP-A
-                            # whereas "Shoot the people with guns" you 
-                        # print 'Match -> ' + str(frame_tag)
-                        # If the subtree matches, add role->phrase to the dictionary
-                        # result_dict[frame_tag[1]] = ' '.join(subtree.leaves())
-                        result_dict[frame_tag[1]] = subtree
-                        matches += 1
-                        break
-
-            if current_subtree == len(subtree_list):
-                return None
-
-            # Only return something if every frame was matched
-            if matches == len(self.frame_list):
-                return result_dict
+            return None
+    
+    def _simple_frame(self, frame_tag, first_NP=False):
+        if frame_tag[0]=='NP':
+            if first_NP:
+                return "subject"   
             else:
-                return None
-
-    def _traverse_subtree(self, subtree, phrase_list, result_dict, current_frame_tag):
-        """Given a subtree, traverses its children, only expands those in phrase_list"""
-        # All frame tags matched
-        if current_frame_tag == len(self.frame_list):
-            return result_dict, current_frame_tag
-
-        frame_tag = self.frame_list[current_frame_tag]
-
-        # Adds null agent in case where there needs to be one (e.g. "Don't go in the hallway")
-            # Skips "ADVP-TMP" and "RB" for "never" and "always"
-        # This is kind of hack-y and there's probably a better way to do it
-        if frame_tag[1] == 'Agent' and not (subtree.node == "S" or subtree.node == "S-A") and not subtree.node == "ADVP-TMP" \
-            and not subtree.node == "RB" and not self.__match_subtree(subtree, frame_tag):
-            result_dict[frame_tag[1]] = Tree("(NP-SBJ-A (-NONE- *))")
-            current_frame_tag+=1
-            if len(self.frame_list)>1: #E: This is probably unnecessary
-                frame_tag = self.frame_list[current_frame_tag]
-
-        # Check if current node matches frame
-        if self.__match_subtree(subtree, frame_tag):
-            result_dict[frame_tag[1]] = subtree
-            current_frame_tag+=1
-            return(result_dict, current_frame_tag)
-        # Otherwise, traverse down the tree to children if the current node is in the phrase list
-        elif subtree.node in phrase_list or (frame_tag[0]=='PREP' and 'PP' in subtree.node):
-            children_list = list(subtree)
-            for subtr in children_list:
-                if not subtr.__eq__(Tree("(VBP Do)")) and not subtr.__eq__(Tree("(VBP do)")) :       
-                    result_dict, current_frame_tag = self._traverse_subtree(subtr, phrase_list, result_dict, current_frame_tag)
-                if current_frame_tag == len(self.frame_list):
-                    break
-            return result_dict, current_frame_tag
-        elif ('NP' in subtree.node or 'PP' in subtree.node):
-            return None, len(self.frame_list)
-
-        return result_dict, current_frame_tag
-
-    def __match_subtree(self, subtree, frame_tag):
+                return "object" 
+        elif frame_tag[0]=='PREP':
+            return "prep"
+        elif frame_tag[0]=='VERB':
+            return "verb"
+        else:
+            return "other"
+    
+    def _simple_tag(self, subtree):
+        return subtree.node.split("-")[0]
+        
+    def _match_subtree(self, subtree, frame_tag):
+        node = subtree.node
+        
+        # Tag/Role -> Treebank map
+        if ((frame_tag[0], frame_tag[1])) in tag_mapping.keys():
+            tree_tags = tag_mapping[(frame_tag[0], frame_tag[1])]
+        elif frame_tag[0] in tag_mapping.keys():
+            tree_tags = tag_mapping[frame_tag[0]]
+            
+    def __match_subtree_old(self, subtree, frame_tag):
+        # TODO: Possibly get rid of all of this
         """Given a subtree, tries to match it to a frame element"""
         # Regex for POS tags
         # C: Get rid of regular expressions (maybe)
@@ -263,7 +283,7 @@ class VerbFrameObject:
 
         if len(tags) > 0:
             for tree_tag in tree_tags:
-                if tree_tag in tags[0]: #NEEDS TO BE EXACT MATCH
+                if tree_tag in tags[0]:
                     # Matched first word
                     if not frame_tag[3] == '':
                         # Now need to match a syntax restriction
@@ -288,6 +308,12 @@ class VerbFrameObject:
 
 
 # Mapping from Verbnet tags to Treebank tags
+
+# TODO: VerbNet things into something much simpler
+simple_tag_mapping = {'subject': ['NP'],
+                      'object': ['NP'],
+                      'verb': ['VB'],
+                      'prep': ['IN', 'TO']}
 tag_mapping = {'NP': ['NP'],
                #('NP', 'Location'): ['PP-LOC', 'PP-DIR', 'PP-CLR', 'NN', 'ADVP-LOC', 'NP-A', 'WHADVP', 'ADVP-TMP', 'PP-PRD', 'ADVP-DIR'],
                #('NP', 'Destination'): ['PP-LOC', 'PP-DIR', 'NN', 'NP-A', 'ADVP', 'PP-CLR', 'WHADVP', 'ADVP-DIR'],
