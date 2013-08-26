@@ -2,7 +2,6 @@
 <!DOCTYPE VNCLASS SYSTEM "vn_class-3.dtd">
 <VNCLASS ID="fit-54.3" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="vn_schema-3.xsd">
     <MEMBERS>
-        <MEMBER name="carry" wn="carry%2:42:03 carry%2:31:12 carry%2:36:08 carry%2:34:01" grouping="carry.02 carry.03"/>
         <MEMBER name="contain" wn="contain%2:42:14" grouping="contain.01"/>
         <MEMBER name="fit" wn="fit%2:42:02 fit%2:42:03" grouping="fit.02"/>
         <MEMBER name="feed" wn="feed%2:34:02" grouping="feed.03"/>
