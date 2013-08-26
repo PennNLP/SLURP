@@ -1,0 +1,10 @@
+{ "region_names": ["Office", "Classroom","Bathroom","Kitchen","Conservatory","Dining Room",
+                  "Computer Room","Billiard Room","Annex","Ballroom","Library","Lounge",
+                  "Cellar","Study","North Hallway","South Hallway","West Hallway","East Hallway"],
+  "adjacencies": [["Office","East Hallway"],["Classroom","East Hallway"],
+                 ["Bathroom","South Hallway"],["Kitchen","North Hallway"],
+                 ["Conservatory","North Hallway"],["Dining Room","West Hallway"],
+                 ["Computer Room","West Hallway"],["Billiard Room","South Hallway"],
+                 ["Annex","East Hallway"],["Ballroom","West Hallway"],["Library","East Hallway"],
+                 ["Lounge","West Hallway"],["Cellar","South Hallway"],["Study","South Hallway"]]
+}

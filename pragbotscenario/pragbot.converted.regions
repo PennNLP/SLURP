@@ -1,0 +1,391 @@
+# This is a region definition file for the LTLMoP toolkit.
+# Format details are described at the beginning of each section below.
+# Note that all values are separated by *tabs*.
+
+Background: # Relative path of background image file
+None
+
+CalibrationPoints: # Vertices to use for map calibration: (vertex_region_name, vertex_index)
+
+Obstacles: # Names of regions to treat as obstacles
+
+Regions: # Stored as JSON string
+[
+    {
+        "name": "Office", 
+        "color": [
+            255, 
+            255, 
+            0
+        ], 
+        "holeList": [], 
+        "height": 0, 
+        "points": [], 
+        "position": [
+            0.0, 
+            0.0
+        ], 
+        "type": "poly", 
+        "size": [
+            0.0, 
+            0.0
+        ]
+    }, 
+    {
+        "name": "Classroom", 
+        "color": [
+            0, 
+            255, 
+            0
+        ], 
+        "holeList": [], 
+        "height": 0, 
+        "points": [], 
+        "position": [
+            0.0, 
+            0.0
+        ], 
+        "type": "poly", 
+        "size": [
+            0.0, 
+            0.0
+        ]
+    }, 
+    {
+        "name": "Bathroom", 
+        "color": [
+            255, 
+            0, 
+            0
+        ], 
+        "holeList": [], 
+        "height": 0, 
+        "points": [], 
+        "position": [
+            0.0, 
+            0.0
+        ], 
+        "type": "poly", 
+        "size": [
+            0.0, 
+            0.0
+        ]
+    }, 
+    {
+        "name": "Kitchen", 
+        "color": [
+            255, 
+            128, 
+            0
+        ], 
+        "holeList": [], 
+        "height": 0, 
+        "points": [], 
+        "position": [
+            0.0, 
+            0.0
+        ], 
+        "type": "poly", 
+        "size": [
+            0.0, 
+            0.0
+        ]
+    }, 
+    {
+        "name": "Conservatory", 
+        "color": [
+            255, 
+            128, 
+            0
+        ], 
+        "holeList": [], 
+        "height": 0, 
+        "points": [], 
+        "position": [
+            0.0, 
+            0.0
+        ], 
+        "type": "poly", 
+        "size": [
+            0.0, 
+            0.0
+        ]
+    }, 
+    {
+        "name": "Dining Room", 
+        "color": [
+            255, 
+            255, 
+            0
+        ], 
+        "holeList": [], 
+        "height": 0, 
+        "points": [], 
+        "position": [
+            0.0, 
+            0.0
+        ], 
+        "type": "poly", 
+        "size": [
+            0.0, 
+            0.0
+        ]
+    }, 
+    {
+        "name": "Computer Room", 
+        "color": [
+            0, 
+            255, 
+            0
+        ], 
+        "holeList": [], 
+        "height": 0, 
+        "points": [], 
+        "position": [
+            0.0, 
+            0.0
+        ], 
+        "type": "poly", 
+        "size": [
+            0.0, 
+            0.0
+        ]
+    }, 
+    {
+        "name": "Billiard Room", 
+        "color": [
+            255, 
+            0, 
+            255
+        ], 
+        "holeList": [], 
+        "height": 0, 
+        "points": [], 
+        "position": [
+            0.0, 
+            0.0
+        ], 
+        "type": "poly", 
+        "size": [
+            0.0, 
+            0.0
+        ]
+    }, 
+    {
+        "name": "Annex", 
+        "color": [
+            255, 
+            0, 
+            255
+        ], 
+        "holeList": [], 
+        "height": 0, 
+        "points": [], 
+        "position": [
+            0.0, 
+            0.0
+        ], 
+        "type": "poly", 
+        "size": [
+            0.0, 
+            0.0
+        ]
+    }, 
+    {
+        "name": "Ballroom", 
+        "color": [
+            0, 
+            0, 
+            255
+        ], 
+        "holeList": [], 
+        "height": 0, 
+        "points": [], 
+        "position": [
+            0.0, 
+            0.0
+        ], 
+        "type": "poly", 
+        "size": [
+            0.0, 
+            0.0
+        ]
+    }, 
+    {
+        "name": "Library", 
+        "color": [
+            255, 
+            0, 
+            0
+        ], 
+        "holeList": [], 
+        "height": 0, 
+        "points": [], 
+        "position": [
+            0.0, 
+            0.0
+        ], 
+        "type": "poly", 
+        "size": [
+            0.0, 
+            0.0
+        ]
+    }, 
+    {
+        "name": "Lounge", 
+        "color": [
+            0, 
+            0, 
+            255
+        ], 
+        "holeList": [], 
+        "height": 0, 
+        "points": [], 
+        "position": [
+            0.0, 
+            0.0
+        ], 
+        "type": "poly", 
+        "size": [
+            0.0, 
+            0.0
+        ]
+    }, 
+    {
+        "name": "Cellar", 
+        "color": [
+            0, 
+            255, 
+            0
+        ], 
+        "holeList": [], 
+        "height": 0, 
+        "points": [], 
+        "position": [
+            0.0, 
+            0.0
+        ], 
+        "type": "poly", 
+        "size": [
+            0.0, 
+            0.0
+        ]
+    }, 
+    {
+        "name": "Study", 
+        "color": [
+            255, 
+            255, 
+            0
+        ], 
+        "holeList": [], 
+        "height": 0, 
+        "points": [], 
+        "position": [
+            0.0, 
+            0.0
+        ], 
+        "type": "poly", 
+        "size": [
+            0.0, 
+            0.0
+        ]
+    }, 
+    {
+        "name": "North Hallway", 
+        "color": [
+            255, 
+            255, 
+            0
+        ], 
+        "holeList": [], 
+        "height": 0, 
+        "points": [], 
+        "position": [
+            0.0, 
+            0.0
+        ], 
+        "type": "poly", 
+        "size": [
+            0.0, 
+            0.0
+        ]
+    }, 
+    {
+        "name": "South Hallway", 
+        "color": [
+            255, 
+            255, 
+            0
+        ], 
+        "holeList": [], 
+        "height": 0, 
+        "points": [], 
+        "position": [
+            0.0, 
+            0.0
+        ], 
+        "type": "poly", 
+        "size": [
+            0.0, 
+            0.0
+        ]
+    }, 
+    {
+        "name": "West Hallway", 
+        "color": [
+            255, 
+            0, 
+            255
+        ], 
+        "holeList": [], 
+        "height": 0, 
+        "points": [], 
+        "position": [
+            0.0, 
+            0.0
+        ], 
+        "type": "poly", 
+        "size": [
+            0.0, 
+            0.0
+        ]
+    }, 
+    {
+        "name": "East Hallway", 
+        "color": [
+            0, 
+            255, 
+            0
+        ], 
+        "holeList": [], 
+        "height": 0, 
+        "points": [], 
+        "position": [
+            0.0, 
+            0.0
+        ], 
+        "type": "poly", 
+        "size": [
+            0.0, 
+            0.0
+        ]
+    }
+]
+
+Transitions: # Region 1 Name, Region 2 Name, Bidirectional transition faces (face1_x1, face1_y1, face1_x2, face1_y2, face2_x1, ...)
+Office	East Hallway	1.0	2.0	3.0	4.0
+Classroom	East Hallway	1.0	2.0	3.0	4.0
+Bathroom	South Hallway	1.0	2.0	3.0	4.0
+Kitchen	North Hallway	1.0	2.0	3.0	4.0
+Conservatory	North Hallway	1.0	2.0	3.0	4.0
+Dining Room	West Hallway	1.0	2.0	3.0	4.0
+Computer Room	West Hallway	1.0	2.0	3.0	4.0
+Billiard Room	South Hallway	1.0	2.0	3.0	4.0
+Annex	East Hallway	1.0	2.0	3.0	4.0
+Ballroom	West Hallway	1.0	2.0	3.0	4.0
+Library	East Hallway	1.0	2.0	3.0	4.0
+Lounge	West Hallway	1.0	2.0	3.0	4.0
+Cellar	South Hallway	1.0	2.0	3.0	4.0
+Study	South Hallway	1.0	2.0	3.0	4.0
+

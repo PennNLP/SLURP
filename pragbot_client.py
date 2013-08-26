@@ -10,10 +10,8 @@ from semantics.new_knowledge import KnowledgeBase
 from semantics.parsing import process_parse_tree
 from semantics.response import make_response
 from pragbot.GameEnvironment import GameEnvironment
-import semantics.parsing
 import sys
 import threading
-import xmlrpclib
 from SimpleXMLRPCServer import SimpleXMLRPCServer
 
 

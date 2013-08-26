@@ -24,7 +24,7 @@ Customs: # List of custom propositions
 carrying_item
 
 RegionFile: # Relative path of region description file
-floorplan.regions
+pragbot.converted.regions
 
 Sensors: # List of sensor propositions and their state (enabled = 1, disabled = 0)
 fire, 0
