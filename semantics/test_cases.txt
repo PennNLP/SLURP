@@ -17,5 +17,5 @@ What is in the kitchen?
 What is in the cafeteria?
 What are you doing?
 Where are you?
-Activate your camera in the closet and hallway.
+Activate your camera in the closet and in the hallway.
 If you are in the hallway, stay there.
