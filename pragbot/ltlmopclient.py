@@ -143,7 +143,7 @@ class LTLMoPClient(object):
         else:
             print message
 
-    def get_input(self, user_text):  # wxGlade: LTLMoPClient.<event_handler>
+    def get_pragbot_input(self, user_text):  # wxGlade: LTLMoPClient.<event_handler>
         # echo
         self.append_log(user_text, self.user_name)
         # response
@@ -249,8 +249,3 @@ class BarebonesDialogueManager(object):
         """ return the current specification as one big string """
         return "\n".join(self.base_spec + self.spec)
 
-
-if __name__ == "__main__":
-    LTLMOPCLIENT = LTLMoPClient()
-    while True:
-        LTLMOPCLIENT.get_input()
