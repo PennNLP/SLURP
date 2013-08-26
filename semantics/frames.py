@@ -85,17 +85,13 @@ class VerbFrameObject:
             else:
                 print str(element.tag)
 
-    def match_parse(self, parse_tree, strict, allow_leftovers):
+    def match_parse(self, parse_tree, strict=True, allow_leftovers=False):
         """Takes a Treebank parse tree compiled into NLTK's tree structure.
         Outputs a result dictionary mapping predicates to arguments"""
 
         result_dict = {}
         matches = 0
         skipped_NP = 0
-
-        # print "Trying: "
-        # print self.frame_list
-        # print
 
         vp_idx = 0
         pp_idx = 0
@@ -108,10 +104,8 @@ class VerbFrameObject:
         for frame in self.frame_list:
             if not vp_subtree or vp_idx < len(vp_subtree):  # vp_subtree is empty or isn't at its end
 
-                # TODO: This is a hacky solution. Makes first NP "subject."
                 simple_role = self._simple_frame(frame, first_NP)
 
-                # TODO: This only takes NP then VP. Do we want to take anything else from the S level?
                 if simple_role == "subject":
                     first_NP = False
                     subtrees = list(parse_tree)
@@ -119,22 +113,22 @@ class VerbFrameObject:
                         if self._simple_tag(subtree) == "NP":
                             result_dict[frame[1]] = subtree
                             matches += 1
-                        elif self._simple_tag(subtree) == "VP":
+                        elif self._simple_tag(subtree) == "VP" and matches > 0:
                             vp_subtree = subtree
                             obj_location = "VP"
                             break
 
                 elif simple_role == "verb":
                     if vp_subtree:
-                        if self._simple_tag(vp_subtree[0]).startswith("VB"):
-                            result_dict[frame[1]] = vp_subtree[0]
-                            matches += 1
+                        for subtree in vp_subtree:
+                            if self._simple_tag(subtree).startswith("VB"):
+                                result_dict[frame[1]] = subtree
+                                vp_idx += 1
+                                matches += 1
+                                break
                             vp_idx += 1
-                        else:
-                            # TODO: Will first VP argument always be a verb?
-                            print "First VP argument not a verb"
                     else:
-                        break
+                        return None
 
                 elif simple_role == "prep":
                     if vp_subtree:  # makes sure prep is inside VP (e.g. PP Location VERB Agent should(?)/will fail)
@@ -193,8 +187,7 @@ class VerbFrameObject:
                         else:
                             return None
                 else:
-                    print "Frame role " + frame[0] + " does not exist\n"
-                    # TODO: (?) Add existential "LEX" frame
+                    return None
             else:
                 return None
 
@@ -219,9 +212,6 @@ class VerbFrameObject:
                         for tag in no_leftover_list:
                             if tag == orig_subtree.node:
                                 original_count += 1
-                                # print orig_subtree.node
-                    # print result_dict
-                    # print "Frame: " + str(result_count) + " Original: " + str(original_count)
                     if (result_count + skipped_NP) >= original_count:
                         return result_dict
                 else:
@@ -245,75 +235,11 @@ class VerbFrameObject:
     def _simple_tag(self, subtree):
         return subtree.node.split("-")[0]
         
-    def _match_subtree(self, subtree, frame_tag):
-        node = subtree.node
-        
-        # Tag/Role -> Treebank map
-        if ((frame_tag[0], frame_tag[1])) in tag_mapping.keys():
-            tree_tags = tag_mapping[(frame_tag[0], frame_tag[1])]
-        elif frame_tag[0] in tag_mapping.keys():
-            tree_tags = tag_mapping[frame_tag[0]]
-            
-    def __match_subtree_old(self, subtree, frame_tag):
-        # TODO: Possibly get rid of all of this
-        """Given a subtree, tries to match it to a frame element"""
-        # Regex for POS tags
-        # C: Get rid of regular expressions (maybe)
-        # E: Switch to using proper object-oriented stuff
-        # Don't convert things into strings and match them onto something
 
-        tag_match = re.compile(r'(?<=\()[A-Z][A-Z-]*')
-        tags = tag_match.findall(str(subtree)) #finds all tags in the subtree using regexp
-        #E: Converts frame tags to treebanks tags
-
-        # Tag/Role -> Treebank map
-        if ((frame_tag[0], frame_tag[1])) in tag_mapping.keys():
-            tree_tags = tag_mapping[(frame_tag[0], frame_tag[1])]
-        # PREP tag that requires exact match to preposition
-        elif (not frame_tag[1] == '') and \
-                (frame_tag[0],) in tag_mapping.keys() and \
-                (not frame_tag[0] == frame_tag[1]):
-            tree_tags = tag_mapping[(frame_tag[0],)]
-        # Regular VerbNet tag -> Treebank tag map
-        elif frame_tag[0] in tag_mapping.keys():
-            tree_tags = tag_mapping[frame_tag[0]]
-        # No mapping needed
-        else:
-            tree_tags = [frame_tag[0]]
-
-        if len(tags) > 0:
-            for tree_tag in tree_tags:
-                if tree_tag in tags[0]:
-                    # Matched first word
-                    if not frame_tag[3] == '':
-                        # Now need to match a syntax restriction
-
-                        # Child Tag match required
-                        if len(tags) > 1 and (not frame_tag[3] == '') and \
-                           frame_tag[3] in tags[1]:
-                            return True
-                        # Beginning word match required
-                        elif len(tags) > 1 and frame_tag[3] == 'begins':
-                            prefix_match = re.compile(frame_tag[1])
-                            if prefix_match.match(' '.join(subtree.leaves())):
-                                return True
-                    else:
-                        return True
-                # Exact word match required
-                elif tree_tag == 'exact' and \
-                        ' '.join(subtree.leaves()).lower() in frame_tag[1].split():
-                    return True
-
-        return False
 
 
 # Mapping from Verbnet tags to Treebank tags
 
-# TODO: VerbNet things into something much simpler
-simple_tag_mapping = {'subject': ['NP'],
-                      'object': ['NP'],
-                      'verb': ['VB'],
-                      'prep': ['IN', 'TO']}
 tag_mapping = {'NP': ['NP'],
                #('NP', 'Location'): ['PP-LOC', 'PP-DIR', 'PP-CLR', 'NN', 'ADVP-LOC', 'NP-A', 'WHADVP', 'ADVP-TMP', 'PP-PRD', 'ADVP-DIR'],
                #('NP', 'Destination'): ['PP-LOC', 'PP-DIR', 'NN', 'NP-A', 'ADVP', 'PP-CLR', 'WHADVP', 'ADVP-DIR'],
