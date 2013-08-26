@@ -6,7 +6,6 @@ import getpass
 import socket
 import multiprocessing
 import threading
-import logging
 import time
 import xmlrpclib
 from SimpleXMLRPCServer import SimpleXMLRPCServer

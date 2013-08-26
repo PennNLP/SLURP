@@ -13,10 +13,34 @@ from pragbot.GameEnvironment import GameEnvironment
 import semantics.parsing
 import sys
 import threading
+import xmlrpclib
+from SimpleXMLRPCServer import SimpleXMLRPCServer
+
 
 class PragbotProtocol(LineReceiver):
+
+    PRAGBOT_LISTEN_PORT = 20003
+
     def __init__(self):
+        self.xmlrpc_server = SimpleXMLRPCServer(("localhost", self.PRAGBOT_LISTEN_PORT),
+                                                logRequests=False, allow_none=True)
+        self.xmlrpc_server.register_function(self.receiveHandlerMessages)
+        self.xmlrpc_server_thread = threading.Thread(target=self.xmlrpc_server.serve_forever)
+        self.xmlrpc_server_thread.daemon = True
+        self.xmlrpc_server_thread.start()
+        print "LTLMoPClient listening for XML-RPC calls on \
+               http://localhost:{} ...".format(self.PRAGBOT_LISTEN_PORT)
+
         self.kb = KnowledgeBase(other_agents=['cmdr'])
+
+    def receiveHandlerMessages(self, event_type, message):
+        if event_type == "Move":
+            room = self.ge.rooms[message]
+            destination = room.center
+            self.ge.jr.plan_path(destination)
+        else:
+            print event_type + " : " + message
+
 
     def sendMessage(self, action, msg):
         self.sendLine('%s%s' % (action, str(msg)))
@@ -58,7 +82,7 @@ class PragbotFactory(ClientFactory):
         return PragbotProtocol()
 
 if __name__ == '__main__':
-    port = int(sys.argv[1]) if len(sys.argv) == 2 else 10006    
+    port = int(sys.argv[1]) if len(sys.argv) == 2 else 10006
     print 'Initializing pragbot client...'
-    reactor.connectTCP('localhost', port, PragbotFactory())    
+    reactor.connectTCP('localhost', port, PragbotFactory())
     reactor.run()
