@@ -47,7 +47,7 @@ NOT_WORDS = set(("not", "n't"))
 NEVER_WORD = "never"
 
 
-class VerbFrameObject:
+class VerbFrame(object):
 
     """Object which contains elements of a frame in a list. Each element has
     the form (POS tag, role, syntactic restriction, child node to match /
@@ -336,9 +336,7 @@ def fill_mappings(node, temp_word_sense_mapping, temp_sense_frame_mapping):
     for member in node.findall('MEMBERS/MEMBER'):
         temp_word_sense_mapping[member.attrib['name']].add(class_id)
     for frame in node.findall('FRAMES/FRAME/SYNTAX'):
-        temp_sense_frame_mapping[class_id].append(VerbFrameObject(class_id,
-                                                                  node,
-                                                                  list(frame)))
+        temp_sense_frame_mapping[class_id].append(VerbFrame(class_id, node, list(frame)))
 
 
 def generate_mapping(result_filename):
