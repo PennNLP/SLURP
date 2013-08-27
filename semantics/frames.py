@@ -1,6 +1,7 @@
 """Frames.py
 
 Ian Perera
+Modified by Eric Doty
 
 Converts parse tree representation into a tree that can be matched to Verbnet
 frames, and then returns the matching frames and their corresponding trees.
@@ -29,9 +30,13 @@ VERBNET_DIRECTORY = os.path.join(MODULE_PATH, 'Verbnet', 'verbnet-3.1')
 # Parse tree constants
 VP_TAG = "VP"
 S_TAG = "S"
+SUBJ_TAG = "NP-SBJ"
 VERB_TAG = "VB"
+ADVP_TAG = "ADVP"
 DO_WORD = "do"
+SUPPORT_VERBS = set((DO_WORD, "please"))
 NOT_WORDS = set(("not", "n't"))
+NEVER_WORD = "never"
 
 
 class VerbFrameObject:
@@ -80,102 +85,167 @@ class VerbFrameObject:
             else:
                 print str(element.tag)
 
-    def match_parse(self, parse_tree):
+    def match_parse(self, parse_tree, strict=True, allow_leftovers=False):
         """Takes a Treebank parse tree compiled into NLTK's tree structure.
         Outputs a result dictionary mapping predicates to arguments"""
+
         result_dict = {}
-        subtree_list = list(parse_tree.subtrees())
-        current_subtree = 0
         matches = 0
+        skipped_NP = 0
 
-        # For each frame element, find the next subtree that matches
-        for frame_tag in self.frame_list:
-            # Go through the subtrees until you run out of subtrees
-            while current_subtree < len(subtree_list):
-                subtree = subtree_list[current_subtree]
+        vp_idx = 0
+        pp_idx = 0
+        pp_subtree = None
+        vp_subtree = None
+        obj_location = None
+        first_NP = True
+        nonstrict_PP = False
 
-                # If there is no explicit NP for the Agent role, insert one
-                # NOTE: Assumes Agent role is the first in the frame, may not
-                # be true
-                if (current_subtree == 0 and frame_tag[1] == 'Agent' and not
-                        self.__match_subtree(subtree, frame_tag)):
-                    result_dict[frame_tag[1]] = Tree("(NP-SBJ-A (-NONE- *))")
-                    matches += 1
-                    break
+        for frame in self.frame_list:
+            if not vp_subtree or vp_idx < len(vp_subtree):  # vp_subtree is empty or isn't at its end
 
-                if self.__match_subtree(subtree, frame_tag):
-                    # print 'Match -> ' + str(frame_tag)
-                    # If the subtree matches, add role->phrase to the dictionary
-                    # result_dict[frame_tag[1]] = ' '.join(subtree.leaves())
-                    result_dict[frame_tag[1]] = subtree
-                    matches += 1
-                    break
+                simple_role = self._simple_frame(frame, first_NP)
 
-                current_subtree += 1
+                if simple_role == "subject":
+                    first_NP = False
+                    subtrees = list(parse_tree)
+                    for subtree in subtrees:
+                        if self._simple_tag(subtree) == "NP":
+                            result_dict[frame[1]] = subtree
+                            matches += 1
+                        elif self._simple_tag(subtree) == "VP" and matches > 0:
+                            vp_subtree = subtree
+                            obj_location = "VP"
+                            break
 
-        if current_subtree == len(subtree_list):
-            return None
-
-        # Only return something if every frame was matched
-        if matches == len(self.frame_list):
-            return result_dict
-        else:
-            return None
-
-    def __match_subtree(self, subtree, frame_tag):
-        """Given a subtree, tries to match it to a frame element"""
-        # Regex for POS tags
-        tag_match = re.compile(r'(?<=\()[A-Z][A-Z-]*')
-
-        tags = tag_match.findall(str(subtree))
-
-        # Tag/Role -> Treebank map
-        if ((frame_tag[0], frame_tag[1])) in tag_mapping.keys():
-            tree_tags = tag_mapping[(frame_tag[0], frame_tag[1])]
-        # PREP tag that requires exact match to preposition
-        elif (not frame_tag[1] == '') and \
-                (frame_tag[0],) in tag_mapping.keys() and \
-                (not frame_tag[0] == frame_tag[1]):
-            tree_tags = tag_mapping[(frame_tag[0],)]
-        # Regular VerbNet tag -> Treebank tag map
-        elif frame_tag[0] in tag_mapping.keys():
-            tree_tags = tag_mapping[frame_tag[0]]
-        # No mapping needed
-        else:
-            tree_tags = [frame_tag[0]]
-
-        if len(tags) > 0:
-            for tree_tag in tree_tags:
-                if tree_tag in tags[0]:
-                    # Matched first word
-                    if not frame_tag[3] == '':
-                        # Now need to match a syntax restriction
-
-                        # Child Tag match required
-                        if len(tags) > 1 and (not frame_tag[3] == '') and \
-                           frame_tag[3] in tags[1]:
-                            return True
-                        # Beginning word match required
-                        elif len(tags) > 1 and frame_tag[3] == 'begins':
-                            prefix_match = re.compile(frame_tag[1])
-                            if prefix_match.match(' '.join(subtree.leaves())):
-                                return True
+                elif simple_role == "verb":
+                    if vp_subtree:
+                        for subtree in vp_subtree:
+                            if self._simple_tag(subtree).startswith("VB"):
+                                result_dict[frame[1]] = subtree
+                                vp_idx += 1
+                                matches += 1
+                                break
+                            vp_idx += 1
                     else:
-                        return True
-                # Exact word match required
-                elif tree_tag == 'exact' and \
-                        ' '.join(subtree.leaves()).lower() in frame_tag[1].split():
-                    return True
+                        return None
 
-        return False
+                elif simple_role == "prep":
+                    if vp_subtree:  # makes sure prep is inside VP (e.g. PP Location VERB Agent should(?)/will fail)
+                        for subtree in vp_subtree[vp_idx:]:  # go through arguments of VP looking for PP
+                            if self._simple_tag(subtree) == "PP":
+                                if self._simple_tag(subtree[0]) == "PP":  # if first tag in PP is another PP
+                                    if pp_subtree and pp_idx == len(pp_subtree):
+                                        pp_idx = 0
+                                    pp_subtree = subtree[pp_idx]
+                                    pp_idx += 1
+                                else:
+                                    pp_subtree = subtree
+
+                                if (frame[1] == "in" and pp_subtree[0].node == "IN" \
+                                    or frame[1] == "to towards" and pp_subtree[0].node == "TO" \
+                                    or frame[1] == "PREP"):
+                                        result_dict[frame[1]] = pp_subtree[0]
+                                        matches += 1
+                                        obj_location = "PP"
+                                        break
+                                else:
+                                    return None
+
+                    elif not strict and pp_subtree:
+                        if (frame[1] == "in" and pp_subtree[0].node == "IN" \
+                            or frame[1] == "to towards" and pp_subtree[0].node == "TO" \
+                            or frame[1] == "PREP"):
+                                result_dict[frame[1]] = pp_subtree[0]
+                                matches += 1
+                                obj_location = "PP"
+                        else:
+                            return None
+                    else:
+                        return None
+
+                elif simple_role == "object":
+                    if obj_location == "PP":
+                        if self._simple_tag(pp_subtree[1]) == "NP":
+                            matches += 1
+                            if not strict and not nonstrict_PP and vp_idx + 1 == len(vp_subtree) and self._simple_tag(pp_subtree[1][1]) == "PP" and matches < len(self.frame_list):
+                                result_dict[frame[1]] = pp_subtree[1][0]
+                                pp_subtree = pp_subtree[1][1]
+                                vp_subtree = None
+                                nonstrict_PP = True
+                                skipped_NP += 1
+                            else: 
+                                result_dict[frame[1]] = pp_subtree[1]
+                                if pp_idx == 0:
+                                    vp_idx += 1
+                                obj_location = "VP"
+                    elif obj_location == "VP":
+                        if self._simple_tag(vp_subtree[vp_idx]) == "NP":
+                            result_dict[frame[1]] = vp_subtree[vp_idx]
+                            matches += 1
+                            vp_idx += 1
+                        else:
+                            return None
+                else:
+                    return None
+            else:
+                return None
+
+        # Check results
+        if result_dict:
+            # Check that every frame is filled
+            if len(result_dict) == len(self.frame_list) and matches == len(self.frame_list):
+                if not allow_leftovers:
+                    # Count relevant tags in result_dict
+                    no_leftover_list = ['SBAR-A', 'SINV', 'NP', 'NP-SBJ-A', 'NP-A', 'IN', 'TO']  # nodes that must be in frame output
+                    result_count = 0
+                    original_count = 0
+                    for frame_tree in result_dict.values():
+                        frame_subtrees = list(frame_tree.subtrees())
+                        for frame_subtree in frame_subtrees:
+                            for tag in no_leftover_list:
+                                if tag == frame_subtree.node:
+                                    result_count += 1
+                    # Count tags in original subtree
+                    original_subtree_list = list(parse_tree.subtrees())
+                    for orig_subtree in original_subtree_list:
+                        for tag in no_leftover_list:
+                            if tag == orig_subtree.node:
+                                original_count += 1
+                    if (result_count + skipped_NP) >= original_count:
+                        return result_dict
+                else:
+                    return result_dict
+        else:
+            return None
+    
+    def _simple_frame(self, frame_tag, first_NP=False):
+        if frame_tag[0]=='NP':
+            if first_NP:
+                return "subject"   
+            else:
+                return "object" 
+        elif frame_tag[0]=='PREP':
+            return "prep"
+        elif frame_tag[0]=='VERB':
+            return "verb"
+        else:
+            return "other"
+    
+    def _simple_tag(self, subtree):
+        return subtree.node.split("-")[0]
+        
+
 
 
 # Mapping from Verbnet tags to Treebank tags
+
 tag_mapping = {'NP': ['NP'],
-               ('NP', 'Location'): ['PP-LOC', 'PP-DIR', 'PP-CLR', 'NN', 'ADVP-LOC',
-                                    'NP-A', 'WHADVP', 'ADVP-TMP', 'PP-PRD', 'ADVP-DIR'],
-               ('NP', 'Destination'): ['PP-LOC', 'PP-DIR', 'NN', 'NP-A',
-                                       'ADVP', 'PP-CLR', 'WHADVP', 'ADVP-DIR'],
+               #('NP', 'Location'): ['PP-LOC', 'PP-DIR', 'PP-CLR', 'NN', 'ADVP-LOC', 'NP-A', 'WHADVP', 'ADVP-TMP', 'PP-PRD', 'ADVP-DIR'],
+               #('NP', 'Destination'): ['PP-LOC', 'PP-DIR', 'NN', 'NP-A', 'ADVP', 'PP-CLR', 'WHADVP', 'ADVP-DIR'],
+               ('NP', 'Location'): ['NN', 'ADVP-LOC', 'NP-A', 'WHADVP', 'ADVP-TMP', 'ADVP-DIR'],
+               ('NP', 'Destination'): ['NN', 'NP-A', 'ADVP', 'WHADVP', 'ADVP-DIR'],
+               ('NP', 'Source'): ['NN', 'NP-A', 'ADVP', 'WHADVP', 'ADVP-DIR'], # Eric: added NP-A (Not sure why?)
                ('NP', 'Asset'): ['NP-A'],
                ('NP', 'Agent'): ['NP-SBJ-A', 'NP', 'NP-A'],
                ('NP', 'Beneficiary'): ['NP-A'],
@@ -187,7 +257,7 @@ tag_mapping = {'NP': ['NP'],
                                  'WHNP', 'WP'],
                ('PREP',): ['exact'],
                'PREP': ['IN', 'TO', 'ADVP-DIR'],
-               'VERB': ['VB']
+               'VERB': ['VB'] #, 'VBZ', 'VBP', 'VBD']
                }
 
 # Mapping from syntax restrictions to Treebank tags and matching conditions
@@ -341,7 +411,7 @@ def _immediate_children(tree):
     return [_first_leaf(subtree) for subtree in tree if len(subtree.leaves()) == 1]
 
 
-def find_verbs(parse_tree, negated=False):
+def find_verbs(parse_tree, negated=False, subject=None):
     """Returns the list of tuples: (verb, negation)"""
     results = []
 
@@ -352,25 +422,58 @@ def find_verbs(parse_tree, negated=False):
 
     # Find VP_TAG children and examine them
     vps = [(child, parse_tree) for child in parse_tree if child.node.startswith(VP_TAG)]
-    for vp, parent in vps:
-        # TODO: Improve negation and re-enable never.
-        # Check for do-insertion
-        immed_children = _immediate_children(vp)
-        do_idx = immed_children.index(DO_WORD) if DO_WORD in immed_children else None
-        if do_idx is not None:
-            # Check for 'do not'
-            if do_idx + 1 < len(vp) and _first_leaf(vp[do_idx + 1]) in NOT_WORDS:
-                child_negated = True
-            # Recurse on this vp
-            results.extend(find_verbs(vp, child_negated))
-            break
+    # If there were no VPs, check for an embedded S
+    if not vps:
+        s_children = [child for child in parse_tree if child.node.startswith(S_TAG)]
+        # It's pretty weird to have multiple S children, but we might as well handle it
+        for s_child in s_children:
+            results.extend(find_verbs(s_child))
+    else:
+        for vp, parent in vps:
+            # Check for support verbs (do, please)
+            immed_children = _immediate_children(vp)
+            support_verb = None
+            for idx, child in enumerate(immed_children):
+                if child in SUPPORT_VERBS:
+                    support_verb = (idx, child.lower())
+                    break
 
-        # Check for verbs
-        for child in vp:
-            if child.node.startswith(VERB_TAG):
-                results.append((child[0].lower(), negated, parent))
+            if support_verb:
+                idx, child = support_verb
+                # Check for do not/don't
+                child_negated = (child == DO_WORD and idx + 1 < len(vp) and
+                                 _first_leaf(vp[idx + 1]).lower() in NOT_WORDS)
+
+                # Find the subject if not specified already
+                if not subject:
+                    subject = _find_subject(parent)
+                    if not subject:
+                        continue
+
+                # Recurse on this vp
+                results.extend(find_verbs(vp, negated=child_negated, subject=subject))
+                break
+            else:
+                # Check parent for negation
+                for child in parent:
+                    # Never looks like: (ADVP-TMP (RB Never))
+                    if child.node.startswith(ADVP_TAG) and _first_leaf(child) == NEVER_WORD:
+                        negated = True
+                        break
+
+                # Check for verbs
+                for child in vp:
+                    if child.node.startswith(VERB_TAG):
+                        result_tree = (parent if not subject else Tree('S', [subject, vp]))
+                        results.append((child[0].lower(), negated, result_tree))
 
     return results
+
+
+def _find_subject(parse_tree):
+    """Return our best guess for what the subject is at the top level of a tree."""
+    subjects = [child for child in parse_tree if child.node.startswith(SUBJ_TAG)]
+    return subjects[0] if subjects else None
 
 
 def wh_movement(parse_tree):

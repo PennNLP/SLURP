@@ -29,6 +29,8 @@ from semantics.lexical_constants import ACTION_ALIASES
 
 
 EXTRACT_DEBUG = False
+STRICT_MODE = True
+ALLOW_LEFTOVERS = False
 
 
 def extract_frames_from_parse(parse_tree_string, verbose=False):
@@ -98,7 +100,7 @@ def extract_frames_from_parse(parse_tree_string, verbose=False):
                         print '\n'.join(str(vfo.frame_list) for vfo in vfo_list)
 
                     for vfo in vfo_list:
-                        match = vfo.match_parse(subtree)
+                        match = vfo.match_parse(subtree, STRICT_MODE, ALLOW_LEFTOVERS)
 
                         if match:
                             if EXTRACT_DEBUG:
