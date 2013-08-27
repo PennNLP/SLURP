@@ -6,6 +6,7 @@ import time
 
 ROW_DELIMITER = ';'
 DEFAULT_MAP = 'pragbot/Maps/ScenarioEnv.txt'
+STARTING_AREA = "entrance"
 
 class Node:
     """"Node for A* pathing"""
@@ -144,6 +145,11 @@ class GameEnvironment:
     def __init__(self, env):
         self.grid = []
         self.rooms = {}
+        self.objects=[]
+        self.object_positions = {}
+        bombs = 0
+        badguys = 0
+        hostages = 0
         for i, line in enumerate(env.split(ROW_DELIMITER)):
             if line.startswith('r') or line.startswith('h'):
                 room_data = line.split(":")
@@ -161,6 +167,22 @@ class GameEnvironment:
                         self.cmdr = Agent(new_cell)
                     elif c == 'J':
                         self.jr = Agent(new_cell)
+                    elif c == 'E':
+                        badguys= badguys+1
+                        new_badguy = "badguy"+str(badguys)
+                        self.objects.append(new_badguy)
+                        self.object_positions[new_badguy] = (i,j)
+                    elif c == '*':
+                        bombs = bombs + 1
+                        new_bomb = "bomb" + str(bombs)
+                        self.objects.append(new_bomb)
+                        self.object_positions[new_bomb] = (i, j)
+                    elif c=='H':
+                        hostages = hostages + 1
+                        new_hostage = "hostage" + str(hostages)
+                        self.objects.append(new_hostage)
+                        self.object_positions[new_hostage] = (i, j)
+                        
         for i, row in enumerate(self.grid):
             for j, cell in enumerate(row):
                 if i > 0:

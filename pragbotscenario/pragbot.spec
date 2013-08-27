@@ -27,9 +27,9 @@ RegionFile: # Relative path of region description file
 pragbot.converted.regions
 
 Sensors: # List of sensor propositions and their state (enabled = 1, disabled = 0)
-fire, 0
-person, 0
-hazardous_item, 0
+bomb, 0
+hostage, 0
+badguy, 0
 
 
 ======== SPECIFICATION ========

@@ -41,6 +41,18 @@ class PragbotProtocol(LineReceiver):
             self.ge.jr.plan_path(destination)
         elif event_type == "Stop":
             self.ge.jr.plan_path(self.ge.jr.cell)
+        elif event_type in ["bomb", "hostage", "badguy"]:
+            object_seen = False
+            for thing in self.ge.objects:
+                if thing.startswith(event_type):
+                    object_seen = (object_seen or
+                        self.ge.object_positions[thing] in self.ge.rooms[message])
+            return object_seen
+        elif event_type == "Find Bomb":
+            if message in self.ge.objects:
+                return self.ge.object_positions[message]
+            else:
+                return None
         else:
             print event_type + " : " + message
 
