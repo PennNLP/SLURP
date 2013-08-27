@@ -1,6 +1,6 @@
 { "region_names": ["office", "classroom","bathroom","kitchen","conservatory","dining_room",
                   "computer_room","billiard_room","annex","ballroom","library","lounge",
-                  "cellar","study","hallway1","hallway2","hallway3","hallway4"],
+                  "cellar","study","hallway1","hallway2","hallway3","hallway4","entrance"],
   "adjacencies": [["office","hallway4"],["classroom","hallway4"],
                  ["bathroom","hallway2"],["kitchen","hallway1"],
                  ["conservatory","hallway1"],["dining_room","hallway3"],
@@ -8,5 +8,5 @@
                  ["annex","hallway4"],["ballroom","hallway3"],["library","hallway4"],
                  ["lounge","hallway3"],["cellar","hallway2"],["study","hallway2"],
                  ["hallway1","hallway3"],["hallway1","hallway4"],["hallway2","hallway3"],
-                 ["hallway2","hallway4"]]
+                 ["hallway2","hallway4"],["entrance","hallway2"]]
 }

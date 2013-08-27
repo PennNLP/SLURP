@@ -35,8 +35,8 @@ Regions: # Stored as JSON string
         "name": "classroom", 
         "color": [
             255, 
-            128, 
-            0
+            0, 
+            255
         ], 
         "holeList": [], 
         "height": 0, 
@@ -54,7 +54,7 @@ Regions: # Stored as JSON string
     {
         "name": "bathroom", 
         "color": [
-            255, 
+            0, 
             255, 
             0
         ], 
@@ -75,8 +75,8 @@ Regions: # Stored as JSON string
         "name": "kitchen", 
         "color": [
             255, 
-            128, 
-            0
+            0, 
+            255
         ], 
         "holeList": [], 
         "height": 0, 
@@ -94,9 +94,9 @@ Regions: # Stored as JSON string
     {
         "name": "conservatory", 
         "color": [
-            0, 
-            0, 
-            255
+            255, 
+            255, 
+            0
         ], 
         "holeList": [], 
         "height": 0, 
@@ -114,9 +114,9 @@ Regions: # Stored as JSON string
     {
         "name": "dining_room", 
         "color": [
-            0, 
-            0, 
-            255
+            255, 
+            128, 
+            0
         ], 
         "holeList": [], 
         "height": 0, 
@@ -135,8 +135,8 @@ Regions: # Stored as JSON string
         "name": "computer_room", 
         "color": [
             255, 
-            255, 
-            0
+            0, 
+            255
         ], 
         "holeList": [], 
         "height": 0, 
@@ -154,8 +154,8 @@ Regions: # Stored as JSON string
     {
         "name": "billiard_room", 
         "color": [
-            255, 
             0, 
+            255, 
             0
         ], 
         "holeList": [], 
@@ -175,8 +175,8 @@ Regions: # Stored as JSON string
         "name": "annex", 
         "color": [
             255, 
-            128, 
-            0
+            0, 
+            255
         ], 
         "holeList": [], 
         "height": 0, 
@@ -195,7 +195,7 @@ Regions: # Stored as JSON string
         "name": "ballroom", 
         "color": [
             255, 
-            128, 
+            0, 
             0
         ], 
         "holeList": [], 
@@ -215,8 +215,8 @@ Regions: # Stored as JSON string
         "name": "library", 
         "color": [
             255, 
-            0, 
-            255
+            128, 
+            0
         ], 
         "holeList": [], 
         "height": 0, 
@@ -234,7 +234,7 @@ Regions: # Stored as JSON string
     {
         "name": "lounge", 
         "color": [
-            255, 
+            0, 
             255, 
             0
         ], 
@@ -274,9 +274,9 @@ Regions: # Stored as JSON string
     {
         "name": "study", 
         "color": [
-            255, 
-            255, 
-            0
+            0, 
+            0, 
+            255
         ], 
         "holeList": [], 
         "height": 0, 
@@ -314,26 +314,6 @@ Regions: # Stored as JSON string
     {
         "name": "hallway2", 
         "color": [
-            255, 
-            0, 
-            0
-        ], 
-        "holeList": [], 
-        "height": 0, 
-        "points": [], 
-        "position": [
-            0.0, 
-            0.0
-        ], 
-        "type": "poly", 
-        "size": [
-            0.0, 
-            0.0
-        ]
-    }, 
-    {
-        "name": "hallway3", 
-        "color": [
             0, 
             0, 
             255
@@ -352,7 +332,47 @@ Regions: # Stored as JSON string
         ]
     }, 
     {
+        "name": "hallway3", 
+        "color": [
+            255, 
+            0, 
+            0
+        ], 
+        "holeList": [], 
+        "height": 0, 
+        "points": [], 
+        "position": [
+            0.0, 
+            0.0
+        ], 
+        "type": "poly", 
+        "size": [
+            0.0, 
+            0.0
+        ]
+    }, 
+    {
         "name": "hallway4", 
+        "color": [
+            255, 
+            255, 
+            0
+        ], 
+        "holeList": [], 
+        "height": 0, 
+        "points": [], 
+        "position": [
+            0.0, 
+            0.0
+        ], 
+        "type": "poly", 
+        "size": [
+            0.0, 
+            0.0
+        ]
+    }, 
+    {
+        "name": "entrance", 
         "color": [
             255, 
             128, 
@@ -392,4 +412,5 @@ hallway1	hallway3	1.0	2.0	3.0	4.0
 hallway1	hallway4	1.0	2.0	3.0	4.0
 hallway2	hallway3	1.0	2.0	3.0	4.0
 hallway2	hallway4	1.0	2.0	3.0	4.0
+hallway2	entrance	1.0	2.0	3.0	4.0
 
