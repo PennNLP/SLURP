@@ -33,8 +33,11 @@ class PragbotProtocol(LineReceiver):
 
         self.kb = KnowledgeBase(other_agents=['cmdr'])
         self.ltlmop = ltlmopclient.LTLMoPClient()
+        self.ge = None
+        self.is_ready = threading.Event()
 
     def receiveHandlerMessages(self, event_type, message=None):
+        self.is_ready.wait()
         if event_type == "Move":
             room = self.ge.rooms[message]
             destination = room.center
@@ -89,6 +92,7 @@ class PragbotProtocol(LineReceiver):
                 s = remove_prefix(s, 'CREATE_FPSENVIRONMENT')
                 # This will be provided before environment related messages
                 self.ge = GameEnvironment(s)
+                self.is_ready.set()
                 lc = LoopingCall(self.ge.jr.follow_waypoints, self.sendMessage)
                 lc.start(0.05)
 def remove_prefix(s, prefix):
