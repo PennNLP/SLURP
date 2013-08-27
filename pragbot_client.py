@@ -53,6 +53,11 @@ class PragbotProtocol(LineReceiver):
                 return self.ge.object_positions[message]
             else:
                 return None
+        elif event_type == "Location":
+            for room in self.ge.rooms:
+                if self.ge.jr.cell in room:
+                    return room
+            return "Nowhere"
         else:
             print event_type + " : " + message
 
