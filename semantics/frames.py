@@ -175,9 +175,9 @@ class VerbFrame(object):
 
                 elif simple_role == "object":
                     if obj_location == "PP":
-                        if self._simple_tag(pp_subtree[1]) == "NP":
+                        if len(pp_subtree) > 1 and self._simple_tag(pp_subtree[1]) == "NP":
                             matches += 1
-                            if not strict and not nonstrict_PP and vp_idx + 1 == len(vp_subtree) and self._simple_tag(pp_subtree[1][1]) == "PP" and matches < len(self.frame_list):
+                            if not strict and not nonstrict_PP and vp_idx + 1 == len(vp_subtree) and len(pp_subtree[1]) > 1 and self._simple_tag(pp_subtree[1][1]) == "PP" and matches < len(self.frame_list):
                                 result_dict[frame[1]] = pp_subtree[1][0]
                                 pp_subtree = pp_subtree[1][1]
                                 vp_subtree = None
