@@ -1,12 +1,20 @@
-"""Frames.py
+"""Converts parse tree representation into a tree that can be matched to Verbnet
+frames, and then returns the matching frames and their corresponding trees."""
 
-Ian Perera
-Modified by Eric Doty
+# Copyright (C) 2011-2013 Eric Doty, Kenton Lee, Constantine Lignos, and Ian Perera
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-Converts parse tree representation into a tree that can be matched to Verbnet
-frames, and then returns the matching frames and their corresponding trees.
-"""
-# -*- coding: iso-8859-1 -*-
 import re
 try:
     import cPickle as pickle
@@ -14,13 +22,13 @@ except ImportError:
     import pickle
 import os
 import time
-from semantics.tree import Tree
-
-# We cannot use cElementTree because its output cannot be pickled.
-from xml.etree.ElementTree import parse
 from copy import deepcopy
 from collections import defaultdict
-from lexical_constants import *
+# We cannot use cElementTree because its output cannot be pickled.
+from xml.etree.ElementTree import parse
+
+from semantics.lexical_constants import UNDERSTOOD_SENSES
+from semantics.tree import Tree
 
 PERF_DEBUG = False
 WORD_SENSE_FILENAME = 'word_sense_mapping.pkl'
@@ -40,6 +48,7 @@ NEVER_WORD = "never"
 
 
 class VerbFrameObject:
+
     """Object which contains elements of a frame in a list. Each element has
     the form (POS tag, role, syntactic restriction, child node to match /
     matching condition)"""
@@ -142,23 +151,23 @@ class VerbFrameObject:
                                 else:
                                     pp_subtree = subtree
 
-                                if (frame[1] == "in" and pp_subtree[0].node == "IN" \
-                                    or frame[1] == "to towards" and pp_subtree[0].node == "TO" \
-                                    or frame[1] == "PREP"):
-                                        result_dict[frame[1]] = pp_subtree[0]
-                                        matches += 1
-                                        obj_location = "PP"
-                                        break
+                                if (frame[1] == "in" and pp_subtree[0].node == "IN" or
+                                        frame[1] == "to towards" and pp_subtree[0].node == "TO" or
+                                        frame[1] == "PREP"):
+                                    result_dict[frame[1]] = pp_subtree[0]
+                                    matches += 1
+                                    obj_location = "PP"
+                                    break
                                 else:
                                     return None
 
                     elif not strict and pp_subtree:
-                        if (frame[1] == "in" and pp_subtree[0].node == "IN" \
-                            or frame[1] == "to towards" and pp_subtree[0].node == "TO" \
-                            or frame[1] == "PREP"):
-                                result_dict[frame[1]] = pp_subtree[0]
-                                matches += 1
-                                obj_location = "PP"
+                        if (frame[1] == "in" and pp_subtree[0].node == "IN" or
+                                frame[1] == "to towards" and pp_subtree[0].node == "TO" or
+                                frame[1] == "PREP"):
+                            result_dict[frame[1]] = pp_subtree[0]
+                            matches += 1
+                            obj_location = "PP"
                         else:
                             return None
                     else:
@@ -174,7 +183,7 @@ class VerbFrameObject:
                                 vp_subtree = None
                                 nonstrict_PP = True
                                 skipped_NP += 1
-                            else: 
+                            else:
                                 result_dict[frame[1]] = pp_subtree[1]
                                 if pp_idx == 0:
                                     vp_idx += 1
@@ -197,7 +206,8 @@ class VerbFrameObject:
             if len(result_dict) == len(self.frame_list) and matches == len(self.frame_list):
                 if not allow_leftovers:
                     # Count relevant tags in result_dict
-                    no_leftover_list = ['SBAR-A', 'SINV', 'NP', 'NP-SBJ-A', 'NP-A', 'IN', 'TO']  # nodes that must be in frame output
+                    no_leftover_list = [
+                        'SBAR-A', 'SINV', 'NP', 'NP-SBJ-A', 'NP-A', 'IN', 'TO']  # nodes that must be in frame output
                     result_count = 0
                     original_count = 0
                     for frame_tree in result_dict.values():
@@ -218,34 +228,31 @@ class VerbFrameObject:
                     return result_dict
         else:
             return None
-    
+
     def _simple_frame(self, frame_tag, first_NP=False):
-        if frame_tag[0]=='NP':
+        if frame_tag[0] == 'NP':
             if first_NP:
-                return "subject"   
+                return "subject"
             else:
-                return "object" 
-        elif frame_tag[0]=='PREP':
+                return "object"
+        elif frame_tag[0] == 'PREP':
             return "prep"
-        elif frame_tag[0]=='VERB':
+        elif frame_tag[0] == 'VERB':
             return "verb"
         else:
             return "other"
-    
+
     def _simple_tag(self, subtree):
         return subtree.node.split("-")[0]
-        
-
 
 
 # Mapping from Verbnet tags to Treebank tags
-
 tag_mapping = {'NP': ['NP'],
                #('NP', 'Location'): ['PP-LOC', 'PP-DIR', 'PP-CLR', 'NN', 'ADVP-LOC', 'NP-A', 'WHADVP', 'ADVP-TMP', 'PP-PRD', 'ADVP-DIR'],
                #('NP', 'Destination'): ['PP-LOC', 'PP-DIR', 'NN', 'NP-A', 'ADVP', 'PP-CLR', 'WHADVP', 'ADVP-DIR'],
                ('NP', 'Location'): ['NN', 'ADVP-LOC', 'NP-A', 'WHADVP', 'ADVP-TMP', 'ADVP-DIR'],
                ('NP', 'Destination'): ['NN', 'NP-A', 'ADVP', 'WHADVP', 'ADVP-DIR'],
-               ('NP', 'Source'): ['NN', 'NP-A', 'ADVP', 'WHADVP', 'ADVP-DIR'], # Eric: added NP-A (Not sure why?)
+               ('NP', 'Source'): ['NN', 'NP-A', 'ADVP', 'WHADVP', 'ADVP-DIR'],  # Eric: added NP-A (Not sure why?)
                ('NP', 'Asset'): ['NP-A'],
                ('NP', 'Agent'): ['NP-SBJ-A', 'NP', 'NP-A'],
                ('NP', 'Beneficiary'): ['NP-A'],
@@ -257,7 +264,7 @@ tag_mapping = {'NP': ['NP'],
                                  'WHNP', 'WP'],
                ('PREP',): ['exact'],
                'PREP': ['IN', 'TO', 'ADVP-DIR'],
-               'VERB': ['VB'] #, 'VBZ', 'VBP', 'VBD']
+               'VERB': ['VB']  # , 'VBZ', 'VBP', 'VBD']
                }
 
 # Mapping from syntax restrictions to Treebank tags and matching conditions
@@ -543,6 +550,7 @@ def invert_clause(parse_tree):
     inverted = False
     vp_position = None
     np_position = None
+    position = None
 
     # Find the inverted clause tags and NP-V tags
     for position in parse_tree.treepositions():
