@@ -20,6 +20,7 @@ from pragbot import ltlmopclient
 class PragbotProtocol(LineReceiver):
 
     PRAGBOT_LISTEN_PORT = 20003
+    KNOWN_OBJECTS = set(("bomb", "hostage", "badguy"))
 
     def __init__(self):
         # Set up basics before starting the server
@@ -49,7 +50,7 @@ class PragbotProtocol(LineReceiver):
             self.ge.jr.plan_path(destination)
         elif event_type == "Stop":
             self.ge.jr.plan_path(self.ge.jr.cell)
-        elif event_type in ["bomb", "hostage", "badguy"]:
+        elif event_type in self.KNOWN_OBJECTS:
             object_seen = False
             for thing in self.ge.objects:
                 if thing.startswith(event_type):
@@ -68,7 +69,6 @@ class PragbotProtocol(LineReceiver):
             return "Nowhere"
         else:
             print event_type + " : " + message
-
 
     def sendMessage(self, action, msg):
         self.sendLine('%s%s' % (action, str(msg)))
