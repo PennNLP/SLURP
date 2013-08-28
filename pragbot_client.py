@@ -75,7 +75,7 @@ class PragbotClient(object):
         if event_type == "Move":
             room = self.ge.rooms[message]
             destination = room.center
-            self.ge.jr.plan_path(destination)
+            self.ge.jr.plan_path(self.ge.grid[destination[0]][destination[1]])
         elif event_type == "Stop":
             self.ge.jr.plan_path(self.ge.jr.cell)
         elif event_type in self.KNOWN_OBJECTS:
