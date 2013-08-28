@@ -1,27 +1,38 @@
 #!/usr/bin/env python
-"""Demonstration of the Penn NLP pipeline and semantics processing."""
+"""An individual SLURP client for the Pragbot game."""
 
-import sys
+# Copyright (C) 2013 Israel Geselowitz and Constantine Lignos
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import signal
 import threading
+import time
+import socket
+from socket import error, timeout
 from SimpleXMLRPCServer import SimpleXMLRPCServer
 
-import twisted
-from twisted.internet.protocol import ClientFactory
-from twisted.protocols.basic import LineReceiver
-from twisted.internet import reactor
-from twisted.internet.task import LoopingCall
-
-from pipelinehost import PipelineClient
 from semantics.new_knowledge import KnowledgeBase
-from semantics.parsing import process_parse_tree
-from semantics.response import make_response
 from pragbot.GameEnvironment import GameEnvironment
 from pragbot import ltlmopclient
 
+PRAGBOT_SERVER_PORT = 10006
 
-class PragbotProtocol(LineReceiver):
 
-    PRAGBOT_LISTEN_PORT = 20003
+class PragbotClient(object):
+    """Provide a SLURP client for the Pragbot server."""
+
+    HANDLER_LISTEN_PORT = 20003
     KNOWN_OBJECTS = set(("bomb", "hostage", "badguy"))
 
     def __init__(self):
@@ -31,19 +42,24 @@ class PragbotProtocol(LineReceiver):
         self.is_ready = threading.Event()
         self.kb = KnowledgeBase(other_agents=['cmdr'])
 
-        self.xmlrpc_server = SimpleXMLRPCServer(("localhost", self.PRAGBOT_LISTEN_PORT),
+        # Connect to the pragbot server first
+        self._conn = socket.create_connection(('localhost', PRAGBOT_SERVER_PORT))
+
+        # Start the RPC server for handler requests
+        self.xmlrpc_server = SimpleXMLRPCServer(("localhost", self.HANDLER_LISTEN_PORT),
                                                 logRequests=False, allow_none=True)
         self.xmlrpc_server.register_function(self.receiveHandlerMessages)
         self.xmlrpc_server_thread = threading.Thread(target=self.xmlrpc_server.serve_forever)
         self.xmlrpc_server_thread.daemon = True
 
-        # Start the server and then the client which will connect to it
+        # Start the server and then kick off the LTLMoP client which will indirectly connect to it
         self.xmlrpc_server_thread.start()
         print "LTLMoPClient listening for XML-RPC calls on \
-               http://localhost:{} ...".format(self.PRAGBOT_LISTEN_PORT)
+               http://localhost:{} ...".format(self.HANDLER_LISTEN_PORT)
         self.ltlmop = ltlmopclient.LTLMoPClient()
 
     def receiveHandlerMessages(self, event_type, message=None):
+        """Process messages from the handlers."""
         print "Received handler message:", event_type, message
         self.is_ready.wait()
         if event_type == "Move":
@@ -73,56 +89,116 @@ class PragbotProtocol(LineReceiver):
             print event_type + " : " + message
 
     def sendMessage(self, action, msg):
-        self.sendLine('%s%s' % (action, str(msg)))
-        print 'Sending: %s%s' % (action, str(msg))
+        """Send a message to the server."""
+        data = action + str(msg)
+        self._conn.sendall(data + self.delimiter)
+        print 'Sending: ', data
 
-    def connectionMade(self):
-        print 'Connected to server'
-
-    def connectionLost(self, reason):
-        print 'Server disconnected'
-        try:
-            reactor.stop()
-        except twisted.internet.error.ReactorNotRunning:
-            pass
-
-    def lineReceived(self, line):
+    def process_line(self, line):
+        """Process a line from the server."""
         print 'Received input: {!r}'.format(line)
         if line.startswith('CHAT_MESSAGE_PREFIX'):
-            line = remove_prefix(line, 'CHAT_MESSAGE_PREFIX<Commander> ')
+            line = _remove_prefix(line, 'CHAT_MESSAGE_PREFIX<Commander> ')
             # TODO: multi-process lock
             self.ltlmop.get_pragbot_input(line)
         elif line.startswith('MOVE_PLAYER_CELL'):
-            line = remove_prefix(line, 'MOVE_PLAYER_CELL')
+            line = _remove_prefix(line, 'MOVE_PLAYER_CELL')
             new_x, old_x, new_y, old_y = line.split(',')
             self.ge.update_cmdr((int(new_x), int(new_y)))
             print str(self.ge)
         elif line.startswith('CREATE_FPSENVIRONMENT'):
-            line = remove_prefix(line, 'CREATE_FPSENVIRONMENT')
+            line = _remove_prefix(line, 'CREATE_FPSENVIRONMENT')
             # This will be provided before environment related messages
             self.ge = GameEnvironment(line)
             self.is_ready.set()
-            lc = LoopingCall(self.ge.jr.follow_waypoints, self.sendMessage)
-            lc.start(0.05)
+            call = RepeatingCall(self.ge.jr.follow_waypoints, (self.sendMessage,), 0.05)
+            call.daemon = True
+            call.start()
+
+    def run(self):
+        """Process requests from the server."""
+        while True:
+            try:
+                buff = self._conn.recv(4096)
+            except timeout:
+                continue
+            except error:
+                break
+            if not buff:
+                break
+            while buff:
+                msg, buff = _parse_msg(buff, self.delimiter)
+                if msg:
+                    self.process_line(msg)
+                else:
+                    print "Received an incomplete message: {!r}".format(buff)
+                    break
+
+        print "Server disconnected"
+
+    def shutdown(self):
+        """Close any resources before exiting."""
+        print "Shutting down PragbotClient..."
+        # Close down the socket
+        try:
+            self._conn.shutdown(socket.SHUT_RDWR)
+        except error:
+            pass
+        self._conn.close()
 
 
-def remove_prefix(s, prefix):
+
+class RepeatingCall(threading.Thread):
+    """Repeatedly call a function in a separate thread."""
+
+    def __init__(self, func, args, interval):
+        self.func = func
+        self.args = args
+        self.interval = interval
+        threading.Thread.__init__(self)
+
+    def run(self):
+        """Call the function in a loop."""
+        while True:
+            self.func(*self.args)
+            time.sleep(self.interval)
+
+
+def _parse_msg(buff, delim):
+    """Split a buffer into the msg and the remaining data."""
+    idx = buff.find(delim)
+    if idx != -1:
+        # Throw away the delim when slicing by adding its length
+        return (buff[:idx], buff[idx + len(delim):])
+    else:
+        # Return no message, only buffer
+        return (None, buff)
+
+
+def _remove_prefix(s, prefix):
+    """Remove a prefix from the start of a string."""
     return s[len(prefix):]
-
-
-class PragbotFactory(ClientFactory):
-
-    def buildProtocol(self, addr):
-        return PragbotProtocol()
 
 
 def main():
     """Create a pragbot client."""
-    port = 10006
     print 'Initializing pragbot client...'
-    reactor.connectTCP('localhost', port, PragbotFactory())
-    reactor.run()
+    client = PragbotClient()
 
+    # Set up signal handlers
+    def shutdown(signum, frame):  # pylint:disable=W0613
+        """Stop the reactor."""
+        print "Shutting down client..."
+        client.shutdown()
+
+    signal.signal(signal.SIGABRT, shutdown)
+    signal.signal(signal.SIGINT, shutdown)
+
+    print 'Running pragbot client...'
+    try:
+        client.run()
+    except KeyboardInterrupt:
+        pass
 
 if __name__ == '__main__':
     main()

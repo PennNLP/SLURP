@@ -1,7 +1,23 @@
 #!/usr/bin/env python
 """Respond to requests on the listening socket by spawning a new client."""
 
+# Copyright (C) 2013 Constantine Lignos
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import sys
+import os
+import signal
 from multiprocessing import Process
 import socket
 from socket import timeout, error
@@ -27,8 +43,10 @@ class Spawner:
 
     def shutdown(self):
         """Shut down all child processes."""
+        if self.client_processes:
+            print "Sending shutdown signal to child processes..."
         for process in self.client_processes:
-            process.terminate()
+            os.kill(process.pid, signal.SIGABRT)
 
 
 def accept_connections(port, spawner):
