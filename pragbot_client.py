@@ -107,8 +107,14 @@ class PragbotFactory(ClientFactory):
     def buildProtocol(self, addr):
         return PragbotProtocol()
 
-if __name__ == '__main__':
+
+def main():
+    """Create a pragbot client."""
     port = int(sys.argv[1]) if len(sys.argv) == 2 else 10006
     print 'Initializing pragbot client...'
     reactor.connectTCP('localhost', port, PragbotFactory())
     reactor.run()
+
+
+if __name__ == '__main__':
+    main()
