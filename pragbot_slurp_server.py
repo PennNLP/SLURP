@@ -8,12 +8,13 @@ from socket import timeout, error
 
 import pragbot_client
 
-STARTUP_MESSAGE = "PRAGBOT\n"
+STARTUP_MESSAGE = "PRAGBOT"
+RESPONSE = "OK"
 
 
 class Spawner:
     """Manage the spawning of pragbot clients."""
-    
+
     def __init__(self):
         self.client_processes = []
 
@@ -24,15 +25,18 @@ class Spawner:
         self.client_processes.append(new_client)
         new_client.start()
 
+    def shutdown(self):
+        """Shut down all child processes."""
+        for process in self.client_processes:
+            process.terminate()
 
-def main(port):
-    """Listen on a socket and open a new connection."""
+
+def accept_connections(port, spawner):
+    """Spawn a new client each time we receive a valid connection."""
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind(('localhost', port))
     sock.listen(5)
-
-    spawner = Spawner()
 
     timed_out = False  # Use this flag to avoid printing when we timeout
     while True:
@@ -51,8 +55,9 @@ def main(port):
             except error:
                 print "Error receiving data"
             else:
-                if buff == STARTUP_MESSAGE:
+                if buff == (STARTUP_MESSAGE + "\n"):
                     spawner.spawn_client()
+                    conn.sendall(RESPONSE + "\n")
                 else:
                     print "Received unexpected message:", repr(buff)
         except timeout:
@@ -74,9 +79,23 @@ def main(port):
     sock.close()
 
 
-if __name__ == "__main__":
+def main():
+    """Listen on a socket and open a new connection."""
     try:
-        main(int(sys.argv[1]))
+        port = int(sys.argv[1])
     except (IndexError, ValueError):
         print "Usage: pragbot_slurp_server port"
         sys.exit(64)
+
+    # Spawn clients
+    spawner = Spawner()
+    try:
+        accept_connections(port, spawner)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        spawner.shutdown()
+
+
+if __name__ == "__main__":
+    main()

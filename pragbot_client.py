@@ -1,19 +1,21 @@
 #!/usr/bin/env python
 """Demonstration of the Penn NLP pipeline and semantics processing."""
 
+import sys
+import threading
+from SimpleXMLRPCServer import SimpleXMLRPCServer
+
+import twisted
 from twisted.internet.protocol import ClientFactory
 from twisted.protocols.basic import LineReceiver
 from twisted.internet import reactor
 from twisted.internet.task import LoopingCall
+
 from pipelinehost import PipelineClient
 from semantics.new_knowledge import KnowledgeBase
 from semantics.parsing import process_parse_tree
 from semantics.response import make_response
 from pragbot.GameEnvironment import GameEnvironment
-import sys
-import threading
-from SimpleXMLRPCServer import SimpleXMLRPCServer
-
 from pragbot import ltlmopclient
 
 
@@ -55,7 +57,7 @@ class PragbotProtocol(LineReceiver):
             for thing in self.ge.objects:
                 if thing.startswith(event_type):
                     object_seen = (object_seen or
-                        self.ge.object_positions[thing] in self.ge.rooms[message])
+                                   self.ge.object_positions[thing] in self.ge.rooms[message])
             return object_seen
         elif event_type == "Find Bomb":
             if message in self.ge.objects:
@@ -79,7 +81,10 @@ class PragbotProtocol(LineReceiver):
 
     def connectionLost(self, reason):
         print 'Server disconnected'
-        reactor.stop()
+        try:
+            reactor.stop()
+        except twisted.internet.error.ReactorNotRunning:
+            pass
 
     def lineReceived(self, line):
         print 'Received input: {!r}'.format(line)
@@ -100,17 +105,20 @@ class PragbotProtocol(LineReceiver):
             lc = LoopingCall(self.ge.jr.follow_waypoints, self.sendMessage)
             lc.start(0.05)
 
+
 def remove_prefix(s, prefix):
     return s[len(prefix):]
 
+
 class PragbotFactory(ClientFactory):
+
     def buildProtocol(self, addr):
         return PragbotProtocol()
 
 
 def main():
     """Create a pragbot client."""
-    port = int(sys.argv[1]) if len(sys.argv) == 2 else 10006
+    port = 10006
     print 'Initializing pragbot client...'
     reactor.connectTCP('localhost', port, PragbotFactory())
     reactor.run()
