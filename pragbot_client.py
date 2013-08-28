@@ -106,7 +106,6 @@ class PragbotClient(object):
 
     def process_line(self, line):
         """Process a line from the server."""
-        print 'Received input: {!r}'.format(line)
         if line.startswith('CHAT_MESSAGE_PREFIX'):
             line = _remove_prefix(line, 'CHAT_MESSAGE_PREFIX<Commander> ')
             # TODO: multi-process lock
