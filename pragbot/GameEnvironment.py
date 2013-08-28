@@ -131,7 +131,7 @@ class Room:
     def __init__(self, coords, name):
         self.coords = coords
         self.name = name
-        self.center = ((coords[2] - coords[0]) / 2, (coords[3] - coords[1]) / 2)
+        self.center = (coords[0] + (coords[2] - coords[0]) / 2, coords[1] + (coords[3] - coords[1]) / 2)
 
     def __contains__(self, location):
         """Checks if x,z coordinates in a room"""
