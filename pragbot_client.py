@@ -25,14 +25,17 @@ from SimpleXMLRPCServer import SimpleXMLRPCServer
 from semantics.new_knowledge import KnowledgeBase
 from pragbot.GameEnvironment import GameEnvironment
 from pragbot import ltlmopclient
+from pragbot.ltlmopclient import find_port
 
 PRAGBOT_SERVER_PORT = 10006
+# Because this is at the highest risk for a race condition, handler needs
+# the highest port of all the XML-RPC ports.
+HANDLER_BASE_PORT = 13000
 
 
 class PragbotClient(object):
     """Provide a SLURP client for the Pragbot server."""
 
-    HANDLER_LISTEN_PORT = 20003
     KNOWN_OBJECTS = set(("bomb", "hostage", "badguy"))
 
     def __init__(self):
@@ -43,10 +46,17 @@ class PragbotClient(object):
         self.kb = KnowledgeBase(other_agents=['cmdr'])
 
         # Connect to the pragbot server first
-        self._conn = socket.create_connection(('localhost', PRAGBOT_SERVER_PORT))
+        try:
+            self._conn = socket.create_connection(('localhost', PRAGBOT_SERVER_PORT))
+        except error:
+            raise IOError("Could not connect to Pragbot server on port " + str(PRAGBOT_SERVER_PORT))
+
+        # Find a port for the handlers
+        self.handler_port = find_port(HANDLER_BASE_PORT)
+        print "Using port {} for handlers".format(self.handler_port)
 
         # Start the RPC server for handler requests
-        self.xmlrpc_server = SimpleXMLRPCServer(("localhost", self.HANDLER_LISTEN_PORT),
+        self.xmlrpc_server = SimpleXMLRPCServer(("localhost", self.handler_port),
                                                 logRequests=False, allow_none=True)
         self.xmlrpc_server.register_function(self.receiveHandlerMessages)
         self.xmlrpc_server_thread = threading.Thread(target=self.xmlrpc_server.serve_forever)
@@ -55,8 +65,8 @@ class PragbotClient(object):
         # Start the server and then kick off the LTLMoP client which will indirectly connect to it
         self.xmlrpc_server_thread.start()
         print "LTLMoPClient listening for XML-RPC calls on \
-               http://localhost:{} ...".format(self.HANDLER_LISTEN_PORT)
-        self.ltlmop = ltlmopclient.LTLMoPClient()
+               http://localhost:{} ...".format(self.handler_port)
+        self.ltlmop = ltlmopclient.LTLMoPClient(self.handler_port)
 
     def receiveHandlerMessages(self, event_type, message=None):
         """Process messages from the handlers."""

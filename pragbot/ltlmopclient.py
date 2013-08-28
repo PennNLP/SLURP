@@ -15,36 +15,57 @@ from specCompiler import SpecCompiler
 import execute
 
 
-# TODO: Refactor Config class into global variables
-class Config:
-    # base_spec_file = os.path.join(ltlmop_root, "src", "examples", "gumbotest", "skeleton.spec")
-    # base_spec_file = os.path.join("firefighting", "firefighting.spec")
-    base_spec_file = os.path.join("pragbotscenario", "pragbot.spec")
-    executor_listen_port = 20000
-    ltlmop_listen_port = 20001
+# TODO: This class with one instance is overkill
+# pylint: disable=W0201
+class Config(object):
+    pass
+CONFIG = Config()
+CONFIG.base_spec_file = os.path.join("pragbotscenario", "pragbot.spec")
+CONFIG.executor_base_port = 11000
+CONFIG.ltlmop_base_port = 12000
+CONFIG.max_port_tries = 100
+
+
+def find_port(base):
+    """Try to find an open port starting at base."""
+    port = base
+    while (port - base) < CONFIG.max_port_tries:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            sock.bind(('localhost', port))
+        except socket.error:
+            port += 1
+        else:
+            sock.close()
+            return port
 
 
 class LTLMoPClient(object):
 
-    def __init__(self):
+    def __init__(self, handler_port):
         self.map_bitmap = None
         self.robot_pos = None
         self.fiducial_positions = {}
         self.proj = project.Project()
-        self.proj.loadProject(Config.base_spec_file)
+        self.proj.loadProject(CONFIG.base_spec_file)
 
         # Start execution context
         print "Starting executor..."
         self.executor_ready_flag = threading.Event()
+        self.executor_port = find_port(CONFIG.executor_base_port)
+        print "Using port {} for executor".format(self.executor_port)
         self.executor_process = multiprocessing.Process(
             target=execute.execute_main,
-            args=(Config.executor_listen_port,
+            args=(self.executor_port,
                   self.proj.getFilenamePrefix() + ".spec",
-                  None, False))
+                  None, False, {'handler_port': handler_port}))
         self.executor_process.start()
 
         # Start our own xml-rpc server to receive events from execute
-        self.xmlrpc_server = SimpleXMLRPCServer(("localhost", Config.ltlmop_listen_port),
+        self.server_port = find_port(CONFIG.ltlmop_base_port)
+        print "Using port {} for LTLMoP client".format(self.server_port)
+        self.xmlrpc_server = SimpleXMLRPCServer(("localhost", self.server_port),
                                                 logRequests=False, allow_none=True)
 
         # Register functions with the XML-RPC server
@@ -55,19 +76,19 @@ class LTLMoPClient(object):
         self.xmlrpc_server_thread.daemon = True
         self.xmlrpc_server_thread.start()
         print "LTLMoPClient listening for XML-RPC calls on \
-               http://localhost:{} ...".format(Config.ltlmop_listen_port)
+               http://localhost:{} ...".format(self.server_port)
 
         # Connect to executor
         print "Connecting to executor...",
         while True:
             try:
                 self.executor_proxy = xmlrpclib.ServerProxy(
-                    "http://localhost:{}".format(Config.executor_listen_port),
+                    "http://localhost:{}".format(self.executor_port),
                     allow_none=True)
 
                 # Register with executor for event callbacks
                 self.executor_proxy.registerExternalEventTarget(
-                    "http://localhost:{}".format(Config.ltlmop_listen_port))
+                    "http://localhost:{}".format(self.server_port))
             except socket.error:
                 sys.stdout.write(".")
             else:
