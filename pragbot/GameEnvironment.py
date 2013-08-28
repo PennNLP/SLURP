@@ -95,8 +95,7 @@ class Agent:
                                   - 1 * math.sin(angle), 0, math.cos(angle)]
                 self.location = newlocation
             """Ok, here's where I need to rotate Jr in the direction he is moving"""
-            # TODO Switch back to [0] then [1], once Junior is displaying properly
-            callback('PLAYER_MOVE_3D', ','.join(str(s) for s in [self.location[1], 0, self.location[0]] + rotationmatrix))
+            callback('PLAYER_MOVE_3D', ','.join(str(s) for s in [self.location[0], 0, self.location[1]] + rotationmatrix))
 
     def fix_location(self):
         """Moves the agent to the center of its cell"""
@@ -146,7 +145,7 @@ class GameEnvironment:
     def __init__(self, env):
         self.grid = []
         self.rooms = {}
-        self.objects = []
+        self.objects=[]
         self.object_positions = {}
         bombs = 0
         badguys = 0
@@ -162,28 +161,28 @@ class GameEnvironment:
             elif len(line.strip()) > 0:
                 self.grid.append([])
                 for j, c in enumerate(line):
-                    new_cell = Cell((j, i), to_simple_cell(c))
+                    new_cell = Cell((i, j), to_simple_cell(c))
                     self.grid[-1].append(new_cell)
                     if c == 'C':
                         self.cmdr = Agent(new_cell)
                     elif c == 'J':
                         self.jr = Agent(new_cell)
                     elif c == 'E':
-                        badguys = badguys + 1
-                        new_badguy = "badguy" + str(badguys)
+                        badguys= badguys+1
+                        new_badguy = "badguy"+str(badguys)
                         self.objects.append(new_badguy)
-                        self.object_positions[new_badguy] = (j, i)
+                        self.object_positions[new_badguy] = (i,j)
                     elif c == '*':
                         bombs = bombs + 1
                         new_bomb = "bomb" + str(bombs)
                         self.objects.append(new_bomb)
-                        self.object_positions[new_bomb] = (j, i)
-                    elif c == 'H':
+                        self.object_positions[new_bomb] = (i, j)
+                    elif c=='H':
                         hostages = hostages + 1
                         new_hostage = "hostage" + str(hostages)
                         self.objects.append(new_hostage)
-                        self.object_positions[new_hostage] = (j, i)
-
+                        self.object_positions[new_hostage] = (i, j)
+                        
         for i, row in enumerate(self.grid):
             for j, cell in enumerate(row):
                 if i > 0:
