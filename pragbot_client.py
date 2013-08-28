@@ -22,21 +22,26 @@ class PragbotProtocol(LineReceiver):
     PRAGBOT_LISTEN_PORT = 20003
 
     def __init__(self):
+        # Set up basics before starting the server
+        self.delimiter = "\n"
+        self.ge = None
+        self.is_ready = threading.Event()
+        self.kb = KnowledgeBase(other_agents=['cmdr'])
+
         self.xmlrpc_server = SimpleXMLRPCServer(("localhost", self.PRAGBOT_LISTEN_PORT),
                                                 logRequests=False, allow_none=True)
         self.xmlrpc_server.register_function(self.receiveHandlerMessages)
         self.xmlrpc_server_thread = threading.Thread(target=self.xmlrpc_server.serve_forever)
         self.xmlrpc_server_thread.daemon = True
+
+        # Start the server and then the client which will connect to it
         self.xmlrpc_server_thread.start()
         print "LTLMoPClient listening for XML-RPC calls on \
                http://localhost:{} ...".format(self.PRAGBOT_LISTEN_PORT)
-
-        self.kb = KnowledgeBase(other_agents=['cmdr'])
         self.ltlmop = ltlmopclient.LTLMoPClient()
-        self.ge = None
-        self.is_ready = threading.Event()
 
     def receiveHandlerMessages(self, event_type, message=None):
+        print "Received handler message:", event_type, message
         self.is_ready.wait()
         if event_type == "Move":
             room = self.ge.rooms[message]
@@ -68,33 +73,33 @@ class PragbotProtocol(LineReceiver):
     def sendMessage(self, action, msg):
         self.sendLine('%s%s' % (action, str(msg)))
         print 'Sending: %s%s' % (action, str(msg))
+
     def connectionMade(self):
         print 'Connected to server'
 
     def connectionLost(self, reason):
         print 'Server disconnected'
         reactor.stop()
-    def dataReceived(self, data):
-        lines = data.split('\n')
-        print 'Received input: ', lines
 
-        for s in lines:
-            if s.startswith('CHAT_MESSAGE_PREFIX'):
-                s = remove_prefix(s, 'CHAT_MESSAGE_PREFIX<Commander> ')
-                # TODO: multi-process lock
-                self.ltlmop.get_pragbot_input(s)
-            elif s.startswith('MOVE_PLAYER_CELL'):
-                s = remove_prefix(s, 'MOVE_PLAYER_CELL')
-                new_x, old_x, new_y, old_y = s.split(',')
-                self.ge.update_cmdr((int(new_x), int(new_y)))
-                print str(self.ge)
-            elif s.startswith('CREATE_FPSENVIRONMENT'):
-                s = remove_prefix(s, 'CREATE_FPSENVIRONMENT')
-                # This will be provided before environment related messages
-                self.ge = GameEnvironment(s)
-                self.is_ready.set()
-                lc = LoopingCall(self.ge.jr.follow_waypoints, self.sendMessage)
-                lc.start(0.05)
+    def lineReceived(self, line):
+        print 'Received input: ', line
+        if line.startswith('CHAT_MESSAGE_PREFIX'):
+            line = remove_prefix(line, 'CHAT_MESSAGE_PREFIX<Commander> ')
+            # TODO: multi-process lock
+            self.ltlmop.get_pragbot_input(line)
+        elif line.startswith('MOVE_PLAYER_CELL'):
+            line = remove_prefix(line, 'MOVE_PLAYER_CELL')
+            new_x, old_x, new_y, old_y = line.split(',')
+            self.ge.update_cmdr((int(new_x), int(new_y)))
+            print str(self.ge)
+        elif line.startswith('CREATE_FPSENVIRONMENT'):
+            line = remove_prefix(line, 'CREATE_FPSENVIRONMENT')
+            # This will be provided before environment related messages
+            self.ge = GameEnvironment(line)
+            self.is_ready.set()
+            lc = LoopingCall(self.ge.jr.follow_waypoints, self.sendMessage)
+            lc.start(0.05)
+
 def remove_prefix(s, prefix):
     return s[len(prefix):]
 
