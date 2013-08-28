@@ -91,9 +91,9 @@ class PragbotClient(object):
             else:
                 return None
         elif event_type == "Location":
-            for room in self.ge.rooms:
+            for room in self.ge.rooms.itervalues():
                 if self.ge.jr.cell in room:
-                    return room
+                    return room.name
             return "Nowhere"
         else:
             print event_type + " : " + message
