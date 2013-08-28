@@ -117,9 +117,10 @@ class PragbotClient(object):
 
     def run(self):
         """Process requests from the server."""
+        buff = ""
         while True:
             try:
-                buff = self._conn.recv(4096)
+                buff += self._conn.recv(4096)
             except timeout:
                 continue
             except error:
@@ -131,7 +132,6 @@ class PragbotClient(object):
                 if msg:
                     self.process_line(msg)
                 else:
-                    print "Received an incomplete message: {!r}".format(buff)
                     break
 
         print "Server disconnected"

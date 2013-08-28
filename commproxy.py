@@ -91,9 +91,10 @@ class ClientHandler(threading.Thread):
     def run(self):
         """Process client requests."""
         print "%s: Handling requests from %s" % (self.name, str(self._client_addr))
+        buff = ""
         while True:
             try:
-                buff = self._conn.recv(4096)
+                buff += self._conn.recv(4096)
             except timeout:
                 continue
             except error:
@@ -108,7 +109,6 @@ class ClientHandler(threading.Thread):
                 if msg:
                     self._server.queue.put((msg, self))
                 else:
-                    print "%s: Received an incomplete message: %s" % (self.name, repr(buff))
                     break
 
         print "%s: Client disconnected." % self.name
