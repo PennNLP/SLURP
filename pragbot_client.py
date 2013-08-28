@@ -82,7 +82,7 @@ class PragbotProtocol(LineReceiver):
         reactor.stop()
 
     def lineReceived(self, line):
-        print 'Received input: ', line
+        print 'Received input: {!r}'.format(line)
         if line.startswith('CHAT_MESSAGE_PREFIX'):
             line = remove_prefix(line, 'CHAT_MESSAGE_PREFIX<Commander> ')
             # TODO: multi-process lock
