@@ -133,10 +133,10 @@ class Room:
         self.name = name
         self.center = ((coords[2] - coords[0]) / 2, (coords[3] - coords[1]) / 2)
 
-    def __contains__(self, cell):
+    def __contains__(self, location):
         """Checks if x,z coordinates in a room"""
-        x_coords = cell[0] >= self.coords[0] and cell[0] <= self.coords[2]
-        y_coords = cell[1] >= self.coords[1] and cell[1] <= self.coords[3]
+        x_coords = location[0] >= self.coords[0] and location[0] <= self.coords[2]
+        y_coords = location[1] >= self.coords[1] and location[1] <= self.coords[3]
         return x_coords and y_coords
 
 
