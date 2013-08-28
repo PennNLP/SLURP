@@ -99,13 +99,7 @@ class LTLMoPClient(object):
         # Start dialogue manager
         self.dialogue_manager = BarebonesDialogueManager(self, self.executor_proxy)
 
-        # Load in robot icon
-        # https://commons.wikimedia.org/wiki/File:Hamton_the_hamster.gif
-        # Figure out the user's name, if we can
-        try:
-            self.user_name = getpass.getuser().title()
-        except:
-            self.user_name = "User"
+        self.user_name = "User"
 
         # Wait for executor to fully boot
         self.append_log(">> Please wait, initializing...")
