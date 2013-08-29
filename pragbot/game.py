@@ -23,7 +23,8 @@ import logging
 ROW_DELIMITER = ';'
 DEFAULT_MAP = 'pragbot/Maps/ScenarioEnv.txt'
 STARTING_AREA = "entrance"
-PATH_DEBUG = True
+# Turn on for extremely verbose logging of path planning
+PATH_DEBUG = False
 
 
 class Cell:
