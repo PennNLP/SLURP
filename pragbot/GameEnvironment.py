@@ -252,6 +252,8 @@ class GameEnvironment:
 
         for i, row in enumerate(self.grid):
             for j, cell in enumerate(row):
+                if not cell.is_open():
+                    continue
                 if i > 0:
                     cell.add_neighbor(self.grid[i - 1][j])
                 if i < len(self.grid) - 1:
