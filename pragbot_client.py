@@ -77,7 +77,7 @@ class PragbotClient(object):
             destination = room.center
             self.ge.jr.plan_path(self.ge.grid[destination[0]][destination[1]])
         elif event_type == "Stop":
-            self.ge.jr.plan_path(self.ge.jr.cell)
+            self.ge.jr.set_waypoints([])
         elif event_type in self.KNOWN_OBJECTS:
             object_seen = False
             for thing in self.ge.objects:

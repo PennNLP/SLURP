@@ -2,7 +2,7 @@
 
 import heapq
 import math
-import time
+import threading
 
 ROW_DELIMITER = ';'
 DEFAULT_MAP = 'pragbot/Maps/ScenarioEnv.txt'
@@ -71,31 +71,37 @@ class Agent:
             self.fix_location()
 
         # Causes initial position to be relayed
-        self.waypoints = [self.cell]
+        self._waypoints = [self.cell]
+        self.waypoint_lock = threading.Lock()
+
+    def set_waypoints(self, new_waypoints):
+        with self.waypoint_lock:
+            self._waypoints = new_waypoints
 
     def follow_waypoints(self, callback):
         """Take one step towards next waypoint"""
-        rotationmatrix = [0, 0, 1, 0, 1, 0, -1, 0, 0]
-        if len(self.waypoints) > 0:
-            if self.waypoints[0].world_distance(self.location) < 0.3:
-                # Make sure movement is only from center to center
-                # to prevent stuck-in-the wall bugs
-                callback('MOVE_PLAYER_CELL', ','.join(str(s) for s in (self.waypoints[0].location[0], self.cell.location[0], self.waypoints[0].location[1], self.cell.location[1])))
-                self.cell = self.waypoints.pop(0)
-                self.fix_location()
-            else:
-                newlocation = self.waypoints[0].closer_point(self.location)
-                deltaX = self.location[0] - newlocation[0]
-                deltaZ = self.location[1] - newlocation[1]
-                angle = math.atan2(deltaX, deltaZ)
-                """rotationmatrix = [1,0,0,0,math.cos(angle),1-math.sin(angle),
-                                  0,math.sin(angle),math.cos(angle)]"""
+        with self.waypoint_lock:
+            rotationmatrix = [0, 0, 1, 0, 1, 0, -1, 0, 0]
+            if len(self._waypoints) > 0:
+                if self._waypoints[0].world_distance(self.location) < 0.3:
+                    # Make sure movement is only from center to center
+                    # to prevent stuck-in-the wall bugs
+                    callback('MOVE_PLAYER_CELL', ','.join(str(s) for s in (self._waypoints[0].location[0], self.cell.location[0], self._waypoints[0].location[1], self.cell.location[1])))
+                    self.cell = self._waypoints.pop(0)
+                    self.fix_location()
+                else:
+                    newlocation = self._waypoints[0].closer_point(self.location)
+                    deltaX = self.location[0] - newlocation[0]
+                    deltaZ = self.location[1] - newlocation[1]
+                    angle = math.atan2(deltaX, deltaZ)
+                    # rotationmatrix = [1,0,0,0,math.cos(angle),1-math.sin(angle),
+                    # 0,math.sin(angle),math.cos(angle)]
 
-                rotationmatrix = [math.cos(angle), 0, math.sin(angle), 0, 1, 0,
-                                  - 1 * math.sin(angle), 0, math.cos(angle)]
-                self.location = newlocation
-            """Ok, here's where I need to rotate Jr in the direction he is moving"""
-            callback('PLAYER_MOVE_3D', ','.join(str(s) for s in [self.location[0], 0, self.location[1]] + rotationmatrix))
+                    rotationmatrix = [math.cos(angle), 0, math.sin(angle), 0, 1, 0,
+                                      - 1 * math.sin(angle), 0, math.cos(angle)]
+                    self.location = newlocation
+                # Ok, here's where I need to rotate Jr in the direction he is moving#
+                callback('PLAYER_MOVE_3D', ','.join(str(s) for s in [self.location[0], 0, self.location[1]] + rotationmatrix))
 
     def fix_location(self):
         """Moves the agent to the center of its cell"""
@@ -114,11 +120,12 @@ class Agent:
             current = heapq.heappop(frontier)
             print 'Exploring: %s (%d)' % (str(current.cell), current.min_cost)
             if current.cell is goal:
-                self.waypoints = []
+                waypoints = []
                 while current is not None:
-                    self.waypoints.append(current.cell)
+                    waypoints.append(current.cell)
                     current = current.parent
-                self.waypoints.reverse()
+                waypoints.reverse()
+                self.set_waypoints(waypoints)
                 return True
             explored.add(current.cell)
             for n in current.cell.neighbors:
@@ -145,7 +152,7 @@ class GameEnvironment:
     def __init__(self, env):
         self.grid = []
         self.rooms = {}
-        self.objects=[]
+        self.objects = []
         self.object_positions = {}
         bombs = 0
         badguys = 0
@@ -170,21 +177,21 @@ class GameEnvironment:
                     elif c == 'J':
                         self.jr = Agent(new_cell)
                     elif c == 'E':
-                        badguys= badguys+1
-                        new_badguy = "badguy"+str(badguys)
+                        badguys = badguys + 1
+                        new_badguy = "badguy" + str(badguys)
                         self.objects.append(new_badguy)
-                        self.object_positions[new_badguy] = (i,j)
+                        self.object_positions[new_badguy] = (i, j)
                     elif c == '*':
                         bombs = bombs + 1
                         new_bomb = "bomb" + str(bombs)
                         self.objects.append(new_bomb)
                         self.object_positions[new_bomb] = (i, j)
-                    elif c=='H':
+                    elif c == 'H':
                         hostages = hostages + 1
                         new_hostage = "hostage" + str(hostages)
                         self.objects.append(new_hostage)
                         self.object_positions[new_hostage] = (i, j)
-                        
+
         for i, row in enumerate(self.grid):
             for j, cell in enumerate(row):
                 if i > 0:
@@ -195,6 +202,7 @@ class GameEnvironment:
                     cell.add_neighbor(self.grid[i][j - 1])
                 if j < len(self.grid) - 1:
                     cell.add_neighbor(self.grid[i][j + 1])
+                print "Cell " + i + "," + j + " has neighbors: " + cell.neighbors
         print 'Created environment:'
         print str(self)
 
