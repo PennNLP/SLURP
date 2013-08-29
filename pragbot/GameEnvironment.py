@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import sys
 import heapq
 import math
 from threading import Lock
@@ -9,16 +10,6 @@ ROW_DELIMITER = ';'
 DEFAULT_MAP = 'pragbot/Maps/ScenarioEnv.txt'
 STARTING_AREA = "entrance"
 
-class Node:
-    """"Node for A* pathing"""
-    def __init__(self, cell, goal, parent):
-        self.cell = cell
-        self.cum_cost = (parent.cum_cost + self.cell.distance(parent.cell) if parent else 0)
-        self.min_cost = self.cum_cost + self.cell.distance(goal)
-        self.parent = parent
-
-    def __cmp__(self, other):
-        return cmp(self.min_cost, other.min_cost)
 
 class Cell:
     """Class representing a cell in grid world"""
@@ -126,33 +117,72 @@ class Agent:
             self.fix_location()
 
     def plan_path(self, goal):
-        """A* search"""
+        """Plan to reach a goal using A* search."""
+        start_node = Node(self.cell, goal, None)
+        nodes = {self.cell.location: start_node}
+        # Seems redundant, but makes sure all operations are constant time
+        frontier_heap = [(start_node.future_cost, self.cell.location)]
+        frontier_set = set([self.cell.location])
         explored = set()
-        frontier = [Node(self.cell, goal, None)]
-        print "Planning path from {} to {}...".format(self.cell.location, goal.location)
+        logging.info("Planning path from %s to %s...", self.cell.location, goal.location)
         while True:
             try:
-                current = heapq.heappop(frontier)
+                _, current_location = heapq.heappop(frontier_heap)
+                frontier_set.remove(current_location)
             except IndexError:
                 break
-            if current.cell.location in explored:
-                continue
-            #print 'Exploring: %s (%d)' % (str(current.cell), current.min_cost)
-            explored.add(current.cell.location)
+
+            # Check whether we are at the goal or should keep exploring
+            current = nodes[current_location]
+            # Uncomment for extremely verbose details about path planning
+            logging.debug('Exploring: %s (%d)', str(current.cell), current.past_cost)
             if current.cell is goal:
+                # Reconstruct the path to the goal
                 waypoints = []
                 while current is not None:
                     waypoints.append(current.cell)
                     current = current.parent
                 waypoints.reverse()
                 self.set_waypoints(waypoints)
-                print "Found path"
+                logging.info("Found path: %s", waypoints)
                 return True
-            for n in current.cell.neighbors:
-                if n.location not in explored:
-                    heapq.heappush(frontier, Node(n, goal, current))
-        print "Error: could not find path"
+            else:
+                # Mark as explored
+                explored.add(current_location)
+                # Explore all unexplored neighbors
+                for neighbor in current.cell.neighbors:
+                    neighbor_node = Node(neighbor, goal, current)
+                    try:
+                        neighbor_past_cost = nodes[neighbor.location].past_cost
+                    except KeyError:
+                        neighbor_past_cost = sys.maxint
+
+                    # Skip this neighbor if it's already been explored for lower/equal cost
+                    if (neighbor.location in explored and
+                            neighbor_node.past_cost >= neighbor_past_cost):
+                        continue
+                    else:
+                        # Update best cost
+                        nodes[neighbor.location] = neighbor_node
+                        # If not already going to be explored, add to frontier
+                        if neighbor.location not in frontier_set:
+                            frontier_set.add(neighbor.location)
+                            heapq.heappush(frontier_heap,
+                                           (neighbor_node.future_cost, neighbor.location))
+
+        # Failure
+        logging.error("Could not find path from %s to %s...", self.cell.location, goal.location)
         return False
+
+
+class Node:
+    """"Node for A* pathing"""
+    def __init__(self, cell, goal, parent):
+        self.cell = cell
+        self.parent = parent
+        self.past_cost = (parent.past_cost + self.cell.distance(parent.cell)) if parent else 0
+        self.future_cost = self.past_cost + self.cell.distance(goal)
+
 
 class Room:
     """Class representing rooms in map"""
