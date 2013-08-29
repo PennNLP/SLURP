@@ -3,6 +3,7 @@
 import heapq
 import math
 from threading import Lock
+import logging
 
 ROW_DELIMITER = ';'
 DEFAULT_MAP = 'pragbot/Maps/ScenarioEnv.txt'
@@ -222,9 +223,8 @@ class GameEnvironment:
                     cell.add_neighbor(self.grid[i][j - 1])
                 if j < len(self.grid) - 1:
                     cell.add_neighbor(self.grid[i][j + 1])
-                print "Cell ({}, {}) has neighbors: {}".format(i, j, cell.neighbors)
-        print 'Created environment:'
-        print str(self)
+                # Uncomment to see all neighbors of all cells
+                logging.debug("Cell ({}, {}) has neighbors: {}".format(i, j, cell.neighbors))
 
     def update_cmdr(self, location):
         """Updates commander's location"""

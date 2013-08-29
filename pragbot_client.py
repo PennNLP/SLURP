@@ -21,11 +21,13 @@ import time
 import socket
 from socket import error, timeout
 from SimpleXMLRPCServer import SimpleXMLRPCServer
+import logging
 
 from semantics.new_knowledge import KnowledgeBase
 from pragbot.GameEnvironment import GameEnvironment
 from pragbot import ltlmopclient
 from pragbot.ltlmopclient import find_port
+import globalConfig  # pylint: disable=W0611
 
 PRAGBOT_SERVER_PORT = 10006
 # Because this is at the highest risk for a race condition, handler needs
@@ -59,7 +61,7 @@ class PragbotClient(object):
 
         # Find a port for the handlers
         self.handler_port = find_port(HANDLER_BASE_PORT)
-        print "Using port {} for handlers".format(self.handler_port)
+        logging.info("Using port {} for handlers".format(self.handler_port))
 
         # Start the RPC server for handler requests
         self.xmlrpc_server = SimpleXMLRPCServer(("localhost", self.handler_port),
@@ -70,8 +72,8 @@ class PragbotClient(object):
 
         # Start the server and then kick off the LTLMoP client which will indirectly connect to it
         self.xmlrpc_server_thread.start()
-        print "LTLMoPClient listening for XML-RPC calls on \
-               http://localhost:{} ...".format(self.handler_port)
+        logging.info("LTLMoPClient listening for XML-RPC calls on http://localhost:{} ...".
+                     format(self.handler_port))
         self.ltlmop = ltlmopclient.LTLMoPClient(self.handler_port)
 
     def receiveHandlerMessages(self, event_type, message=None):
@@ -81,7 +83,7 @@ class PragbotClient(object):
 
         # Skip location messages since we get them so often
         if event_type != self.EVENT_LOCATION:
-            print "Received handler message:", event_type, message
+            logging.info("Received handler message: %s %s", event_type, message)
 
         # Handle events
         if event_type == self.EVENT_MOVE:
@@ -109,13 +111,15 @@ class PragbotClient(object):
                     return room.name
             return self.LOCATION_UNKNOWN
         else:
-            print event_type + " : " + message
+            logging.warning("Unknown event_type: %s %s", event_type, message)
 
     def sendMessage(self, action, msg):
         """Send a message to the server."""
         data = action + str(msg)
         self._conn.sendall(data + self.delimiter)
-        print 'Sending: ', data
+        # Skip player move messages
+        if not data.startswith("PLAYER_MOVE"):
+            logging.info('Sending: %s', data)
 
     def process_line(self, line):
         """Process a line from the server."""
@@ -127,11 +131,13 @@ class PragbotClient(object):
             line = _remove_prefix(line, 'MOVE_PLAYER_CELL')
             new_x, old_x, new_y, old_y = line.split(',')
             self.ge.update_cmdr((int(new_x), int(new_y)))
-            print str(self.ge)
+            # Uncomment for a crazy amount of logging, showing a map every single move
+            # logging.debug(self.ge)
         elif line.startswith('CREATE_FPSENVIRONMENT'):
             line = _remove_prefix(line, 'CREATE_FPSENVIRONMENT')
             # This will be provided before environment related messages
             self.ge = GameEnvironment(line)
+            logging.info("Scenario map:\n%s", self.ge)
             self.is_ready.set()
             call = RepeatingCall(self.ge.jr.follow_waypoints, (self.sendMessage,), 0.05)
             call.daemon = True
