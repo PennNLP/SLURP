@@ -1,4 +1,18 @@
-#!/usr/bin/env python
+"""Representation of the Pragbot game world."""
+
+# Copyright (C) 2013 Israel Geselowitz, Kenton Lee, and Constantine Lignos
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys
 import heapq
@@ -9,6 +23,7 @@ import logging
 ROW_DELIMITER = ';'
 DEFAULT_MAP = 'pragbot/Maps/ScenarioEnv.txt'
 STARTING_AREA = "entrance"
+PATH_DEBUG = True
 
 
 class Cell:
@@ -135,7 +150,8 @@ class Agent:
             # Check whether we are at the goal or should keep exploring
             current = nodes[current_location]
             # Uncomment for extremely verbose details about path planning
-            # logging.debug('Exploring: %s (%d)', str(current.cell), current.future_cost)
+            if PATH_DEBUG:
+                logging.debug('Exploring: %s (%d)', str(current.cell), current.future_cost)
             if current.cell is goal:
                 # Reconstruct the path to the goal
                 waypoints = []
@@ -151,7 +167,8 @@ class Agent:
                 explored.add(current_location)
                 # Explore all unexplored neighbors
                 # Uncomment for extremely verbose details about path planning
-                # logging.debug("Neighbors: %s", current.cell.neighbors)
+                if PATH_DEBUG:
+                    logging.debug("Neighbors: %s", current.cell.neighbors)
                 for neighbor in current.cell.neighbors:
                     neighbor_node = Node(neighbor, goal, current)
                     try:
@@ -172,7 +189,8 @@ class Agent:
                         # If not already going to be explored, add to frontier
                         if neighbor.location not in frontier_set:
                             # Uncomment for extremely verbose details about path planning
-                            # logging.debug('Adding: %s (%d)', str(neighbor), neighbor_node.future_cost)
+                            if PATH_DEBUG:
+                                logging.debug('Adding: %s (%d)', str(neighbor), neighbor_node.future_cost)
                             frontier_set.add(neighbor.location)
                             heapq.heappush(frontier_heap,
                                            (neighbor_node.future_cost, neighbor.location))
@@ -263,7 +281,8 @@ class GameEnvironment:
                 if j < len(row) - 1:
                     cell.add_neighbor(self.grid[i][j + 1])
                 # Uncomment to see all neighbors of all cells
-                # logging.debug("Cell ({}, {}) has neighbors: {}".format(i, j, cell.neighbors))
+                if PATH_DEBUG:
+                    logging.debug("Cell ({}, {}) has neighbors: {}".format(i, j, cell.neighbors))
 
     def update_cmdr(self, location):
         """Updates commander's location"""
