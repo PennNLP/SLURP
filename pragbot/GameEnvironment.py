@@ -135,7 +135,7 @@ class Agent:
             # Check whether we are at the goal or should keep exploring
             current = nodes[current_location]
             # Uncomment for extremely verbose details about path planning
-            logging.debug('Exploring: %s (%d)', str(current.cell), current.past_cost)
+            # logging.debug('Exploring: %s (%d)', str(current.cell), current.future_cost)
             if current.cell is goal:
                 # Reconstruct the path to the goal
                 waypoints = []
@@ -150,6 +150,8 @@ class Agent:
                 # Mark as explored
                 explored.add(current_location)
                 # Explore all unexplored neighbors
+                # Uncomment for extremely verbose details about path planning
+                # logging.debug("Neighbors: %s", current.cell.neighbors)
                 for neighbor in current.cell.neighbors:
                     neighbor_node = Node(neighbor, goal, current)
                     try:
@@ -162,10 +164,15 @@ class Agent:
                             neighbor_node.past_cost >= neighbor_past_cost):
                         continue
                     else:
-                        # Update best cost
+                        # Update best cost. Note that we do not update this in the heap;
+                        # that would be a linear time operation, which is probably not worth
+                        # it even though it could possibly save us from exploring a sub-optimal
+                        # hypothesis later.
                         nodes[neighbor.location] = neighbor_node
                         # If not already going to be explored, add to frontier
                         if neighbor.location not in frontier_set:
+                            # Uncomment for extremely verbose details about path planning
+                            # logging.debug('Adding: %s (%d)', str(neighbor), neighbor_node.future_cost)
                             frontier_set.add(neighbor.location)
                             heapq.heappush(frontier_heap,
                                            (neighbor_node.future_cost, neighbor.location))
@@ -254,7 +261,7 @@ class GameEnvironment:
                 if j < len(self.grid) - 1:
                     cell.add_neighbor(self.grid[i][j + 1])
                 # Uncomment to see all neighbors of all cells
-                logging.debug("Cell ({}, {}) has neighbors: {}".format(i, j, cell.neighbors))
+                # logging.debug("Cell ({}, {}) has neighbors: {}".format(i, j, cell.neighbors))
 
     def update_cmdr(self, location):
         """Updates commander's location"""
