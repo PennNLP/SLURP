@@ -222,7 +222,7 @@ class GameEnvironment:
                     cell.add_neighbor(self.grid[i][j - 1])
                 if j < len(self.grid) - 1:
                     cell.add_neighbor(self.grid[i][j + 1])
-                print "Cell " + i + "," + j + " has neighbors: " + cell.neighbors
+                print "Cell ({}, {}) has neighbors: {}".format(i, j, cell.neighbors)
         print 'Created environment:'
         print str(self)
 
