@@ -108,8 +108,11 @@ class ClientHandler(threading.Thread):
                     msg, buff = buff, None
                 if msg:
                     self._server.queue.put((msg, self))
-                else:
+                elif msg is None:
                     break
+                else:
+                    # Adjacent delimiters
+                    continue
 
         print "%s: Client disconnected." % self.name
 

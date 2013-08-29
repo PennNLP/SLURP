@@ -123,6 +123,7 @@ class PragbotClient(object):
 
     def process_line(self, line):
         """Process a line from the server."""
+        logging.info("Received: %s", line)
         if line.startswith('CHAT_MESSAGE_PREFIX'):
             line = _remove_prefix(line, 'CHAT_MESSAGE_PREFIX<Commander> ')
             # TODO: multi-process lock
@@ -154,17 +155,24 @@ class PragbotClient(object):
             try:
                 buff += self._conn.recv(4096)
             except timeout:
+                logging.debug("Timed out waiting for data.")
                 continue
             except error:
+                logging.debug("Error reading data from server.")
                 break
             if not buff:
+                logging.debug("Received empty message from server.")
                 break
             while buff:
                 msg, buff = _parse_msg(buff, self.delimiter)
                 if msg:
                     self.process_line(msg)
-                else:
+                elif msg is None:
+                    # Incomplete message, recv again for more data
                     break
+                else:
+                    # Adjacent delimiters in the input, keep going
+                    continue
 
         print "Server disconnected"
 
