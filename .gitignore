@@ -18,3 +18,7 @@ build
 CMakeFiles
 CMakeCache.txt
 srv_gen
+*.step*.aut
+*.step*.ltl
+*.step*.spec
+*.step*.smv
