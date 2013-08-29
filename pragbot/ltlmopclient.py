@@ -43,12 +43,13 @@ def find_port(base):
 
 class LTLMoPClient(object):
 
-    def __init__(self, handler_port):
+    def __init__(self, handler_port, chat_callback):
         self.map_bitmap = None
         self.robot_pos = None
         self.fiducial_positions = {}
         self.proj = project.Project()
         self.proj.loadProject(CONFIG.base_spec_file)
+        self.chat_callback = chat_callback
 
         # Start execution context
         print "Starting executor..."
@@ -170,6 +171,7 @@ class LTLMoPClient(object):
     def on_receive_reply(self, result):
         """ when the dialoguemanager has gotten back to us """
         if result:
+            self.chat_callback(result)
             self.append_log(result, "System")
 
     def on_clear_commands(self, event):

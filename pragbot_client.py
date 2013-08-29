@@ -74,7 +74,7 @@ class PragbotClient(object):
         self.xmlrpc_server_thread.start()
         logging.info("LTLMoPClient listening for XML-RPC calls on http://localhost:{} ...".
                      format(self.handler_port))
-        self.ltlmop = ltlmopclient.LTLMoPClient(self.handler_port)
+        self.ltlmop = ltlmopclient.LTLMoPClient(self.handler_port, self.send_response)
 
     def receiveHandlerMessages(self, event_type, message=None):
         """Process messages from the handlers."""
@@ -142,6 +142,10 @@ class PragbotClient(object):
             call = RepeatingCall(self.ge.jr.follow_waypoints, (self.sendMessage,), 0.05)
             call.daemon = True
             call.start()
+
+    def send_response(self, msg):
+        """Send a chat response to the server."""
+        self.sendMessage('CHAT_MESSAGE_PREFIX<JR> ', msg)
 
     def run(self):
         """Process requests from the server."""
