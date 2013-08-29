@@ -187,8 +187,8 @@ class Node:
     def __init__(self, cell, goal, parent):
         self.cell = cell
         self.parent = parent
-        self.past_cost = (parent.past_cost + self.cell.distance(parent.cell)) if parent else 0
-        self.future_cost = self.past_cost + self.cell.distance(goal)
+        self.past_cost = (parent.past_cost + 1) if parent else 0
+        self.future_cost = self.cell.distance(goal)
 
 
 class Room:
