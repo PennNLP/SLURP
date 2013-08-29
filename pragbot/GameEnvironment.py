@@ -116,9 +116,16 @@ class Agent:
         """A* search"""
         explored = set()
         frontier = [Node(self.cell, goal, None)]
-        while len(frontier) > 0:
-            current = heapq.heappop(frontier)
-            print 'Exploring: %s (%d)' % (str(current.cell), current.min_cost)
+        print "Planning path from {} to {}...".format(self.cell.location, goal.location)
+        while True:
+            try:
+                current = heapq.heappop(frontier)
+            except IndexError:
+                return False
+            if current.cell.location in explored:
+                continue
+            #print 'Exploring: %s (%d)' % (str(current.cell), current.min_cost)
+            explored.add(current.cell.location)
             if current.cell is goal:
                 waypoints = []
                 while current is not None:
@@ -126,11 +133,12 @@ class Agent:
                     current = current.parent
                 waypoints.reverse()
                 self.set_waypoints(waypoints)
+                print "Found path"
                 return True
-            explored.add(current.cell)
             for n in current.cell.neighbors:
-                if n not in explored:
+                if n.location not in explored:
                     heapq.heappush(frontier, Node(n, goal, current))
+        print "Error: could not find path"
         return False
 
 class Room:
