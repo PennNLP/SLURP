@@ -2,7 +2,7 @@
 
 import heapq
 import math
-import threading
+from threading import Lock
 
 ROW_DELIMITER = ';'
 DEFAULT_MAP = 'pragbot/Maps/ScenarioEnv.txt'
@@ -66,42 +66,52 @@ class Agent:
     def __init__(self, cell, location=None):
         # World coordinates
         self.cell = cell
+        self.cell_lock = Lock()
         self.location = location
         if not self.location:
             self.fix_location()
 
         # Causes initial position to be relayed
         self._waypoints = [self.cell]
-        self.waypoint_lock = threading.Lock()
+        self.waypoint_lock = Lock()
 
-    def set_waypoints(self, new_waypoints):
+    def set_waypoints(self, waypoints):
         with self.waypoint_lock:
-            self._waypoints = new_waypoints
+            self._waypoints = waypoints
+
+    def get_waypoints(self):
+        with self.waypoint_lock:
+            return self._waypoints
 
     def follow_waypoints(self, callback):
         """Take one step towards next waypoint"""
-        with self.waypoint_lock:
-            rotationmatrix = [0, 0, 1, 0, 1, 0, -1, 0, 0]
-            if len(self._waypoints) > 0:
-                if self._waypoints[0].world_distance(self.location) < 0.3:
-                    # Make sure movement is only from center to center
-                    # to prevent stuck-in-the wall bugs
-                    callback('MOVE_PLAYER_CELL', ','.join(str(s) for s in (self._waypoints[0].location[0], self.cell.location[0], self._waypoints[0].location[1], self.cell.location[1])))
-                    self.cell = self._waypoints.pop(0)
-                    self.fix_location()
-                else:
-                    newlocation = self._waypoints[0].closer_point(self.location)
-                    deltaX = self.location[0] - newlocation[0]
-                    deltaZ = self.location[1] - newlocation[1]
-                    angle = math.atan2(deltaX, deltaZ)
-                    # rotationmatrix = [1,0,0,0,math.cos(angle),1-math.sin(angle),
-                    # 0,math.sin(angle),math.cos(angle)]
+        waypoints = self.get_waypoints()
+        rotationmatrix = [0, 0, 1, 0, 1, 0, -1, 0, 0]
+        if len(waypoints) > 0:
+            if waypoints[0].world_distance(self.location) < 0.3:
+                # Make sure movement is only from center to center
+                # to prevent stuck-in-the wall bugs
+                callback('MOVE_PLAYER_CELL',
+                    ','.join(str(s) for s in
+                             (waypoints[0].location[0], self.cell.location[0],
+                              waypoints[0].location[1], self.cell.location[1])))
+                self.set_cell(waypoints[0])
+                # If the waypoints changed from under us, don't try to change them
+                if self.get_waypoints() == waypoints:
+                    self.set_waypoints(waypoints[1:])
+            else:
+                newlocation = waypoints[0].closer_point(self.location)
+                deltaX = self.location[0] - newlocation[0]
+                deltaZ = self.location[1] - newlocation[1]
+                angle = math.atan2(deltaX, deltaZ)
+                # rotationmatrix = [1,0,0,0,math.cos(angle),1-math.sin(angle),
+                # 0,math.sin(angle),math.cos(angle)]
 
-                    rotationmatrix = [math.cos(angle), 0, math.sin(angle), 0, 1, 0,
-                                      - 1 * math.sin(angle), 0, math.cos(angle)]
-                    self.location = newlocation
-                # Ok, here's where I need to rotate Jr in the direction he is moving#
-                callback('PLAYER_MOVE_3D', ','.join(str(s) for s in [self.location[0], 0, self.location[1]] + rotationmatrix))
+                rotationmatrix = [math.cos(angle), 0, math.sin(angle), 0, 1, 0,
+                                  - 1 * math.sin(angle), 0, math.cos(angle)]
+                self.location = newlocation
+            # Ok, here's where I need to rotate Jr in the direction he is moving
+            callback('PLAYER_MOVE_3D', ','.join(str(s) for s in [self.location[0], 0, self.location[1]] + rotationmatrix))
 
     def fix_location(self):
         """Moves the agent to the center of its cell"""
@@ -109,8 +119,10 @@ class Agent:
 
     def set_cell(self, cell):
         """Sets the agent's cell and the location to the center of it"""
-        self.cell = cell
-        self.fix_location()
+        # TODO: Make reads of cell coherent as well
+        with self.cell_lock:
+            self.cell = cell
+            self.fix_location()
 
     def plan_path(self, goal):
         """A* search"""
