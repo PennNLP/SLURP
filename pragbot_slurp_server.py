@@ -53,6 +53,7 @@ def accept_connections(port, spawner):
     """Spawn a new client each time we receive a valid connection."""
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
     sock.bind(('localhost', port))
     sock.listen(5)
 
