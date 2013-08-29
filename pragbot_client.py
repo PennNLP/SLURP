@@ -37,6 +37,12 @@ class PragbotClient(object):
     """Provide a SLURP client for the Pragbot server."""
 
     KNOWN_OBJECTS = set(("bomb", "hostage", "badguy"))
+    EVENT_LOCATION = "Location"
+    EVENT_MOVE = "Move"
+    EVENT_STOP = "Stop"
+    EVENT_SENSOR = "Sensor"
+    EVENT_FIND_BOMB = "Find Bomb"
+    LOCATION_UNKNOWN = "Unknown"
 
     def __init__(self):
         # Set up basics before starting the server
@@ -70,13 +76,20 @@ class PragbotClient(object):
 
     def receiveHandlerMessages(self, event_type, message=None):
         """Process messages from the handlers."""
-        print "Received handler message:", event_type, message
+        # Wait for the environment to be loaded
         self.is_ready.wait()
-        if event_type == "Move":
+
+        # Skip location messages since we get them so often
+        if event_type != self.EVENT_LOCATION:
+            print "Received handler message:", event_type, message
+
+        # Handle events
+        if event_type == self.EVENT_MOVE:
             room = self.ge.rooms[message]
             destination = room.center
+            self.ge.jr.set_waypoints([])
             self.ge.jr.plan_path(self.ge.grid[destination[0]][destination[1]])
-        elif event_type == "Stop":
+        elif event_type == self.EVENT_STOP:
             self.ge.jr.set_waypoints([])
         elif event_type in self.KNOWN_OBJECTS:
             object_seen = False
@@ -85,16 +98,16 @@ class PragbotClient(object):
                     object_seen = (object_seen or
                                    self.ge.object_positions[thing] in self.ge.rooms[message])
             return object_seen
-        elif event_type == "Find Bomb":
+        elif event_type == self.EVENT_FIND_BOMB:
             if message in self.ge.objects:
                 return self.ge.object_positions[message]
             else:
                 return None
-        elif event_type == "Location":
+        elif event_type == self.EVENT_LOCATION:
             for room in self.ge.rooms.itervalues():
                 if self.ge.jr.cell.location in room:
                     return room.name
-            return "Nowhere"
+            return self.LOCATION_UNKNOWN
         else:
             print event_type + " : " + message
 
