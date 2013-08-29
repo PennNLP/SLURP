@@ -156,6 +156,8 @@ class GameEnvironment:
                 coords = room_data[0].split(" ")
                 coords = coords[1:]
                 coords = [int(item) for item in coords]
+                # Repack coords from [z1, x1, z2, x2] to [x1, z1, x2, z2]
+                coords = [coords[1], coords[0], coords[3], coords[2]]
                 name = room_data[1]
                 self.rooms[name] = (Room(coords, name))
             elif len(line.strip()) > 0:
