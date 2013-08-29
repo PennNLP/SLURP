@@ -286,11 +286,11 @@ class GameEnvironment:
 
     def update_cmdr(self, location):
         """Updates commander's location"""
-        self.cmdr.set_cell(self.grid[location[0]][location[1]])
+        self.cmdr.set_cell(self.get_cell(location))
 
     def update_jr(self, location):
         """Update junior's location"""
-        self.jr.set_cell(self.grid[location[0]][location[1]])
+        self.jr.set_cell(self.get_cell(location))
 
     def cell_contents(self, cell):
         """Returns either the cell if empty or its contents"""
@@ -300,6 +300,10 @@ class GameEnvironment:
             return 'J'
         else:
             return cell.celltype
+
+    def get_cell(self, location):
+        """Return the cell corresponding to a location."""
+        return self.grid[location[0]][location[1]]
 
     def __str__(self):
         return '\n'.join(''.join(self.cell_contents(cell) for cell in row) \
