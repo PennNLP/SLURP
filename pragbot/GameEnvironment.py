@@ -133,7 +133,7 @@ class Agent:
             try:
                 current = heapq.heappop(frontier)
             except IndexError:
-                return False
+                break
             if current.cell.location in explored:
                 continue
             #print 'Exploring: %s (%d)' % (str(current.cell), current.min_cost)
