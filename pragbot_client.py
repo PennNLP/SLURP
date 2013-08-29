@@ -24,7 +24,7 @@ from SimpleXMLRPCServer import SimpleXMLRPCServer
 import logging
 
 from semantics.new_knowledge import KnowledgeBase
-from pragbot.GameEnvironment import GameEnvironment
+from pragbot.game import GameEnvironment
 from pragbot import ltlmopclient
 from pragbot.ltlmopclient import find_port
 import globalConfig  # pylint: disable=W0611
