@@ -156,7 +156,6 @@ class PragbotClient(object):
         self._conn.close()
 
 
-
 class RepeatingCall(threading.Thread):
     """Repeatedly call a function in a separate thread."""
 
