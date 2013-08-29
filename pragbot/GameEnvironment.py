@@ -260,7 +260,7 @@ class GameEnvironment:
                     cell.add_neighbor(self.grid[i + 1][j])
                 if j > 0:
                     cell.add_neighbor(self.grid[i][j - 1])
-                if j < len(self.grid) - 1:
+                if j < len(row) - 1:
                     cell.add_neighbor(self.grid[i][j + 1])
                 # Uncomment to see all neighbors of all cells
                 # logging.debug("Cell ({}, {}) has neighbors: {}".format(i, j, cell.neighbors))
