@@ -12,8 +12,8 @@ from SimpleXMLRPCServer import SimpleXMLRPCServer
 
 import project
 from specCompiler import SpecCompiler
+from LTLParser.LTLParser import Parser
 import execute
-
 
 # TODO: This class with one instance is overkill
 # pylint: disable=W0201
@@ -24,6 +24,8 @@ CONFIG.base_spec_file = os.path.join("pragbotscenario", "pragbot.spec")
 CONFIG.executor_base_port = 11000
 CONFIG.ltlmop_base_port = 12000
 CONFIG.max_port_tries = 100
+
+RESPONSE_ERROR = "Sorry, something went wrong when I tried to understand that."
 
 
 def find_port(base):
@@ -165,7 +167,12 @@ class LTLMoPClient(object):
         if self.dialogue_manager is None:
             self.append_log("Dialogue manager not initialized", "!!! Error")
         else:
-            self.on_receive_reply(self.dialogue_manager.tell(user_text))
+            try:
+                reply = self.dialogue_manager.tell(user_text)
+            except Parser.ParseErrors:
+                self.append_log("LTLParser encountered an error.")
+                reply = RESPONSE_ERROR
+            self.on_receive_reply(reply)
 
     def on_receive_reply(self, result):
         """ when the dialoguemanager has gotten back to us """
