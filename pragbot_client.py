@@ -52,6 +52,9 @@ class PragbotClient(object):
         self.ge = None
         self.is_ready = threading.Event()
         self.kb = KnowledgeBase(other_agents=['cmdr'])
+        self._waypoint_thread = None
+        self.stop = False
+        self.shutting_down = False
 
         # Connect to the pragbot server first
         try:
@@ -115,11 +118,22 @@ class PragbotClient(object):
 
     def sendMessage(self, action, msg):
         """Send a message to the server."""
+        if self.stop:
+            # We're shutting down already, don't even try to send
+            return
+
         data = action + str(msg)
-        self._conn.sendall(data + self.delimiter)
         # Skip player move messages
         if not data.startswith("PLAYER_MOVE"):
             logging.info('Sending: %s', data)
+
+        # Send, but give up if the connection is dead
+        try:
+            self._conn.sendall(data + self.delimiter)
+        except error:
+            # Shut down, the connection is broken
+            logging.error("Could not send data to server, shutting down.")
+            self.stop = True
 
     def process_line(self, line):
         """Process a line from the server."""
@@ -140,12 +154,12 @@ class PragbotClient(object):
             self.ge = GameEnvironment(line)
             logging.info("Scenario map:\n%s", self.ge)
             self.is_ready.set()
-            call = RepeatingCall(self.ge.jr.follow_waypoints, (self.sendMessage,), 0.05)
-            call.daemon = True
-            call.start()
+            self._waypoint_thread = \
+                RepeatingCall(self.ge.jr.follow_waypoints, (self.sendMessage,), 0.05)
+            self._waypoint_thread.daemon = True
+            self._waypoint_thread.start()
         elif line.startswith('JR_IS_FLIPPED') or line.startswith('JR_IS_UNFLIPPED'):
             self.ge.jr.flip_junior()
-
 
     def send_response(self, msg):
         """Send a chat response to the server."""
@@ -154,17 +168,17 @@ class PragbotClient(object):
     def run(self):
         """Process requests from the server."""
         buff = ""
-        while True:
+        while not self.stop:
             try:
                 buff += self._conn.recv(4096)
             except timeout:
                 logging.debug("Timed out waiting for data.")
                 continue
             except error:
-                logging.debug("Error reading data from server.")
+                logging.warning("Error reading data from server.")
                 break
             if not buff:
-                logging.debug("Received empty message from server.")
+                logging.warning("Server closed connection.")
                 break
             while buff:
                 msg, buff = _parse_msg(buff, self.delimiter)
@@ -176,18 +190,38 @@ class PragbotClient(object):
                 else:
                     # Adjacent delimiters in the input, keep going
                     continue
-
-        print "Server disconnected"
+        # Set self.stop in case we came out from a break, and then shutdown
+        self.stop = True
+        self.shutdown()
 
     def shutdown(self):
         """Close any resources before exiting."""
-        print "Shutting down PragbotClient..."
+        if self.shutting_down:
+            # No need to call this multiple times
+            return
+        self.shutting_down = True
+
+        logging.info("Shutting down PragbotClient...")
+        # Stop the waypoint callback thread
+        if self._waypoint_thread:
+            logging.info("Waiting for waypoint thread to stop...")
+            self._waypoint_thread.stop = True
+            self._waypoint_thread.join()
+
+        logging.info("Shutting down LTLMoPClient...")
+        self.ltlmop.shutdown()
+
+        logging.info("Shutting down handler server...")
+        self.xmlrpc_server.shutdown()
+        self.xmlrpc_server_thread.join()
+
         # Close down the socket
         try:
             self._conn.shutdown(socket.SHUT_RDWR)
         except error:
             pass
         self._conn.close()
+        logging.info("PragbotClient has shut down.")
 
 
 class RepeatingCall(threading.Thread):
@@ -197,11 +231,12 @@ class RepeatingCall(threading.Thread):
         self.func = func
         self.args = args
         self.interval = interval
+        self.stop = False
         threading.Thread.__init__(self)
 
     def run(self):
         """Call the function in a loop."""
-        while True:
+        while not self.stop:
             self.func(*self.args)
             time.sleep(self.interval)
 
@@ -229,8 +264,9 @@ def main():
 
     # Set up signal handlers
     def shutdown(signum, frame):  # pylint:disable=W0613
-        """Stop the reactor."""
+        """Stop the client."""
         print "Shutting down client..."
+        client.stop = True
         client.shutdown()
 
     signal.signal(signal.SIGABRT, shutdown)

@@ -46,8 +46,11 @@ class Spawner:
         if self.client_processes:
             print "Sending shutdown signal to child processes..."
         for process in self.client_processes:
-            os.kill(process.pid, signal.SIGABRT)
-
+            try:
+                os.kill(process.pid, signal.SIGABRT)
+            except OSError:
+                # Usually this means the process is gone already
+                pass
 
 def accept_connections(port, spawner):
     """Spawn a new client each time we receive a valid connection."""

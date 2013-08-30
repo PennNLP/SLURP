@@ -134,7 +134,7 @@ class LTLMoPClient(object):
         else:
             print "[{}] {}".format(event_type, event_data)
 
-    def on_close(self, event):
+    def shutdown(self):
         print "Shutting down executor..."
         try:
             self.executor_proxy.shutdown()
@@ -151,7 +151,6 @@ class LTLMoPClient(object):
         # After ten seconds, just kill it
         if self.executor_process.is_alive():
             self.executor_process.terminate()
-        event.Skip()
 
     def append_log(self, message, agent=None):
         if agent:
