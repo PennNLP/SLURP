@@ -99,6 +99,7 @@ class Agent:
         """Take one step towards next waypoint"""
         if self.flip:
             self.flipped = not self.flipped
+            self.flip = False
             callback('PLAYER_MOVE_3D', ','.join(str(s) for s in [self.location[0], 0, self.location[1]] + self.flip_matrix))
         waypoints = self.get_waypoints()
         rotationmatrix = [0, 0, 1, 0, 1, 0, -1, 0, 0]
