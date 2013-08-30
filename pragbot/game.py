@@ -82,6 +82,10 @@ class Agent:
         # Causes initial position to be relayed
         self._waypoints = [self.cell]
         self.waypoint_lock = Lock()
+        self.flip = False
+        self.flipped = False
+        # A rotation of pi radians on the Z axis
+        self.flip_matrix = [-1, 0, 0, 0, -1, 0, 0, 0, 1]
 
     def set_waypoints(self, waypoints):
         with self.waypoint_lock:
@@ -93,9 +97,12 @@ class Agent:
 
     def follow_waypoints(self, callback):
         """Take one step towards next waypoint"""
+        if self.flip:
+            self.flipped = not self.flipped
+            callback('PLAYER_MOVE_3D', ','.join(str(s) for s in [self.location[0], 0, self.location[1]] + self.flip_matrix))
         waypoints = self.get_waypoints()
         rotationmatrix = [0, 0, 1, 0, 1, 0, -1, 0, 0]
-        if len(waypoints) > 0:
+        if len(waypoints) > 0 and not self.flipped:
             if waypoints[0].world_distance(self.location) < 0.3:
                 # Make sure movement is only from center to center
                 # to prevent stuck-in-the wall bugs
@@ -199,6 +206,11 @@ class Agent:
         # Failure
         logging.error("Could not find path from %s to %s...", self.cell.location, goal.location)
         return False
+
+    def flip_junior(self):
+        """Sets Junior to flipped"""
+        self.flip = True
+
 
 
 class Node:

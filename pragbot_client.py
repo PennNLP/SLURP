@@ -143,6 +143,9 @@ class PragbotClient(object):
             call = RepeatingCall(self.ge.jr.follow_waypoints, (self.sendMessage,), 0.05)
             call.daemon = True
             call.start()
+        elif line.startswith('JR_IS_FLIPPED') or line.startswith('JR_IS_UNFLIPPED'):
+            self.ge.jr.flip_junior()
+
 
     def send_response(self, msg):
         """Send a chat response to the server."""
