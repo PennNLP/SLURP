@@ -221,6 +221,9 @@ class BarebonesDialogueManager(object):
         # TODO: don't resynthesize if the specification hasn't changed?
         #       i.e. distinguish between resuming from pause, versus a new command
 
+        if not self.spec:
+            return "You haven't given me any orders I understand."
+
         # pause
         self.executor.pause()
 
@@ -231,10 +234,11 @@ class BarebonesDialogueManager(object):
         if success:
             # resume
             self.executor.resume()
-            self.ltlmop.append_log("Doing as you asked.", "System")
+            return "Got it. I'm carrying out your orders."
         else:
-            self.ltlmop.append_log(
-                "I'm sorry, I can't do that.  Please try something else.", "System")
+            self.clear()
+            return ("Sorry, I can't come up with a plan that will carry out all your orders. "
+                    "Try giving fewer commands at a time.")
 
     def tell(self, message):
         """ take in a message from the user, return a response.
@@ -244,8 +248,7 @@ class BarebonesDialogueManager(object):
             self.clear()
             return
         elif msg == "go":
-            self.execute()
-            return
+            return self.execute()
         elif msg == "wait":
             self.executor.pause()
             return "Paused."
