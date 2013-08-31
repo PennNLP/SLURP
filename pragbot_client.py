@@ -137,9 +137,9 @@ class PragbotClient(object):
 
     def process_line(self, line):
         """Process a line from the server."""
-        logging.info("Received: %s", line)
         if line.startswith('CHAT_MESSAGE_PREFIX'):
             line = _remove_prefix(line, 'CHAT_MESSAGE_PREFIX<Commander> ')
+            logging.info("Received chat message: %s", line)
             # TODO: multi-process lock
             self.ltlmop.get_pragbot_input(line)
         elif line.startswith('MOVE_PLAYER_CELL'):
@@ -159,6 +159,7 @@ class PragbotClient(object):
             self._waypoint_thread.daemon = True
             self._waypoint_thread.start()
         elif line.startswith('JR_IS_FLIPPED') or line.startswith('JR_IS_UNFLIPPED'):
+            logging.info("Received JR flipped message: %s", line)
             self.ge.jr.flip_junior()
 
     def send_response(self, msg):
