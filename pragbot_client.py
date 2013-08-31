@@ -34,6 +34,8 @@ PRAGBOT_SERVER_PORT = 10006
 # the highest port of all the XML-RPC ports.
 HANDLER_BASE_PORT = 13000
 
+RESPONSE_CRASH = ("Sorry, my language understanding system isn't working. "
+                  "I'm afraid we can't perform our mission.")
 
 class PragbotClient(object):
     """Provide a SLURP client for the Pragbot server."""
@@ -141,7 +143,14 @@ class PragbotClient(object):
             line = _remove_prefix(line, 'CHAT_MESSAGE_PREFIX<Commander> ')
             logging.info("Received chat message: %s", line)
             # TODO: multi-process lock
-            self.ltlmop.get_pragbot_input(line)
+            try:
+                self.ltlmop.get_pragbot_input(line)
+            except IOError:
+                # Error connecting to NLPipeline
+                self.ltlmop.on_receive_reply(RESPONSE_CRASH)
+                logging.error("Pipelinehost cannot be reached, shutting down.")
+                self.stop = True
+                self.shutdown()
         elif line.startswith('MOVE_PLAYER_CELL'):
             line = _remove_prefix(line, 'MOVE_PLAYER_CELL')
             new_x, old_x, new_y, old_y = line.split(',')

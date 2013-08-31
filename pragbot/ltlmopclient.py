@@ -172,6 +172,9 @@ class LTLMoPClient(object):
             except Parser.ParseErrors:
                 self.append_log("LTLParser encountered an error.")
                 reply = RESPONSE_ERROR
+            except IOError:
+                self.append_log("Could not connect to NLPipeline.")
+                raise
             self.on_receive_reply(reply)
 
     def on_receive_reply(self, result):
