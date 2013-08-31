@@ -101,6 +101,10 @@ class Agent:
             self.flipped = not self.flipped
             self.flip = False
             callback('PLAYER_MOVE_3D', ','.join(str(s) for s in [self.location[0], 0, self.location[1]] + self.flip_matrix))
+            # Do an additional move to the cell to make sure the flip takes effect
+            callback('MOVE_PLAYER_CELL', ','.join(str(s) for s in
+                                                  (self.cell.location[0], self.cell.location[0],
+                                                   self.cell.location[1], self.cell.location[1])))
         waypoints = self.get_waypoints()
         rotationmatrix = [0, 0, 1, 0, 1, 0, -1, 0, 0]
         if len(waypoints) > 0 and not self.flipped:
