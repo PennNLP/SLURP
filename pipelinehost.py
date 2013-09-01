@@ -23,6 +23,8 @@ Hosts requests sent to the NLPipeline over sockets.
 
 import json
 import socket
+import time
+
 from commproxy import CallbackSocket, _parse_msg
 from pennpipeline import PennPipeline
 
@@ -119,7 +121,7 @@ def main():
     PipelineHost(DEFAULT_PORT, True, True)
     try:
         while True:
-            raw_input()
+            time.sleep(60)
     except KeyboardInterrupt:
         pass
 
