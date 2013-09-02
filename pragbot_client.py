@@ -151,6 +151,11 @@ class PragbotClient(object):
                 logging.error("Pipelinehost cannot be reached, shutting down.")
                 self.stop = True
                 self.shutdown()
+            except Exception as err:
+                logging.exception("Error when processing user input.")
+                self.ltlmop.on_receive_reply(RESPONSE_CRASH)
+                self.stop = True
+                self.shutdown()
         elif line.startswith('MOVE_PLAYER_CELL'):
             line = _remove_prefix(line, 'MOVE_PLAYER_CELL')
             new_x, old_x, new_y, old_y = line.split(',')
