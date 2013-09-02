@@ -17,7 +17,7 @@
 import sys
 import heapq
 import math
-from threading import Lock
+from threading import Lock, RLock
 import logging
 
 ROW_DELIMITER = ';'
@@ -81,7 +81,8 @@ class Agent:
 
         # Causes initial position to be relayed
         self._waypoints = [self.cell]
-        self.waypoint_lock = Lock()
+        # Reentrant lock so one can get and set while holding the lock to assure consistency
+        self._waypoint_lock = RLock()
         self.flip = False
         self.flipped = False
         # A rotation of pi radians on the Z axis
@@ -89,12 +90,13 @@ class Agent:
         self.unflip_matrix = [1, 0, 0, 0, 1, 0, 0, 0, 1]
 
     def set_waypoints(self, waypoints):
-        with self.waypoint_lock:
+        """Get the waypoint lock and set the waypoints."""
+        with self._waypoint_lock:
             self._waypoints = waypoints
 
     def get_waypoints(self):
-        with self.waypoint_lock:
-            return self._waypoints
+        """Get the waypoints, which may not reflect latest changes."""
+        return self._waypoints
 
     def follow_waypoints(self, callback):
         """Take one step towards next waypoint"""
@@ -123,9 +125,10 @@ class Agent:
                              (waypoints[0].location[0], self.cell.location[0],
                               waypoints[0].location[1], self.cell.location[1])))
                 self.set_cell(waypoints[0])
-                # If the waypoints changed from under us, don't try to change them
-                if self.get_waypoints() == waypoints:
-                    self.set_waypoints(waypoints[1:])
+                # Update the waypoints if no once changed them from under us
+                with self._waypoint_lock:
+                    if self.get_waypoints() == waypoints:
+                        self.set_waypoints(waypoints[1:])
             else:
                 newlocation = waypoints[0].closer_point(self.location)
                 deltaX = self.location[0] - newlocation[0]
