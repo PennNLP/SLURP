@@ -315,7 +315,9 @@ def load_word_sense_mapping(force_generate=False):
         if PERF_DEBUG:
             print 'Time taken to load pickle file: %f' % (time.time() - tic)
         word_sense_file.close()
-    except (IOError, EOFError):
+    except (IOError, AttributeError, EOFError):
+        # IOError: no such file, AttributeError: API change that makes file unloadable,
+        # EOFError: corrupt/empty file
         print "Word sense pickle file is missing or out of date, creating it..."
         result = generate_mapping(word_sense_path)
 
