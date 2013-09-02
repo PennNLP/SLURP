@@ -86,6 +86,7 @@ class Agent:
         self.flipped = False
         # A rotation of pi radians on the Z axis
         self.flip_matrix = [-1, 0, 0, 0, -1, 0, 0, 0, 1]
+        self.unflip_matrix = [1, 0, 0, 0, 1, 0, 0, 0, 1]
 
     def set_waypoints(self, waypoints):
         with self.waypoint_lock:
@@ -97,14 +98,20 @@ class Agent:
 
     def follow_waypoints(self, callback):
         """Take one step towards next waypoint"""
+        # Take care of the flip/flipped cases
         if self.flip:
+            # Flip or unflip JR
             self.flipped = not self.flipped
             self.flip = False
-            callback('PLAYER_MOVE_3D', ','.join(str(s) for s in [self.location[0], 0, self.location[1]] + self.flip_matrix))
-            # Do an additional move to the cell to make sure the flip takes effect
-            callback('MOVE_PLAYER_CELL', ','.join(str(s) for s in
-                                                  (self.cell.location[0], self.cell.location[0],
-                                                   self.cell.location[1], self.cell.location[1])))
+            new_coords = ([self.location[0], 0, self.location[1]] +
+                          (self.flip_matrix if self.flipped else self.unflip_matrix))
+            callback('PLAYER_MOVE_3D', ','.join(str(s) for s in new_coords))
+            return
+        elif self.flipped:
+            # If we're flipped, we can't move
+            return
+
+        # Get waypoints and move
         waypoints = self.get_waypoints()
         rotationmatrix = [0, 0, 1, 0, 1, 0, -1, 0, 0]
         if len(waypoints) > 0 and not self.flipped:
