@@ -160,22 +160,29 @@ class Agent:
         start_node = Node(self.cell, goal, None)
         nodes = {self.cell.location: start_node}
         # Seems redundant, but makes sure all operations are constant time
-        frontier_heap = [(start_node.future_cost, self.cell.location)]
+        frontier_heap = [(start_node.future_cost, start_node)]
         frontier_set = set([self.cell.location])
         explored = set()
         logging.info("Planning path from %s to %s...", self.cell.location, goal.location)
         while True:
             try:
-                _, current_location = heapq.heappop(frontier_heap)
-                frontier_set.remove(current_location)
+                _, current = heapq.heappop(frontier_heap)
             except IndexError:
                 break
+            
+            # Skip voided nodes
+            if current.void:
+                continue
+            
+            # Remove location from the frontier
+            current_location = current.cell.location
+            frontier_set.remove(current_location)
 
-            # Check whether we are at the goal or should keep exploring
-            current = nodes[current_location]
-            # Uncomment for extremely verbose details about path planning
+            # Set PATH_DEBUG for extremely verbose details about path planning
             if PATH_DEBUG:
                 logging.debug('Exploring: %s (%d)', str(current.cell), current.future_cost)
+
+            # Check whether we are at the goal or should keep exploring
             if current.cell is goal:
                 # Reconstruct the path to the goal
                 waypoints = []
@@ -185,14 +192,16 @@ class Agent:
                 waypoints.reverse()
                 self.set_waypoints(waypoints)
                 logging.info("Found path: %s", waypoints)
-                return True
+                return waypoints
             else:
                 # Mark as explored
                 explored.add(current_location)
-                # Explore all unexplored neighbors
-                # Uncomment for extremely verbose details about path planning
+
+                # Set PATH_DEBUG for extremely verbose details about path planning
                 if PATH_DEBUG:
                     logging.debug("Neighbors: %s", current.cell.neighbors)
+
+                # Explore all unexplored neighbors
                 for neighbor in current.cell.neighbors:
                     neighbor_node = Node(neighbor, goal, current)
                     try:
@@ -205,23 +214,26 @@ class Agent:
                             neighbor_node.past_cost >= neighbor_past_cost):
                         continue
                     else:
-                        # Update best cost. Note that we do not update this in the heap;
-                        # that would be a linear time operation, which is probably not worth
-                        # it even though it could possibly save us from exploring a sub-optimal
-                        # hypothesis later.
+                        # Void the last node at this location, then update the current cost
+                        if neighbor.location in nodes:
+                            nodes[neighbor.location].void = True
                         nodes[neighbor.location] = neighbor_node
-                        # If not already going to be explored, add to frontier
+
+                        # Add to the frontier if needed
                         if neighbor.location not in frontier_set:
-                            # Uncomment for extremely verbose details about path planning
-                            if PATH_DEBUG:
-                                logging.debug('Adding: %s (%d)', str(neighbor), neighbor_node.future_cost)
                             frontier_set.add(neighbor.location)
-                            heapq.heappush(frontier_heap,
-                                           (neighbor_node.future_cost, neighbor.location))
+
+                        # Set PATH_DEBUG for extremely verbose details about path planning
+                        if PATH_DEBUG:
+                            logging.debug('Adding: %s (%d)', str(neighbor), neighbor_node.future_cost)
+
+                        # Always add to the heap
+                        heapq.heappush(frontier_heap,
+                                       (neighbor_node.future_cost, neighbor_node))
 
         # Failure
         logging.error("Could not find path from %s to %s...", self.cell.location, goal.location)
-        return False
+        return None
 
     def flip_junior(self):
         """Sets Junior to flipped"""
@@ -236,6 +248,7 @@ class Node:
         self.parent = parent
         self.past_cost = (parent.past_cost + 1) if parent else 0
         self.future_cost = self.cell.distance(goal)
+        self.void = False
 
 
 class Room:
