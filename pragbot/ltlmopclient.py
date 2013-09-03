@@ -35,7 +35,7 @@ def find_port(base):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
-            sock.bind(('localhost', port))
+            sock.bind(('127.0.0.1', port))
         except socket.error:
             port += 1
         else:
@@ -68,7 +68,7 @@ class LTLMoPClient(object):
         # Start our own xml-rpc server to receive events from execute
         self.server_port = find_port(CONFIG.ltlmop_base_port)
         print "Using port {} for LTLMoP client".format(self.server_port)
-        self.xmlrpc_server = SimpleXMLRPCServer(("localhost", self.server_port),
+        self.xmlrpc_server = SimpleXMLRPCServer(("127.0.0.1", self.server_port),
                                                 logRequests=False, allow_none=True)
 
         # Register functions with the XML-RPC server
@@ -79,19 +79,19 @@ class LTLMoPClient(object):
         self.xmlrpc_server_thread.daemon = True
         self.xmlrpc_server_thread.start()
         print "LTLMoPClient listening for XML-RPC calls on \
-               http://localhost:{} ...".format(self.server_port)
+               http://127.0.0.1:{} ...".format(self.server_port)
 
         # Connect to executor
         print "Connecting to executor...",
         while True:
             try:
                 self.executor_proxy = xmlrpclib.ServerProxy(
-                    "http://localhost:{}".format(self.executor_port),
+                    "http://127.0.0.1:{}".format(self.executor_port),
                     allow_none=True)
 
                 # Register with executor for event callbacks
                 self.executor_proxy.registerExternalEventTarget(
-                    "http://localhost:{}".format(self.server_port))
+                    "http://127.0.0.1:{}".format(self.server_port))
             except socket.error:
                 sys.stdout.write(".")
             else:

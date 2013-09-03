@@ -18,7 +18,7 @@ class CallbackSocket(object):
         self.queue = Queue()
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self._sock.bind(('' if not local else 'localhost', port))
+        self._sock.bind(('' if not local else '127.0.0.1', port))
         self._sock.listen(5)
         self._callback_lock = threading.Lock()
 

@@ -57,7 +57,7 @@ def accept_connections(port, spawner):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
-    sock.bind(('localhost', port))
+    sock.bind(('127.0.0.1', port))
     sock.listen(5)
 
     timed_out = False  # Use this flag to avoid printing when we timeout

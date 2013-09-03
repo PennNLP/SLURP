@@ -83,7 +83,7 @@ class PipelineHost(CallbackSocket):
 class PipelineClient(object):
     """Provides a client to the PipelineHost."""
 
-    def __init__(self, port=DEFAULT_PORT, hostname='localhost', verbose=False):
+    def __init__(self, port=DEFAULT_PORT, hostname='127.0.0.1', verbose=False):
         self.verbose = verbose
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:

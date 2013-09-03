@@ -63,7 +63,7 @@ class PragbotClient(object):
 
         # Connect to the pragbot server first
         try:
-            self._conn = socket.create_connection(('localhost', PRAGBOT_SERVER_PORT))
+            self._conn = socket.create_connection(('127.0.0.1', PRAGBOT_SERVER_PORT))
         except error:
             raise IOError("Could not connect to Pragbot server on port " + str(PRAGBOT_SERVER_PORT))
 
@@ -72,7 +72,7 @@ class PragbotClient(object):
         logging.info("Using port {} for handlers".format(self.handler_port))
 
         # Start the RPC server for handler requests
-        self.xmlrpc_server = SimpleXMLRPCServer(("localhost", self.handler_port),
+        self.xmlrpc_server = SimpleXMLRPCServer(("127.0.0.1", self.handler_port),
                                                 logRequests=False, allow_none=True)
         self.xmlrpc_server.register_function(self.receiveHandlerMessages)
         self.xmlrpc_server_thread = threading.Thread(target=self.xmlrpc_server.serve_forever)
@@ -80,7 +80,7 @@ class PragbotClient(object):
 
         # Start the server and then kick off the LTLMoP client which will indirectly connect to it
         self.xmlrpc_server_thread.start()
-        logging.info("LTLMoPClient listening for XML-RPC calls on http://localhost:{} ...".
+        logging.info("LTLMoPClient listening for XML-RPC calls on http://127.0.0.1:{} ...".
                      format(self.handler_port))
         self.ltlmop = ltlmopclient.LTLMoPClient(self.handler_port, self.send_response)
 
