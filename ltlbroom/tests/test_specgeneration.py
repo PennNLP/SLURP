@@ -1,9 +1,9 @@
 """Test components of spec generation."""
 
-import random
 import unittest
 
 from ltlbroom.specgeneration import SpecGenerator
+
 
 class TestSpecGenerator(unittest.TestCase):
 
@@ -20,8 +20,8 @@ class TestSpecGenerator(unittest.TestCase):
         enl, syl = self.lines_from_gen(text)
         self.assertEqual(enl, [])
         self.assertEqual(syl, [
-            '!s.mem_visit_hallway', 
-            '([]((next(s.mem_visit_hallway) <-> (s.mem_visit_hallway | next(s.hallway)))))', 
+            '!s.mem_visit_hallway',
+            '([]((next(s.mem_visit_hallway) <-> (s.mem_visit_hallway | next(s.hallway)))))',
             '([]<>(s.mem_visit_hallway))'
             ])
 
@@ -37,18 +37,18 @@ class TestSpecGenerator(unittest.TestCase):
         text = ""
         enl, syl = self.lines_from_gen(text)
         self.assertEqual(enl, [])
-        self.assertEqual(syl, [
-            '([](((s.camera & !s.radio) | (s.radio & !s.camera) '
-            '| (!s.camera & !s.radio))))'
-            ])
-        
+        # Assumes mutex is the last sys line
+        self.assertEqual(syl[-1], '([](((s.camera & !s.radio) | (s.radio & !s.camera) '
+                         '| (!s.camera & !s.radio))))')
+
     def test_activate(self):
         """Test a simple activate command."""
         self.props = ['camera']
         text = "Activate your camera."""
         enl, syl = self.lines_from_gen(text)
         self.assertEqual(enl, [])
-        self.assertEqual(syl, ['([](s.camera))'])
+        self.assertEqual(syl,
+            ['([](((!s.camera & next(s.camera)) -> STAY_THERE)))', '([](next(s.camera)))'])
 
     def test_activate_conditional(self):
         """Test a conditional activate command."""
@@ -56,7 +56,8 @@ class TestSpecGenerator(unittest.TestCase):
         text = "Activate your camera in the hallway."""
         enl, syl = self.lines_from_gen(text)
         self.assertEqual(enl, [])
-        self.assertEqual(syl, ['([]((s.hallway -> s.camera)))'])
+        # Assume actual safety is last line
+        self.assertEqual(syl[-1], '([]((next(s.hallway) -> next(s.camera))))')
 
     def lines_from_gen(self, text):
         """Return [env_lines, sys_lines] from a default generate call."""
