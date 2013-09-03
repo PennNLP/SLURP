@@ -44,20 +44,30 @@ class TestSpecGenerator(unittest.TestCase):
     def test_activate(self):
         """Test a simple activate command."""
         self.props = ['camera']
-        text = "Activate your camera."""
+        text = "Activate your camera."
         enl, syl = self.lines_from_gen(text)
         self.assertEqual(enl, [])
         self.assertEqual(syl,
             ['([](((!s.camera & next(s.camera)) -> STAY_THERE)))', '([](next(s.camera)))'])
 
-    def test_activate_conditional(self):
-        """Test a conditional activate command."""
+    def test_activate_location(self):
+        """Test an activate command restricted to a location."""
         self.props = ['camera']
-        text = "Activate your camera in the hallway."""
+        text = "Activate your camera in the hallway."
         enl, syl = self.lines_from_gen(text)
         self.assertEqual(enl, [])
         # Assume actual safety is last line
         self.assertEqual(syl[-1], '([]((next(s.hallway) -> next(s.camera))))')
+
+    def test_activate_conditional1(self):
+        """Test an activate command restricted by a preceding conditional."""
+        self.props = ['camera']
+        self.sensors = ['bomb']
+        text = "If you see a bomb, activate your camera."
+        enl, syl = self.lines_from_gen(text)
+        self.assertEqual(enl, [])
+        # Assume actual safety is last line
+        self.assertEqual(syl[-1], '([]((next(e.bomb) -> next(s.camera))))')
 
     def lines_from_gen(self, text):
         """Return [env_lines, sys_lines] from a default generate call."""
