@@ -29,6 +29,8 @@ from pragbot import ltlmopclient
 from pragbot.ltlmopclient import find_port
 import globalConfig  # pylint: disable=W0611
 
+DEBUG_MOVE = False
+
 PRAGBOT_SERVER_PORT = 10006
 # Because this is at the highest risk for a race condition, handler needs
 # the highest port of all the XML-RPC ports.
@@ -36,6 +38,7 @@ HANDLER_BASE_PORT = 13000
 
 RESPONSE_CRASH = ("Sorry, my language understanding system isn't working. "
                   "I'm afraid we can't perform our mission.")
+
 
 class PragbotClient(object):
     """Provide a SLURP client for the Pragbot server."""
@@ -98,6 +101,7 @@ class PragbotClient(object):
             self.ge.jr.plan_path(self.ge.grid[destination[0]][destination[1]])
         elif event_type == self.EVENT_STOP:
             self.ge.jr.set_waypoints([])
+            logging.info("Movement waypoints cleared.")
         elif event_type in self.KNOWN_OBJECTS:
             object_seen = False
             for thing in self.ge.objects:
@@ -126,7 +130,7 @@ class PragbotClient(object):
 
         data = action + str(msg)
         # Skip player move messages
-        if not data.startswith("PLAYER_MOVE"):
+        if DEBUG_MOVE or not data.startswith("PLAYER_MOVE"):
             logging.info('Sending: %s', data)
 
         # Send, but give up if the connection is dead
