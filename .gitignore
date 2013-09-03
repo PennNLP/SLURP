@@ -4,9 +4,6 @@
 *~
 .project
 .pydevproject
-ltlgen.smv
-ltlgen.ltl
-ltlgen.aut
 ltlgen.debug
 .DS_Store
 .settings
@@ -18,7 +15,7 @@ build
 CMakeFiles
 CMakeCache.txt
 srv_gen
-*.step*.aut
-*.step*.ltl
 *.step*.spec
-*.step*.smv
+*.ltl
+*.smv
+*.aut
