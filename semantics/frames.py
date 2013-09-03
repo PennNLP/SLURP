@@ -15,36 +15,53 @@ frames, and then returns the matching frames and their corresponding trees."""
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
 try:
     import cPickle as pickle
 except ImportError:
     import pickle
 import os
 import time
-from copy import deepcopy
 from collections import defaultdict
 # We cannot use cElementTree because its output cannot be pickled.
 from xml.etree.ElementTree import parse
 
 from semantics.lexical_constants import UNDERSTOOD_SENSES
-from semantics.tree import Tree
+from semantics.wntools import morphy
 
 PERF_DEBUG = False
 WORD_SENSE_FILENAME = 'word_sense_mapping.pkl'
 MODULE_PATH = os.path.dirname(os.path.abspath(__file__))
 VERBNET_DIRECTORY = os.path.join(MODULE_PATH, 'Verbnet', 'verbnet-3.1')
 
-# Parse tree constants
-VP_TAG = "VP"
-S_TAG = "S"
-SUBJ_TAG = "NP-SBJ"
-VERB_TAG = "VB"
-ADVP_TAG = "ADVP"
-DO_WORD = "do"
-SUPPORT_VERBS = set((DO_WORD, "please"))
-NOT_WORDS = set(("not", "n't"))
-NEVER_WORD = "never"
+# Mapping from Verbnet tags to Treebank tags
+TAG_MAPPING = {'NP': ['NP'],
+               #('NP', 'Location'): ['PP-LOC', 'PP-DIR', 'PP-CLR', 'NN', 'ADVP-LOC', 'NP-A', 'WHADVP', 'ADVP-TMP', 'PP-PRD', 'ADVP-DIR'],
+               #('NP', 'Destination'): ['PP-LOC', 'PP-DIR', 'NN', 'NP-A', 'ADVP', 'PP-CLR', 'WHADVP', 'ADVP-DIR'],
+               ('NP', 'Location'): ['NN', 'ADVP-LOC', 'NP-A', 'WHADVP', 'ADVP-TMP', 'ADVP-DIR'],
+               ('NP', 'Destination'): ['NN', 'NP-A', 'ADVP', 'WHADVP', 'ADVP-DIR'],
+               ('NP', 'Source'): ['NN', 'NP-A', 'ADVP', 'WHADVP', 'ADVP-DIR'],  # Eric: added NP-A (Not sure why?)
+               ('NP', 'Asset'): ['NP-A'],
+               ('NP', 'Agent'): ['NP-SBJ-A', 'NP', 'NP-A'],
+               ('NP', 'Beneficiary'): ['NP-A'],
+               ('NP', 'Recipient'): ['NP-A'],
+               ('NP', 'Patient'): ['NP'],
+               ('NP', 'Instrument'): ['NP-A'],
+               ('NP', 'Topic'): ['S-A', 'NP-A', 'WHNP'],
+               ('NP', 'Theme'): ['NP-A', 'NP-SBJ-A', 'NP', 'NP-SBJ',
+                                 'WHNP', 'WP'],
+               ('PREP',): ['exact'],
+               'PREP': ['IN', 'TO', 'ADVP-DIR'],
+               'VERB': ['VB']  # , 'VBZ', 'VBP', 'VBD']
+               }
+
+# Mapping from syntax restrictions to Treebank tags and matching conditions
+SYNRESTR_MAPPING = {'to_be': ('NP', 'to be', 'to_be', 'begins'),
+                    'ac_ing': ('VP', 'gerund', 'ac_ing', 'VBG'),
+                    'that_comp': ('S', 'that', 'that_comp', 'begins'),
+                    'wh_comp': ('S', 'what', 'wh_comp', 'begins'),
+                    'poss_ing': ('S', 'wanting', 'poss_ing', 'VBG'),
+                    'wh_inf': ('S', 'how', 'wh_inf', 'WH')
+                    }
 
 
 class VerbFrame(object):
@@ -78,8 +95,8 @@ class VerbFrame(object):
             element_tuple = (element.tag, role, synrestr, child_match)
 
             # If there is a syntax restriction, get the matching tuple
-            if not synrestr == '' and synrestr in synrestr_mapping.keys():
-                self.frame_list.append(synrestr_mapping[synrestr])
+            if not synrestr == '' and synrestr in SYNRESTR_MAPPING.keys():
+                self.frame_list.append(SYNRESTR_MAPPING[synrestr])
             else:
                 self.frame_list.append(element_tuple)
 
@@ -94,7 +111,7 @@ class VerbFrame(object):
             else:
                 print str(element.tag)
 
-    def match_parse(self, parse_tree, strict=True, allow_leftovers=False):
+    def match_parse(self, parse_tree, strict=True, allow_leftovers=True):
         """Takes a Treebank parse tree compiled into NLTK's tree structure.
         Outputs a result dictionary mapping predicates to arguments"""
 
@@ -204,6 +221,7 @@ class VerbFrame(object):
         if result_dict:
             # Check that every frame is filled
             if len(result_dict) == len(self.frame_list) and matches == len(self.frame_list):
+                # TODO: Allow leftovers is completely broken
                 if not allow_leftovers:
                     # Count relevant tags in result_dict
                     no_leftover_list = [
@@ -246,37 +264,49 @@ class VerbFrame(object):
         return subtree.node.split("-")[0]
 
 
-# Mapping from Verbnet tags to Treebank tags
-tag_mapping = {'NP': ['NP'],
-               #('NP', 'Location'): ['PP-LOC', 'PP-DIR', 'PP-CLR', 'NN', 'ADVP-LOC', 'NP-A', 'WHADVP', 'ADVP-TMP', 'PP-PRD', 'ADVP-DIR'],
-               #('NP', 'Destination'): ['PP-LOC', 'PP-DIR', 'NN', 'NP-A', 'ADVP', 'PP-CLR', 'WHADVP', 'ADVP-DIR'],
-               ('NP', 'Location'): ['NN', 'ADVP-LOC', 'NP-A', 'WHADVP', 'ADVP-TMP', 'ADVP-DIR'],
-               ('NP', 'Destination'): ['NN', 'NP-A', 'ADVP', 'WHADVP', 'ADVP-DIR'],
-               ('NP', 'Source'): ['NN', 'NP-A', 'ADVP', 'WHADVP', 'ADVP-DIR'],  # Eric: added NP-A (Not sure why?)
-               ('NP', 'Asset'): ['NP-A'],
-               ('NP', 'Agent'): ['NP-SBJ-A', 'NP', 'NP-A'],
-               ('NP', 'Beneficiary'): ['NP-A'],
-               ('NP', 'Recipient'): ['NP-A'],
-               ('NP', 'Patient'): ['NP'],
-               ('NP', 'Instrument'): ['NP-A'],
-               ('NP', 'Topic'): ['S-A', 'NP-A', 'WHNP'],
-               ('NP', 'Theme'): ['NP-A', 'NP-SBJ-A', 'NP', 'NP-SBJ',
-                                 'WHNP', 'WP'],
-               ('PREP',): ['exact'],
-               'PREP': ['IN', 'TO', 'ADVP-DIR'],
-               'VERB': ['VB']  # , 'VBZ', 'VBP', 'VBD']
-               }
+def get_verb_frames(verb):
+    lemmatized_verb = morphy(verb, 'v')
+    vfo_list = _create_vfos(lemmatized_verb)
+    return vfo_list
 
-# Mapping from syntax restrictions to Treebank tags and matching conditions
-synrestr_mapping = {'to_be': ('NP', 'to be', 'to_be', 'begins'),
-                    'ac_ing': ('VP', 'gerund', 'ac_ing', 'VBG'),
-                    'that_comp': ('S', 'that', 'that_comp', 'begins'),
-                    'wh_comp': ('S', 'what', 'wh_comp', 'begins'),
-                    'poss_ing': ('S', 'wanting', 'poss_ing', 'VBG'),
-                    'wh_inf': ('S', 'how', 'wh_inf', 'WH')
-                    }
 
-auxiliary_verbs = ['was', 'is', 'get', 'are', 'got', 'were', 'been', 'being']
+def _create_vfos(word):
+    """Gets VerbNet data without using NLTK corpora browser."""
+    vfo_list = []
+    for class_id in word_sense_mapping[word]:
+        vfo_list.extend(sense_frame_mapping[class_id])
+    return vfo_list
+
+
+def best_matching_frame(verb, tree):
+    """Get the best matching frame for a tree."""
+    frames = get_verb_frames(verb)
+    matches = [frame.match_parse(tree) for frame in frames]
+    valid_matches = [(args, frame.classid) for args, frame in zip(matches, frames) if args]
+    best_match = _pick_best_match(valid_matches)
+    return best_match
+
+
+def _pick_best_match(match_list):
+    """From the list of tuples, with the first element being the dict containing role assignments,
+    and the second element being the verb class, pick the match that maps to an action if it exists."""
+    if len(match_list) == 0:
+        return (None, None)
+
+    understood_matches = [(match, sense)
+                          for match, sense in match_list if sense.split('-')[0] in UNDERSTOOD_SENSES]
+    if len(understood_matches) > 0:
+        return _pick_most_complete_match(understood_matches)
+    # Otherwise use the all matches
+    return _pick_most_complete_match(match_list)
+
+
+def _pick_most_complete_match(match_list):
+    longest = max(match_list, key=lambda x: len(x[0]))
+    if sum(int(len(x) == longest) for x in match_list) > 1:
+        return max(match_list, key=lambda x: int('Agent ' in x))
+    else:
+        return longest
 
 
 def load_word_sense_mapping(force_generate=False):
@@ -368,424 +398,9 @@ def generate_mapping(result_filename):
 
     return (temp_word_sense_mapping, temp_sense_frame_mapping)
 
+
+# Load the Word/Sense/Frame maps on import
 try:
     (word_sense_mapping, sense_frame_mapping) = load_word_sense_mapping()
 except ValueError:
     (word_sense_mapping, sense_frame_mapping) = load_word_sense_mapping(True)
-
-
-def activize_clause(parse_tree_clause):
-    """Converts passive clauses to active voice, substituting 'something' for the
-    implicit agent."""
-
-    sbj_match = re.compile(r'NP-SBJ.*')
-
-    sbj_position = None
-    null_obj_position = None
-    aux_verb_position = None
-
-    for position in parse_tree_clause.treepositions():
-
-        subtree = parse_tree_clause[position]
-
-        if isinstance(subtree, Tree) and \
-           sbj_match.match(subtree.node) is not None:
-            sbj_position = position
-        elif isinstance(subtree[0], Tree) and subtree[0] and subtree[0][0] == '*':
-            null_obj_position = position
-        if isinstance(subtree, Tree) and subtree[0] in auxiliary_verbs:
-            aux_verb_position = position
-
-    if sbj_position is not None and null_obj_position is not None and \
-       aux_verb_position is not None:
-        parse_tree_clause[null_obj_position][0][0] = 'something'
-        sbj = deepcopy(parse_tree_clause[sbj_position])
-        null_obj = deepcopy(parse_tree_clause[null_obj_position])
-        parse_tree_clause[sbj_position] = null_obj
-        parse_tree_clause[null_obj_position] = sbj
-        parse_tree_clause[aux_verb_position] = ''
-
-    return parse_tree_clause
-
-
-def _first_leaf(tree):
-    """Return the first leaf of a tree with case normalized."""
-    return tree.leaves()[0].lower()
-
-
-def _immediate_children(tree):
-    """Return the leaves of from the children of a tree that have only a single leaf."""
-    return [_first_leaf(subtree) for subtree in tree if len(subtree.leaves()) == 1]
-
-
-def find_verbs(parse_tree, negated=False, subject=None):
-    """Returns the list of tuples: (verb, negation)"""
-    results = []
-
-    # Descend into the tree to find verbs
-    # If this is not rooted in an S, return nothing
-    if not (parse_tree.node.startswith(S_TAG) or parse_tree.node.startswith(VP_TAG)):
-        return results
-
-    # Process embedded S
-    s_children = [child for child in parse_tree if child.node.startswith(S_TAG)]
-    for s_child in s_children:
-        results.extend(find_verbs(s_child))
-
-    # Process VPs
-    vps = [(child, parse_tree) for child in parse_tree if child.node.startswith(VP_TAG)]
-    for vp, parent in vps:
-        # Check for support verbs (do, please)
-        immed_children = _immediate_children(vp)
-        support_verb = None
-        for idx, child in enumerate(immed_children):
-            if child in SUPPORT_VERBS:
-                support_verb = (idx, child.lower())
-                break
-
-        if support_verb:
-            idx, child = support_verb
-            # Check for do not/don't
-            child_negated = (child == DO_WORD and idx + 1 < len(vp) and
-                             _first_leaf(vp[idx + 1]).lower() in NOT_WORDS)
-
-            # Find the subject if not specified already
-            if not subject:
-                subject = _find_subject(parent)
-                if not subject:
-                    continue
-
-            # Recurse on this vp
-            results.extend(find_verbs(vp, negated=child_negated, subject=subject))
-            break
-        else:
-            # Check parent for negation
-            for child in parent:
-                # Never looks like: (ADVP-TMP (RB Never))
-                if child.node.startswith(ADVP_TAG) and _first_leaf(child) == NEVER_WORD:
-                    negated = True
-                    break
-
-            # Check for verbs
-            for child in vp:
-                if child.node.startswith(VERB_TAG):
-                    result_tree = (parent if not subject else Tree('S', [subject, vp]))
-                    results.append((child[0].lower(), negated, result_tree))
-
-    return results
-
-
-def _find_subject(parse_tree):
-    """Return our best guess for what the subject is at the top level of a tree."""
-    subjects = [child for child in parse_tree if child.node.startswith(SUBJ_TAG)]
-    return subjects[0] if subjects else None
-
-
-def wh_movement(parse_tree):
-    """Moves the WH cluase to the null element. Where are the hostages -> The hostages are where?"""
-    wh_position = None
-    null_position = None
-
-    tag_match = re.compile(r'(?<=\()[A-Z][A-Z-]*')
-    tags = tag_match.findall(str(parse_tree))
-    if 'NP-PRD-A' not in tags and 'NP-SBJ' not in tags:
-        # Only do WH movement if an NP predicate or NP subject exists:
-        return parse_tree
-
-    for position in parse_tree.treepositions():
-        if not isinstance(parse_tree[position], Tree) or position == ():
-            continue
-
-        # Find the WH and null positions
-        if parse_tree[position].node[:2] == 'WH':
-            wh_position = position
-        elif isinstance(parse_tree[position][0], Tree) and \
-                parse_tree[position][0][0] == '*T*':
-            null_position = position
-
-        if wh_position is not None and null_position is not None:
-            break
-
-    # Move the WH branch
-    if wh_position is not None and null_position is not None:
-        parse_tree[null_position] = parse_tree[wh_position]
-        del parse_tree[wh_position]
-
-    return parse_tree
-
-
-def existential_there_insertion(parse_tree):
-    """Insert an NP into an existential there node."""
-    existential_there_position = None
-    np_predicate_position = None
-
-    for position in parse_tree.treepositions():
-        # Don't check the leaves or the root
-        if not isinstance(parse_tree[position], Tree) or position == ():
-            continue
-
-        ex_children = [child for child in parse_tree[position]
-                       if isinstance(child, Tree) and child.node == 'EX']
-
-        if len(ex_children) > 0:
-            existential_there_position = position
-            continue
-
-        if parse_tree[position].node == 'NP' or 'NP-PRD' in parse_tree[position].node:
-            np_predicate_position = position
-
-    if existential_there_position is not None and \
-       np_predicate_position is not None:
-        parse_tree[existential_there_position] = \
-            parse_tree[np_predicate_position]
-        del parse_tree[np_predicate_position]
-
-    return parse_tree
-
-
-def invert_clause(parse_tree):
-    """Inverts clauses to enforce a NP-V ordering."""
-    inverted = False
-    vp_position = None
-    np_position = None
-    position = None
-
-    # Find the inverted clause tags and NP-V tags
-    for position in parse_tree.treepositions():
-        # We only want nodes, not leaves
-        if not isinstance(parse_tree[position], Tree):
-            continue
-
-        if parse_tree[position].node == 'SINV' or \
-           parse_tree[position].node == 'SQ':
-            inverted = True
-
-        children = [child for child in parse_tree[position]
-                    if isinstance(child, Tree)]
-
-        child_count = 0
-        temp_np_position = None
-        temp_vp_position = None
-
-        for child in children:
-            if temp_np_position is None and child.node[:2] == 'NP':
-                temp_np_position = child_count
-            elif temp_vp_position is None and child.node[:1] == 'V':
-                temp_vp_position = child_count
-            child_count += 1
-
-        if temp_np_position is not None and temp_vp_position is not None:
-            vp_position = temp_vp_position
-            np_position = temp_np_position
-            break
-    if position is not None:
-        # Invert the NP-V ordering
-        if inverted is True and vp_position is not None and np_position is not None:
-            temp = parse_tree[position][vp_position]
-            parse_tree[position][vp_position] = \
-                parse_tree[position][np_position]
-            parse_tree[position][np_position] = temp
-
-        # Insert the PP into a node with a PRD tag
-        prd_position = None
-        pp_position = None
-
-        if not isinstance(parse_tree[position], Tree):
-            return parse_tree
-
-        for sinv_position in parse_tree[position].treepositions():
-            if not isinstance(parse_tree[position][sinv_position], Tree) or\
-               sinv_position == ():
-                continue
-
-            if 'PRD' in parse_tree[position][sinv_position].node:
-                prd_position = sinv_position
-            elif 'PP' in parse_tree[position][sinv_position].node:
-                pp_position = sinv_position
-
-        if inverted is True and prd_position is not None and \
-           pp_position is not None:
-            parse_tree[position][prd_position] = \
-                parse_tree[position][pp_position]
-            del parse_tree[position][pp_position]
-
-    return parse_tree
-
-
-def split_conjunctions(parse_tree):
-    """Find conjunctions in a given parse_tree, and create a list of parse trees
-    with the conjunctions removed and the conjoined clauses in place of the
-    parent node of the conjunction."""
-    split_tree_list = []
-    conjunction_dict = {}
-
-    for position in parse_tree.treepositions():
-        # We only want nodes, not leaves
-        if not isinstance(parse_tree[position], Tree) or position == ():
-            continue
-
-        children = [child for child in parse_tree[position]
-                    if isinstance(child, Tree)]
-
-        # Get the tags to check for CC's or IN's
-        children_nodes = [child.node for child in children]
-
-        phrase_list = []
-        conjunction = ''
-
-        # Get any phrases that are siblings of a CC
-        if 'CC' in children_nodes:
-            for child in children:
-                if child.node not in ('CC', 'DT'):
-                    phrase_list.append(child)
-                else:
-                    conjunction = child[0]
-
-        # Copy the tree and replace the parent node of the CC with the phrase
-        # for each sibling of the CC
-        for phrase in phrase_list:
-            temp_tree = parse_tree.copy(deep=True)
-            temp_tree[position] = phrase
-            split_tree_list.append(temp_tree)
-
-        if not conjunction == '':
-            conjunction_dict[position] = (split_tree_list, conjunction)
-
-    if len(conjunction_dict.keys()) == 0:
-        return {(0): ([parse_tree], '')}
-
-    return conjunction_dict
-
-
-def split_clauses(parse_tree):
-    """Splits clauses to parse them independently. Returns a dictionary with
-    the positions of the split as the keys and the split trees as the values."""
-    clause_dict = {}
-    clause_match = re.compile(r'\(*\s*\(S[A-Z]*')
-    sbar_match = re.compile(r'\(SBAR[ \-]')
-    deletion_list = []
-
-    for position in parse_tree.treepositions():
-        # We only want nodes, not leaves
-        if not isinstance(parse_tree[position], Tree):
-            continue
-
-        subtree = parse_tree[position]
-
-        # Return subtrees where the root node is an S node and there are no
-        # other S nodes in the subtree
-        if sbar_match.match(str(subtree)) and len(subtree) > 1:
-            clause_dict[position] = (subtree[1], subtree[0].leaves())
-            deletion_list.append(position)
-
-    # Remove the clause from the tree
-    for position in deletion_list:
-        del parse_tree[position]
-
-    clause_dict[(0)] = (parse_tree, '')
-
-    # Code to split S nodes, not always what we want
-# for position in parse_tree.treepositions():
-# if not isinstance(parse_tree[position], Tree):
-# continue
-#
-# subtree = parse_tree[position]
-#
-# if subtree.node == 'S':
-# clause_dict[position] = (subtree, ' ')
-
-    return clause_dict
-
-
-def create_vfos(word):
-    """Gets VerbNet data without using NLTK corpora browser."""
-    vfo_list = []
-    for class_id in word_sense_mapping[word]:
-        vfo_list.extend(sense_frame_mapping[class_id])
-    return vfo_list
-
-
-def pick_best_match(match_list):
-    """From the list of tuples, with the first element being the dict containing role assignments,
-    and the second element being the verb class, pick the match that maps to an action if it exists."""
-    if len(match_list) == 0:
-        return (None, None)
-
-    understood_matches = [(match, sense)
-                          for match, sense in match_list if sense.split('-')[0] in UNDERSTOOD_SENSES]
-    if len(understood_matches) > 0:
-        return pick_most_complete_match(understood_matches)
-    # Otherwise use the all matches
-    return pick_most_complete_match(match_list)
-
-
-def pick_most_complete_match(match_list):
-    longest = max(match_list, key=lambda x: len(x[0]))
-    if sum(int(len(x) == longest) for x in match_list) > 1:
-        return max(match_list, key=lambda x: int('Agent ' in x))
-    else:
-        return longest
-
-
-def split_sentences(parse_tree_string):
-    """Split the parse tree string into a separate tree string for each sentence."""
-    open_brackets = 0
-
-    split_parse_strings = []
-    current_sentence = ''
-    for letter in parse_tree_string:
-        if letter == '(':
-            open_brackets += 1
-        elif letter == ')':
-            open_brackets -= 1
-
-        current_sentence += letter
-
-        if open_brackets == 0 and not current_sentence.isspace():
-            split_parse_strings.append(current_sentence)
-            current_sentence = ''
-
-    return split_parse_strings
-
-
-def is_question(tree_string):
-    """Given a parse tree string, return whether it is a question."""
-    return ('WHADVP' in tree_string or
-            'WHNP' in tree_string or
-            'WHADJP' in tree_string or
-            'WHPP' in tree_string or
-            'SQ' in tree_string or
-            'SINV' in tree_string or
-            'SBARQ' in tree_string)
-
-
-def get_wh_question_type(tree_string):
-    """Given a parse tree string, return the type of wh-question it is."""
-    if 'WHADVP' in tree_string or \
-        'WHNP' in tree_string or \
-        'WHADJP' in tree_string or \
-            'WHPP' in tree_string:
-        tree_string_lower = tree_string.lower()
-        if 'where' in tree_string_lower:
-            return 'Location'
-        if 'status' in tree_string_lower or 'doing' in tree_string_lower:
-            return 'Status'
-        if 'who' in tree_string_lower:
-            return 'People'
-        if 'what' in tree_string_lower:
-            return 'Entity'
-
-    return None
-
-
-def is_existential(tree_string):
-    """Returns whether there is an existential there in the tree string."""
-    return ('EX' in tree_string)
-
-
-def is_yn_question(tree_string):
-    """Given a parse tree string, return whether it is a yes-no question."""
-    return ('SQ' in tree_string or
-            'SINV' in tree_string or
-            'SBARQ' in tree_string or
-            '?' in tree_string)

@@ -19,10 +19,8 @@ Interface for debugging semantic frame matching.
 
 import sys
 
-from semantics.frames import (split_clauses, activize_clause, is_existential,
-    invert_clause, get_wh_question_type, is_yn_question, pick_best_match,
-    existential_there_insertion, wh_movement, split_conjunctions, find_verbs,
-    create_vfos)
+from semantics.frames import (_pick_best_match, _create_vfos)
+from semantics.parsing import (match_verbs, split_conjunctions)
 from semantics.tree import Tree
 from semantics.wntools import morphy
 from pipelinehost import PipelineClient
@@ -46,10 +44,13 @@ def process(parse):
 
 def process_subtree(tree):
     """Follow the transformations for an individual subparse."""
-    verbs = find_verbs(tree)
+    verbs = match_verbs(tree)
+    for verb in verbs:
+        print verb
+    return
     for verb, negation, subtree in verbs:
         lemmatized_verb = morphy(verb, 'v')
-        vfo_list = create_vfos(lemmatized_verb)
+        vfo_list = _create_vfos(lemmatized_verb)
         match_list = []
 
         print "Subtree for %s%s:" % (verb, " (negated)" if negation else "")
@@ -59,11 +60,8 @@ def process_subtree(tree):
         print 'VFO list for %s:' % verb
         print '\n'.join(str(vfo.frame_list) for vfo in vfo_list)
 
-        strict = True
-        allow_leftovers = False
-
         for vfo in vfo_list:
-            match = vfo.match_parse(subtree, strict, allow_leftovers)
+            match = vfo.match_parse(subtree)
 
             if match:
                 print 'Matched:'
