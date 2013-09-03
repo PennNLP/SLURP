@@ -100,6 +100,7 @@ class Agent:
 
     def follow_waypoints(self, callback):
         """Take one step towards next waypoint"""
+        # TODO: Change this to ensure coherent reads of coordinates for cell/location
         # Take care of the flip/flipped cases
         if self.flip:
             # Flip or unflip JR
@@ -116,7 +117,8 @@ class Agent:
         # Get waypoints and move
         waypoints = self.get_waypoints()
         rotationmatrix = [0, 0, 1, 0, 1, 0, -1, 0, 0]
-        if len(waypoints) > 0 and not self.flipped:
+        old_location = self.location
+        if len(waypoints) > 0:
             if waypoints[0].world_distance(self.location) < 0.3:
                 # Make sure movement is only from center to center
                 # to prevent stuck-in-the wall bugs
@@ -124,24 +126,23 @@ class Agent:
                     ','.join(str(s) for s in
                              (waypoints[0].location[0], self.cell.location[0],
                               waypoints[0].location[1], self.cell.location[1])))
+                # Update our location to the waypoint
                 self.set_cell(waypoints[0])
                 # Update the waypoints if no once changed them from under us
                 with self._waypoint_lock:
                     if self.get_waypoints() == waypoints:
                         self.set_waypoints(waypoints[1:])
             else:
-                newlocation = waypoints[0].closer_point(self.location)
-                deltaX = self.location[0] - newlocation[0]
-                deltaZ = self.location[1] - newlocation[1]
-                angle = math.atan2(deltaX, deltaZ)
-                # rotationmatrix = [1,0,0,0,math.cos(angle),1-math.sin(angle),
-                # 0,math.sin(angle),math.cos(angle)]
-
-                rotationmatrix = [math.cos(angle), 0, math.sin(angle), 0, 1, 0,
-                                  - 1 * math.sin(angle), 0, math.cos(angle)]
-                self.location = newlocation
-            # Ok, here's where I need to rotate Jr in the direction he is moving
-            callback('PLAYER_MOVE_3D', ','.join(str(s) for s in [self.location[0], 0, self.location[1]] + rotationmatrix))
+                # Take a step toward the waypoint
+                self.location = waypoints[0].closer_point(self.location)
+            deltaX = old_location[0] - self.location[0]
+            deltaZ = old_location[1] - self.location[1]
+            angle = math.atan2(deltaX, deltaZ)
+            rotationmatrix = [math.cos(angle), 0, math.sin(angle), 0, 1, 0,
+                              - 1 * math.sin(angle), 0, math.cos(angle)]
+            callback('PLAYER_MOVE_3D',
+                     ','.join(str(s) for s in
+                              [self.location[0], 0, self.location[1]] + rotationmatrix))
 
     def fix_location(self):
         """Moves the agent to the center of its cell"""
