@@ -232,6 +232,8 @@ class BarebonesDialogueManager(object):
         # trigger resynthesis
         success = self.executor.resynthesizeFromNewSpecification(self.get_spec())
         if success:
+            # TODO: Remove this to allow carryover of commands when resynthesizing
+            self.clear()
             # resume
             self.executor.resume()
             return "Got it. I'm carrying out your orders."
