@@ -30,14 +30,22 @@ class TestPathPlan(unittest.TestCase):
         """Test that the center of all rooms are reachable from each other."""
         jr = self.ge.jr
         rooms = self.ge.rooms
+        n_paths = 0
+        path_lengths = 0
         for room1 in rooms.values():
             room1_center = self.ge.get_cell(room1.center)
             for room2 in rooms.values():
                 room2_center = self.ge.get_cell(room2.center)
                 # Set JR's location to one center and move to the other
                 jr.set_cell(room1_center)
-                self.assertTrue(jr.plan_path(room2_center),
+                plan = jr.plan_path(room2_center)
+                self.assertTrue(plan,
                                 "Could not reach {} from {}".format(room2.name, room1.name))
+                # Track the path length
+                n_paths += 1
+                path_lengths += len(plan)
+        print "Average plan length:", path_lengths / float(n_paths)
+                
 
 class TestGameEnvironment(unittest.TestCase):
 
