@@ -29,9 +29,7 @@ from semantics.new_structures import (
 from semantics.lexical_constants import ACTION_ALIASES
 
 EXTRACT_DEBUG = False
-MATCH_DEBUG = True
-STRICT_MODE = True
-ALLOW_LEFTOVERS = False
+MATCH_DEBUG = False
 
 # Parse tree constants
 DASH = "-"
@@ -110,10 +108,12 @@ class FrameMatch(object):
         return self.negated
 
     def __str__(self):
+        condition = (self.condition if self.condition else
+                     (self.condition_head if self.condition_head else None))
         return ("<FrameMatch verb: {} sense: {} args: {} negated: {} condition: {}>".format(
             self.verb, self.sense,
             ["{}: {}".format(arg, " ".join(tree.leaves())) for arg, tree in self.args.items()],
-            self.negated, " ".join([str(self.condition_head), str(self.condition)])))
+            self.negated, condition))
 
     def __repr__(self):
         return str(self)
@@ -445,33 +445,49 @@ def _immediate_children(tree):
     return [_first_leaf(subtree) for subtree in tree if len(subtree.leaves()) == 1]
 
 
-def match_verbs(parse_tree, negated=False, subject=None):
-    """Returns a list of matching verb frames for the given parse tree.
+def match_verb(parse_tree, negated=False, subject=None, condition=None):
+    """Returns a single matching verb frames for the given parse tree.
 
     Currently restricted to returning the first match to make things easier.
     """
-    results = []
+    result = None
     condition = None
+    if MATCH_DEBUG:
+        print "Matching on:"
+        print parse_tree
 
     # Descend into the tree to find verbs
     # If this is not rooted in an S, return nothing
     if not (main_tag(parse_tree.node).startswith(S_TAG) or main_tag(parse_tree.node) == VP_TAG):
         if MATCH_DEBUG:
             print "Not matching in tree rooted at {}".format(main_tag(parse_tree.node))
-        return results
+        return result
 
-    # Check for conditionals by looking at the start of the tree
-    conditional_marker = _first_leaf(parse_tree)
-    if conditional_marker  in CONDITIONAL_MARKERS:
-        s_children = [child for child in parse_tree if main_tag(child.node).startswith(S_TAG)]
-        submatches = [match_verbs(s_child) for s_child in s_children]
-        # Filter to non-none
-        valid_submatches = [match for match in submatches if match]
-        # If there are multiple submatches, we grab the first
-        if valid_submatches:
-            condition = (conditional_marker, valid_submatches[0])
+    # Look for a condition in a sub-S
+    s_children = [child for child in parse_tree if main_tag(child.node).startswith(S_TAG)]
+    submatches = [match_verb(s_child) for s_child in s_children]
+    # Filter to non-none
+    valid_submatches = [match for match in submatches if match]
+    if valid_submatches:
+        match = valid_submatches[0]
+        # Check whether the current tree is a conditional by looking at the start of the tree
+        first_word = _first_leaf(parse_tree)
+        immed_children = _immediate_children(parse_tree)
+        is_conditional = \
+            immed_children and immed_children[0] == first_word and first_word in CONDITIONAL_MARKERS
+        if is_conditional:
+            match.condition_head = first_word
             if MATCH_DEBUG:
-                print "Conditional:", condition
+                print "Returning conditional:", match
+            return match
+        else:
+            # Check submatches for whether they are conditional
+            if match.condition_head:
+                # Set condition and then keep looking for VPs
+                condition = match
+            else:
+                # Otherwise, return what we've got so far
+                return match
 
     # Process VPs
     vps = [(child, parse_tree) for child in parse_tree if main_tag(child.node) == VP_TAG]
@@ -497,7 +513,7 @@ def match_verbs(parse_tree, negated=False, subject=None):
                     continue
 
             # Recurse on this vp
-            results = match_verbs(vp, negated=child_negated, subject=subject)
+            result = match_verb(vp, child_negated, subject, condition)
             break
         else:
             # Check parent for negation
@@ -515,16 +531,22 @@ def match_verbs(parse_tree, negated=False, subject=None):
                     match = best_matching_frame(verb, result_tree)
                     if match != (None, None):
                         match = FrameMatch(verb, match[1], match[0], negated, result_tree)
-                        results.append(match)
+                        result = match
                         # TODO: for now we just return the first match
                         break
 
+            # Break out if we've found something
+            if result:
+                break
+
     # Add the condition
     if condition:
-        for match in results:
-            match.condition_head, match.condition = condition
+        if result:
+            result.condition = condition
+        else:
+            return condition
 
-    return results
+    return result
 
 
 def _find_subject(parse_tree):

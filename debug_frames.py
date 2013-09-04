@@ -20,7 +20,7 @@ Interface for debugging semantic frame matching.
 import sys
 
 from semantics.frames import (_pick_best_match, _create_vfos)
-from semantics.parsing import (match_verbs, split_conjunctions)
+from semantics.parsing import (match_verb, split_conjunctions)
 from semantics.tree import Tree
 from semantics.wntools import morphy
 from pipelinehost import PipelineClient
@@ -44,40 +44,18 @@ def process(parse):
 
 def process_subtree(tree):
     """Follow the transformations for an individual subparse."""
-    verbs = match_verbs(tree)
-    for verb in verbs:
-        print verb
-    return
-    for verb, negation, subtree in verbs:
-        lemmatized_verb = morphy(verb, 'v')
-        vfo_list = _create_vfos(lemmatized_verb)
-        match_list = []
-
-        print "Subtree for %s%s:" % (verb, " (negated)" if negation else "")
-        print subtree
+    frame = match_verb(tree)
+    print "Subtree for %s%s:" % (frame.verb, " (negated)" if frame.negated else "")
+    print frame.tree
+    print
+    print "Arguments:"
+    for position, tree in sorted(frame.args.items()):
+        print "{}:".format(position), tree
+    if frame.condition:
         print
-
-        print 'VFO list for %s:' % verb
-        print '\n'.join(str(vfo.frame_list) for vfo in vfo_list)
-
-        for vfo in vfo_list:
-            match = vfo.match_parse(subtree)
-
-            if match:
-                print 'Matched:'
-                print str(vfo.frame_list)
-                print str(tree)
-                print
-                match_list.append((match, vfo.classid))
-
-        print 'Match list:'
-        for m in match_list:
-            print 'Sense:', m[1]
-            for a, b in m[0].items():
-                print a, str(b)
-            print
-        print
-
+        print "Condition:"
+        print frame.condition.condition_head
+        print frame.condition
 
 def print_if_diff(new_parse, old_parse, heading):
     """Print new_parse if it is different from old_parse."""
