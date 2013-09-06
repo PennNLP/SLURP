@@ -42,7 +42,11 @@ def _socket_parse(**kwargs):
     if verbose:
         print "Waiting for response..."
     buff = sock.recv(4096)
+    if verbose:
+        print "Received response."
     msg, buff = _parse_msg(buff, MSG_SEP)
+    if buff:
+        print "Warning: Multiple messages received in response to parse request."
     return msg
 
 
