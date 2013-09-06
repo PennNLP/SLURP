@@ -28,8 +28,6 @@ from semantics.new_structures import (
     EntityQuery, Command, LocationQuery, Assertion, Event)
 from semantics.lexical_constants import ACTION_ALIASES
 
-EXTRACT_DEBUG = False
-MATCH_DEBUG = False
 
 # Parse tree constants
 DASH = "-"
@@ -85,7 +83,7 @@ class FrameMatch(object):
 
     def __init__(self, verb, sense, argdict, negated, tree):
         self.verb = verb
-        self.sense = sense
+        self.sense = sense.split('-')[0]
         if not argdict:
             raise ValueError("Cannot create a FrameMatch with empty arguments")
         self.args = argdict
@@ -93,11 +91,6 @@ class FrameMatch(object):
         self.tree = tree
         self.condition = None
         self.condition_head = None
-
-    def set_conditional(self, condition_head, condition):
-        """Make this frame conditional on a head and VerbFrame condition."""
-        self.condition_head = condition_head
-        self.condition = condition
 
     def is_conditional(self):
         """Return whether this frame is conditioned on another frame."""
@@ -118,6 +111,15 @@ class FrameMatch(object):
     def __repr__(self):
         return str(self)
 
+    def pprint(self):
+        """Return a pretty string representation."""
+        pretty = "Verb: {}\nSense: {}\nArgs:\n{}\nNegated: {}\nConditioned: {}".format(
+            self.verb, self.sense,
+            "\n".join("\t{}: {}".format(arg, tree) for arg, tree in self.args.items()),
+            self.negated,
+            self.condition is not None)
+        return pretty
+
 
 def extract_frames_from_parse(parse_tree_string, verbose=False):
     """Take a string representing the parse tree as input, and print the
@@ -130,7 +132,7 @@ def extract_frames_from_parse(parse_tree_string, verbose=False):
     try:
         parse_tree = Tree.parse(parse_tree_string)
     except ValueError:
-        print "Warning: semantics could not parse tree", repr(parse_tree_string)
+        print "Error: semantics could not parse tree", repr(parse_tree_string)
         return result_list
 
     # Temporarily (and maybe permanently) disabled features:
@@ -145,6 +147,7 @@ def extract_frames_from_parse(parse_tree_string, verbose=False):
     #     activized_clause = activize_clause(clause)
     #     split_clause_dict[key] = (activized_clause, conjunction)
 
+    # TODO: This strange loop is because split_clauses may not work
     # for (clause, conjunction) in split_clause_dict.values():
     for clause, conjunction in ((parse_tree, ''),):
         # Split conjunctions and duplicate arguments if necessary
@@ -154,76 +157,34 @@ def extract_frames_from_parse(parse_tree_string, verbose=False):
             result_list.append(conjunction)
 
         for (split_tree, conjunction) in split_tree_dict.values():
-            if conjunction != '':
-                result_list.append(conjunction)
-
             for tree in split_tree:
-                tag_list = []
-
+                if conjunction and verbose:
+                    print "Subtree ({}):".format(conjunction)
+                    print tree.pprint(force_multiline=True)
+                # TODO: Deactivated for now
                 # Store whether there was an existential there
-                if is_existential(str(tree)):
-                    tag_list.append('ex')
+                # if is_existential(str(tree)):
+                #     tag_list.append('ex')
 
                 # Transformational grammar stuff
+                orig_tree = tree
                 tree = existential_there_insertion(tree)
                 tree = invert_clause(tree)
                 tree = wh_movement(tree)
 
-                if EXTRACT_DEBUG:
+                if verbose and tree != orig_tree:
                     print 'Transformed tree:'
-                    print str(tree)
+                    print tree.pprint(force_multiline=True)
 
                 # TODO: Update to new match_verbs
-                verbs = match_verbs(tree)
-
-                # Create VFOs for each verb, then match them to the parse tree
-                for verb, negation, subtree in verbs:
-                    vfo_list = get_verb_frames(verb)
-                    match_list = []
-
-                    if EXTRACT_DEBUG:
-                        print 'VFO list for %s:' % verb
-                        print '\n'.join(str(vfo.frame_list) for vfo in vfo_list)
-
-                    for vfo in vfo_list:
-                        match = vfo.match_parse(subtree)
-
-                        if match:
-                            if EXTRACT_DEBUG:
-                                print 'Matched:'
-                                print str(vfo.frame_list)
-                                print str(tree)
-                                print
-                            match_list.append((match, vfo.classid))
-
-                    if EXTRACT_DEBUG:
-                        print 'Match list:'
-                        for m in match_list:
-                            print 'Sense:', m[1]
-                            for a, b in m[0].items():
-                                print a, str(b)
-                            print
-                        print
-
-                    (best_match, sense) = pick_best_match(match_list)
-
-                    if EXTRACT_DEBUG:
-                        print 'Chose: '
-                        if best_match:
-                            print sense
-                            for a, b in best_match.items():
-                                print a, str(b)
-                        else:
-                            print str(None)
-                        print '\n\n'
-                    if not best_match is None:
-                        result_list.append(
-                            (best_match, tree, tag_list, sense, verb, negation))
+                match = match_verb(tree, verbose=verbose)
+                if match:
+                    result_list.append(match)
 
     return result_list
 
 
-def extract_entity(parse_tree, semantic_role=''):
+def extract_entity(parse_tree, semantic_role='', verbose=False):
     """Creates an entity object given a snippet of a parse tree."""
     entity = Location() if semantic_role in (
         'Location', 'Source', 'Destination') else ObjectEntity()
@@ -282,39 +243,24 @@ def extract_entity(parse_tree, semantic_role=''):
     return entity
 
 
-def create_semantic_structures(frame_semantic_list):
+def create_semantic_structures(frame_semantic_list, verbose=True):
     """Take in the list of VerbNet frames and generate the semantic
     representation structures from them."""
     semantic_representation_list = []
-    isConditionalNext = False
-    # Whether there is a conditional in the semantic representation list
-    # waiting to be picked up
-    hasConditional = False
 
     # Frame semantic list is a list of conjunction strings and tuples, where the
     # first element of the tuple is the frame semantics, the second element is
     # the original tree branch it came from, the third is a list of tags, and
     # the fourth is the sense.
     for frame in frame_semantic_list:
-        # Check that this is a VerbNet frame and not a conjunction
-        try:
-            frame_items = frame[0].items()
-        except AttributeError:
-            if 'if' in str(frame):
-                isConditionalNext = True
-            frame_items = None
-            # semantic_representation_list.append(frame)
-            continue
-
-        sense = frame[3].split('-')[0]
         # Get the action associated with the sense
         # If such a mapping does not exist, use the original verb
-        action = ACTION_ALIASES.get(sense, frame[4])
+        action = ACTION_ALIASES.get(frame.sense, frame.verb)
 
-        item_to_entity = {key: extract_entity(value, key)
-                          for key, value in frame_items}
+        item_to_entity = _framearg_entities(frame.args)
 
-        wh_question_type = get_wh_question_type(str(frame[1]))
+        # TODO: Make this more robust
+        wh_question_type = get_wh_question_type(str(frame.tree))
 
         # If it's a WH-question, find the type of question it is and add the
         # object
@@ -330,66 +276,55 @@ def create_semantic_structures(frame_semantic_list):
                         EntityQuery(item_to_entity['Location']))
 
         # If it's a yes-no question, add the theme and location of the question
-        elif is_yn_question(str(frame[1])):
+        elif is_yn_question(str(frame.tree)):
             if 'Theme' in item_to_entity and 'Location' in item_to_entity:
                 semantic_representation_list.append(
                     YNQuery(item_to_entity['Theme'], item_to_entity['Location']))
-        # If it's a conditional statement, it is modifying
-        # either the previous or next structure
-        elif isConditionalNext:
-            if 'Stimulus' in item_to_entity:
-                condition = Event(item_to_entity['Stimulus'], action)
-            else:
-                condition = Assertion(item_to_entity.get('Theme', None),
-                                      item_to_entity.get('Location', None),
-                                      'ex' in frame[2])
-
-            if (len(semantic_representation_list) > 0 and
-               isinstance(semantic_representation_list[-1], Command)):
-                # Found the command to which this condition belongs
-                semantic_representation_list[-1].condition = condition
-            else:
-                # Save it for later
-                semantic_representation_list.append(condition)
-                hasConditional = True
-            # Consume the conditional
-            isConditionalNext = False
         # It's a regular command
         elif action is not None and action not in ('is', 'are', 'be'):
-            theme = item_to_entity.get('Theme', None)
-            agent = item_to_entity.get('Agent', None)
-            patient = item_to_entity.get('Patient', None)
-            if patient is None:
-                patient = item_to_entity.get('Recipient', None)
-            location = item_to_entity.get('Location', None)
-            source = item_to_entity.get('Source', None)
-            destination = item_to_entity.get('Destination', None)
-            current_command = Command(
-                agent, theme, patient, location, source, destination, action, negation=frame[5])
-            # Try to pick up the previous condition
-            if hasConditional:
-                current_command.condition = semantic_representation_list.pop()
-                hasConditional = False
+            current_command = _make_command(action, frame)
+            # TODO: Figure out how to save the condition_head
+            if frame.condition:
+                current_command.condition = _make_command(frame.condition)
             semantic_representation_list.append(current_command)
         # It's an assertion
         else:
+            # TODO: Give a real value for whether it's an existential
             semantic_representation_list.append(
                 Assertion(item_to_entity.get('Theme', None),
-                          item_to_entity.get('Location', None), 'ex' in frame[2]))
-    if EXTRACT_DEBUG:
+                          item_to_entity.get('Location', None), False))
+    if verbose:
         print 'Semantic representation list:'
         print semantic_representation_list
     return semantic_representation_list
 
 
-def process_parse_tree(parse_tree_input, text_input, knowledge_base=None, quiet=False):
+def _make_command(action, frame):
+    """Make a command from a mapping of arguments."""
+    item_to_entity = _framearg_entities(frame.args)
+    theme = item_to_entity.get('Theme', None)
+    agent = item_to_entity.get('Agent', None)
+    patient = item_to_entity.get('Patient', None)
+    if patient is None:
+        patient = item_to_entity.get('Recipient', None)
+    location = item_to_entity.get('Location', None)
+    source = item_to_entity.get('Source', None)
+    destination = item_to_entity.get('Destination', None)
+    return Command(agent, theme, patient, location, source, destination, action,
+                   negation=frame.negated)
+
+def _framearg_entities(args):
+    """Return a mapping with frame arguments replace by entities."""
+    return {key: extract_entity(value, key) for key, value in args.items()}
+
+def process_parse_tree(parse_tree_input, text_input, knowledge_base=None, verbose=False):
     """Produces semantic interpretations of parse trees."""
-    if not quiet:
+    if verbose:
         print "Processing:", repr(text_input)
 
     # Perform tree operations
     frames = extract_frames_from_parse(parse_tree_input)
-    if not quiet:
+    if verbose:
         print "Semantic frames:", frames
 
     # Extract meaning
@@ -407,12 +342,12 @@ def process_parse_tree(parse_tree_input, text_input, knowledge_base=None, quiet=
         item for item in semantic_structures if isinstance(item, Command)]
     if knowledge_base:
         knowledge_base.fill_commands(new_commands)
-    if new_commands and not quiet:
+    if new_commands and verbose:
         print "New commands:"
         for command in new_commands:
             print command
 
-    if kb_response and not quiet:
+    if kb_response and verbose:
         print "KB response:", kb_response
 
     return (frames, new_commands, kb_response)
@@ -445,21 +380,21 @@ def _immediate_children(tree):
     return [_first_leaf(subtree) for subtree in tree if len(subtree.leaves()) == 1]
 
 
-def match_verb(parse_tree, negated=False, subject=None, condition=None):
+def match_verb(parse_tree, negated=False, subject=None, condition=None, verbose=False):
     """Returns a single matching verb frames for the given parse tree.
 
     Currently restricted to returning the first match to make things easier.
     """
     result = None
     condition = None
-    if MATCH_DEBUG:
+    if verbose:
         print "Matching on:"
         print parse_tree
 
     # Descend into the tree to find verbs
     # If this is not rooted in an S, return nothing
     if not (main_tag(parse_tree.node).startswith(S_TAG) or main_tag(parse_tree.node) == VP_TAG):
-        if MATCH_DEBUG:
+        if verbose:
             print "Not matching in tree rooted at {}".format(main_tag(parse_tree.node))
         return result
 
@@ -477,7 +412,7 @@ def match_verb(parse_tree, negated=False, subject=None, condition=None):
             immed_children and immed_children[0] == first_word and first_word in CONDITIONAL_MARKERS
         if is_conditional:
             match.condition_head = first_word
-            if MATCH_DEBUG:
+            if verbose:
                 print "Returning conditional:", match
             return match
         else:

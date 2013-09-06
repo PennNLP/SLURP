@@ -193,7 +193,6 @@ class SpecGenerator(object):
                                                SpecChunk.SYS, None))
             generation_trees["Safety assumptions"] = {"Safety assumptions": safety_chunks}
 
-
         for line in text.split('\n'):
             # Strip the text before using it and ignore any comments
             line = line.strip()
@@ -215,10 +214,10 @@ class SpecGenerator(object):
             if verbose:
                 print "Response from parser:", repr(parse)
             frames, new_commands, kb_response = \
-                process_parse_tree(parse, line, self.kbase, quiet=True)
-
-            frames, new_commands, kb_response = process_parse_tree(parse, line, self.kbase,
-                                                                   quiet=not verbose)
+                process_parse_tree(parse, line, self.kbase, verbose=verbose)
+            # TODO: For now second pass through KBis disabled
+            # frames, new_commands, kb_response = process_parse_tree(parse, line, self.kbase,
+            #                                                        quiet=not verbose)
             # Build the metapars
             # For now, assume success if there were commands or a kb_response
             success = bool(new_commands) or bool(kb_response)

@@ -19,10 +19,8 @@ Interface for debugging semantic frame matching.
 
 import sys
 
-from semantics.frames import (_pick_best_match, _create_vfos)
-from semantics.parsing import (match_verb, split_conjunctions)
+from semantics.parsing import (extract_frames_from_parse, create_semantic_structures)
 from semantics.tree import Tree
-from semantics.wntools import morphy
 from pipelinehost import PipelineClient
 
 
@@ -32,35 +30,26 @@ HEADER_WIDTH = 72
 def process(parse):
     """Show the steps of transformation for a parse."""
     # Original parse
-    parse = Tree.parse(parse)
-    print_parse(parse, "Parse")
+    parse_tree = Tree.parse(parse)
+    print_parse(parse_tree, "Parse")
 
-    split_trees = split_conjunctions(parse)
-    for split_parse, conjunction in split_trees.values():
-        for subtree in split_parse:
-            print_if_diff(subtree, parse, "Subtree ({})".format(conjunction))
-            process_subtree(subtree)
-
-
-def process_subtree(tree):
-    """Follow the transformations for an individual subparse."""
-    frame = match_verb(tree)
-    print "Subtree for %s%s:" % (frame.verb, " (negated)" if frame.negated else "")
-    print frame.tree
+    frames = extract_frames_from_parse(parse, verbose=True)
     print
-    print "Arguments:"
-    for position, tree in sorted(frame.args.items()):
-        print "{}:".format(position), tree
-    if frame.condition:
-        print
-        print "Condition:"
-        print frame.condition.condition_head
-        print frame.condition
+    for frame in frames:
+        print frame.pprint()
+        if frame.condition:
+            print "Condition:"
+            print frame.condition.pprint()
+    print
 
-def print_if_diff(new_parse, old_parse, heading):
-    """Print new_parse if it is different from old_parse."""
-    if new_parse != old_parse:
-        print_parse(new_parse, heading)
+    # Bail if no frames matched
+    if not frames:
+        print "No frames matched."
+        return
+
+    # Extract semantic structures
+    semantic_structures = create_semantic_structures(frames)
+    print semantic_structures
 
 
 def print_parse(parse, heading):
