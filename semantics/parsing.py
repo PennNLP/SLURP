@@ -176,7 +176,6 @@ def extract_frames_from_parse(parse_tree_string, verbose=False):
                     print 'Transformed tree:'
                     print tree.pprint(force_multiline=True)
 
-                # TODO: Update to new match_verbs
                 match = match_verb(tree, verbose=verbose)
                 if match:
                     result_list.append(match)
@@ -285,7 +284,7 @@ def create_semantic_structures(frame_semantic_list, verbose=True):
             current_command = _make_command(action, frame)
             # TODO: Figure out how to save the condition_head
             if frame.condition:
-                current_command.condition = _make_command(frame.condition)
+                current_command.condition = _make_command(frame.condition, frame)
             semantic_representation_list.append(current_command)
         # It's an assertion
         else:
@@ -313,9 +312,11 @@ def _make_command(action, frame):
     return Command(agent, theme, patient, location, source, destination, action,
                    negation=frame.negated)
 
+
 def _framearg_entities(args):
     """Return a mapping with frame arguments replace by entities."""
     return {key: extract_entity(value, key) for key, value in args.items()}
+
 
 def process_parse_tree(parse_tree_input, text_input, knowledge_base=None, verbose=False):
     """Produces semantic interpretations of parse trees."""
