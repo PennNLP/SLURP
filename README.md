@@ -26,6 +26,7 @@ Getting started
 ## Dependencies:
 - Java JRE 1.6 or 1.7
 - Python 2.7 (not 3.x)
+- Python numpy and Polygon2 (may be required because of LTLMoP)
 
 ## Setup
 
