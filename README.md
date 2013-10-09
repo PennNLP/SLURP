@@ -69,3 +69,24 @@ Sending: '{"text": "This is a test."}\n'
 Waiting for response...
 (S  (NP-SBJ-A (DT This)) (VP (VBZ is) (NP-PRD-A (DT a) (NN test)))(. .))
 ```
+Running In Conjunction with LTLMoP
+----------------------------------
+Clone the LTLMoP repository recursively with: git clone --recursive git://github.com/LTLMoP/LTLMoP.git
+
+Checkout the LTLMoP gumbo branch via: git checkout gumbo
+
+Compile the java code in LTLMoP/src/etc/jtlv via: sh build.sh
+
+Checkout the frames (trouble checking out pragbot branch from LTLMoP) branch of SLURP via: 
+* cd LTLMoP/src/etc/SLURP
+* git fetch origin frames
+* git checkout frames
+
+Run:
+* LTLMoP/src/etc/SLURP/pipelinehost.py
+* LTLMoP/src/etc/SLURP/run_pragbot_slurp_server.sh
+* Compile Pragbot code (see Pragbot repo)
+* Pragbot/run_slurpserver.sh
+* Pragbot/run_client.sh* 
+
+
