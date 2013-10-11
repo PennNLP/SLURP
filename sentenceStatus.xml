@@ -1,0 +1,37 @@
+<USERLIST>
+	<USER uuid="">
+		<Sent uuid ="" text="Carry the meals from the kitchen to the rooms.">
+			<Status uuid ="" result="desired" time="">
+				<Semantics>
+					<Command uuid ="" agent="*" action="carry">
+						<Theme uuid ="" id="Object" name="meal">
+							<Quantifier definite="True" type="exact" number="1"></Quantifier>
+						</Theme>
+						<Source uuid="" id="Location" name="kitchen">
+							<Quantifier definite="True" type="exact" number="1"></Quantifier>
+							<Description></Description>							
+						</Source>
+						<Desination uuid="" id="Location" name = "rooms">
+							<Quantifier definite="True" type="exact" number="1"></Quantifier>
+							<Description></Description>
+						</Desination>
+						<Negation uuid="" id="False"></Negation>
+					</Command>
+				</Semantics>
+			</Status>
+		</Sent>
+		<Sent uuid ="" text="Carry the meals from the kitchen to the cafeteria.">
+			<Status uuid ="" result="undesired" time="">
+				<Semantics>
+					<Command uuid ="" agent="*" action="carry">
+						<Theme uuid ="" type="Object" name="meal">
+							<Quantifier uuid ="" definite="True" type="exact" number="1"></Quantifier>
+							<Description uuid ="" ></Description>
+						</Theme>
+						<Negation uuid="" id="False"></Negation>
+					</Command>
+				</Semantics>
+			</Status>		
+		</Sent>
+	</USER>	
+</USERLIST>
