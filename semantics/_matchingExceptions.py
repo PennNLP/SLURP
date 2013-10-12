@@ -7,3 +7,6 @@ Define custom exceptions for semantics
 
 class NoSChildVP(Exception):
     pass
+
+class VBTooDeep(Exception):
+    pass

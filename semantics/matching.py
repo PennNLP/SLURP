@@ -4,7 +4,8 @@ parse and tree are synonymous
 @author: tad
 '''
 from nltk import Tree
-from _matchingExceptions import NoSChildVP
+from _matchingExceptions import NoSChildVP, VBTooDeep
+import sys
 DEBUG = False
 def main():
     tests = [exampePPAttachment()]
@@ -30,14 +31,19 @@ class exampePPAttachment(object):
      
     def run_test(self):
         matcher = ParseMatcher(0,2)
-        cmatch = matcher.match_frame(exampePPAttachment.frame_list,\
-                                 exampePPAttachment.correct)
-        icmatch = matcher.match_frame(exampePPAttachment.frame_list,\
-                                 exampePPAttachment.incorrect)
+        matcher.th.depth_augment(self.correct,0)
+        matcher.th.depth_augment(self.incorrect,0)
+        for frame in self.frame_list:
+            cmatch = matcher.match_frame(frame,\
+                                 self.correct)
+            icmatch = matcher.match_frame(frame,\
+                                 self.incorrect)
 
 
 class TreeHandler(object):
     depthdelim = "."
+    posdelim = "-"    
+
     def common_acestor(self,tree,indexa,indexb):
         '''Returns the path to the common ancestor of the two indices'''
         patha = tree.leaf_treeposition(indexa)
@@ -66,30 +72,44 @@ class TreeHandler(object):
             return tree
         self.get_subtree(tree[path[0]],path[1:])
         
-    def leftmost_pos(self,tree,pos,maxVBdepth=2):
+    def leftmost_pos(self,tree,pos):
+        '''Recursively returns the node for the leftmost pos'''
+        
         if len(tree) == 1:
             if type(tree[0][0]) == type(''):
                 #If leaf is str
-                nodesplit =tree.node.split(self.depthdelim) 
-                if nodesplit[0] == pos:
-                    if int(nodesplit[-1]) <= maxVBdepth: 
-                        return tree
-                return None#dead leaf 
+                depthsplit = tree.node.split(self.depthdelim)#Split on depth delim
+                possplit = depthsplit[0].split(self.posdelim)#split on pos delim
+                if possplit[0] == '' and possplit[1] != '':
+                    if possplit[1] == pos:
+                        return tree                   
+                elif possplit[0] == pos:                    
+                    return tree
+            for branch in tree:
+                if type(branch) == type(''):
+                    return None
+                else:
+                    res = self.leftmost_pos(branch,pos)
+                    return res
         for branch in tree:
             res = self.leftmost_pos(branch,pos)
             if res:
                 return res
-            
-
-                    
+        return None
         
-    def get_main_verb_path(self,tree):
-        '''Return path to the shallowest leftmost VB'''
-        for i,branch in enumerate(tree):
-            if branch.node == self.s_child_vp:
-                return i            
-        raise NoSChildVP
-    
+    def get_main_pos_path(self,tree,pos,maxVBDepth):
+        '''Return path to the shallowest leftmost VB'''        
+        node = self.leftmost_pos(tree, pos)
+        path = self.get_path_to_node(tree,node)
+        if len(path) > maxVBDepth:
+            raise VBTooDeep
+        return path    
+        
+    def get_path_to_node(self,tree,node):
+        leaves = tree.leaves()
+        #accomodate nullsubjects here        
+        index = leaves.index(node[0])
+        return tree.leaf_treeposition(index)
      
         
 
@@ -108,7 +128,7 @@ class ParseMatcher(object):
         self.strictMatching = smatch
         self.strictPPMatching = sppmatch
         self.th = TreeHandler()
-        self.minVbDepth = smatch + 2
+        self.maxVBDepth = smatch + 3
         self.vbDepth = -1
         self.subjectDepth = -1
         self.directObjectDepth = -1
@@ -118,15 +138,27 @@ class ParseMatcher(object):
                          'verb' : 2,
                          'prep' : 3,
                          'object' : 4
-                         }       
+                         }
+        self.posmap = { 'VERB' : 'VB',
+                        'NP' : 'NONE',
+                        'PREP' : {"to towards" : "TO",
+                                  "PREP": "IN"}}       
         
     def match_frame(self,frame,parse):
         '''Try to match the frame to the parse'''
-        print 'match_frame Tree before: ',parse
-        self.th.depth_augment(parse,0)
-        print 'match_frame Tree after: ',parse
-        mainverb = self.th.leftmost_pos(parse, "VB")        
-        print 'mainVP: ',mainverb
+        try:
+            for slot in frame:
+                pos, role, secondary, tertiary = slot      
+                head = self.posmap[pos]
+                if type(head) == type({}):
+                    head = head[role]           
+                mainpos = self.th.get_main_pos_path(parse,head,self.maxVBDepth)
+                print 'path to mainpos for slot(',slot,') ',mainpos
+        except VBTooDeep:
+            sys.stderr.write("VB found but too deep given maxVBDepth\n")
+        except AttributeError, e:
+            sys.stderr.write("Could not find the part of speech that you were looking for.\n")
+        
 
 if __name__=="__main__":
     main()
