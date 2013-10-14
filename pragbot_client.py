@@ -179,6 +179,9 @@ class PragbotClient(object):
         elif line.startswith('JR_IS_FLIPPED') or line.startswith('JR_IS_UNFLIPPED'):
             logging.info("Received JR flipped message: %s", line)
             self.ge.jr.flip_junior()
+        elif line.startswith("JR_STATE"):
+            logging.info("Received JR state message: %s",line)
+            
 
     def send_response(self, msg):
         """Send a chat response to the server."""
