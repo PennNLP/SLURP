@@ -4,7 +4,7 @@ parse and tree are synonymous
 @author: tad
 '''
 from nltk import Tree
-from _matchingExceptions import NoSChildVP, PosTooDeep, VerbFrameCountError, SlotTreeCountError
+from _matchingExceptions import NoSChildVP, PosTooDeep, VerbFrameCountError,SlotTreeCountError, NoRightSibling, TreeProcError, NodeNotFound, SlotNotFilledError
 import sys
 import copy
 DEBUG = False
@@ -35,8 +35,8 @@ class exampePPAttachment(object):
         matcher.th.depth_augment(self.correct,0)
         matcher.th.depth_augment(self.incorrect,0)
         for frame in self.frame_list:
-            #cmatch = matcher.match_frame(frame,\
-            #                     self.correct)
+            cmatch = matcher.match_frame(frame,\
+                                 self.correct)
             icmatch = matcher.match_frame(frame,\
                                  self.incorrect)
 
@@ -73,19 +73,27 @@ class TreeHandler(object):
             return tree
         self.get_subtree(tree[path[0]],path[1:])
         
+    def node_pos(self,tree):
+        depthsplit = tree.node.split(self.depthdelim)#Split on depth delim
+        possplit = depthsplit[0].split(self.posdelim)#split on pos delim
+        if possplit[0] == '' and possplit[1] != '':
+            return possplit[1]
+        return possplit[0]        
+    
+#     def leaf_parent(self,tree):
+#         '''Dig down and get the parent of what should be the only leaf of this tree'''
+#         if tree[0]
+        
     def leftmost_pos(self,tree,pos):
         '''Recursively returns the node for the leftmost pos'''
-        
+        #If tree only has 1 branch       
         if len(tree) == 1:
-            #If leaf is str
-            if type(tree[0][0]) == type(''):                
-                depthsplit = tree.node.split(self.depthdelim)#Split on depth delim
-                possplit = depthsplit[0].split(self.posdelim)#split on pos delim
-                #If this is the pos we are looking for
-                if possplit[0] == '' and possplit[1] != '':
-                    if possplit[1] in pos:
-                        return tree                   
-                elif possplit[0] in pos:                    
+            #If that branch 
+            #if type(tree[0][0]) == type(''):                
+            if type(tree[0]) == type(''):
+                npos = self.node_pos(tree)
+                #If this is the pos we are looking for         
+                if npos in pos:                    
                     return tree
             for branch in tree:
                 if type(branch) == type(''):
@@ -102,6 +110,8 @@ class TreeHandler(object):
     def get_main_pos_path(self,tree,pos,maxPosDepth):
         '''Return path to the shallowest leftmost VB'''        
         node = self.leftmost_pos(tree, pos)
+        if not node:
+            return False
         path = self.get_path_to_node(tree,node)
         if maxPosDepth != -1 and len(path) > maxPosDepth:            
             raise PosTooDeep(pos)        
@@ -110,13 +120,14 @@ class TreeHandler(object):
     def get_path_to_node(self,tree,node):
         leaves = tree.leaves()
         #accomodate nullsubjects here
-        node is the phrase, which is good except we are trying to match on leafs for heads, not phrases        
+        #node is the phrase, which is good except we are trying to match on leaves/heads, not phrases        
         index = leaves.index(node[0])
         return tree.leaf_treeposition(index)
     
     def nearest_right_sibling(self,leafpath,tree):
-        '''Returns the path(inclusive) to the branch of the nearest right sibling of leafpath
-            (1,0,1,1,0,0) returns [1,0,1,1] iff the subtree at [1,0,1,1] has > 1 children
+        '''Returns the path(inclusive of the first branch in leafpath past the parent)
+            to the parent of the nearest right sibling of leafpath
+            (1,0,1,1,0,0) returns [1,0,1,1,0] iff the parent(subtree) at [1,0,1,1] has > 1 children
             destructive mthd, makes a copy of tree            
         '''
         #destructive mthd, make copy
@@ -126,14 +137,25 @@ class TreeHandler(object):
         for branch in leafpath:
             tree = tree.pop(branch)
             path.append((branch,tree))
-        foundSibling = False
-        res = []
+        foundRSibling = False
+        parentpath = []
+        #Reverse order traversal along path
+        last = -1
         for branch,r in reversed(path):
-            if foundSibling:
-                res.insert(0,branch)
-            elif len(r) > 1:
-                foundSibling = True
-        return res
+            #Because the list is popped trees, the first branch with any length
+            if not foundRSibling and type(r) != str and len(r) > 0:
+                foundRSibling = True
+            elif not foundRSibling and branch > 0:
+                raise NoRightSibling 
+            if foundRSibling:
+                #initialize 
+                if len(parentpath) == 0:
+                    parentpath.insert(0,last[0])
+                parentpath.insert(0,branch)     
+            last = (branch,r)        
+        else:            
+            return parentpath
+        raise TreeProcError("Error finding nearest right sibling of leafpath: "+str(leafpath))
                 
     def nearest_left_sibling(self,leafpath):
         '''Returns the path(inclusive) to the branch of the nearest left sibling of leafpath
@@ -187,6 +209,7 @@ class ParseMatcher(object):
                           'maxPREP': -1}    
         
     def get_path(self,tree,slot):
+        '''Return the path to the head of the slot'''
         pos, role, secondary, tertiary = slot      
         heads = self.pos_map[pos]
         if type(heads) == type({}):
@@ -194,10 +217,9 @@ class ParseMatcher(object):
         maxd = -1
         for head in heads:            
             if 'max'+head in self.depth_map:
-                maxd = self.depth_map['max'+head]                    
-        
-        mainpos = self.th.get_main_pos_path(tree,head,maxd)
-        print 'path to mainpos for slot(',slot,') ',mainpos
+                maxd = self.depth_map['max'+head]        
+        mainpos = self.th.get_main_pos_path(tree,heads,maxd)
+        if DEBUG : print 'path to mainpos for slot(',slot,') ',mainpos
         return mainpos 
         
     def match_subject(self,subframe,v,tree):
@@ -212,11 +234,22 @@ class ParseMatcher(object):
             res.append(self.get_path(tree,slot))
         return res
     
+    def pop_path(self,tree,path):
+        if len(path) < 2:
+            sys.stderr.write('tried to pop_path for a path with no length')
+        elif len(path) == 2:
+            tree.pop(path[0])
+        else: 
+            self.pop_path(tree[path[0]],path[1:])
+    
     def match_object(self,subframe,v,tree):
-        '''    Match the object given the subframe([]), path(tup) and syntaxparse(Tree)
+        '''    Match the object given the subframe([]), path(tup) and syntaxparse(tree)
                 return [path] to each slot        
+            @input v is the path to the VP + the last item is the VB branch
+            @input tree is the VP itself
+            @input subframe is the object subframe 
             object must be to the right of v
-        ''' 
+        '''        
         tree = copy.deepcopy(tree)
         res = []       
         nearestRightBranch = self.th.nearest_right_sibling(v,tree)
@@ -224,10 +257,24 @@ class ParseMatcher(object):
         for i in nearestRightBranch[:-1]:
             tree = tree.pop(i)
         #At this point, tree should be the constituent VP of the main verb
-        next = nearestRightBranch[-1]+1
-        for slot in subframe:
-            if next < len(tree):
-                res.append(self.get_path(tree.pop(next),slot))
+        next = nearestRightBranch[-1] + 1
+        #next is the index of the branch of tree for the nearest right neighbor of v
+        for slot in subframe:            
+            if next < len(tree):     
+                path = self.get_path(tree[next],slot)
+                #If a path to the head of the slot was not found
+                while not path and next+1 < len(tree):
+                    next += 1
+                    path = self.get_path(tree[next],slot)
+                if path:         
+                    #subpath from tree, which is prototypically the VP                    
+                    subpath = [next] + [w for w in path] 
+                    #full path from root of v, which is the path to the VP
+                    full = nearestRightBranch[:-1] + subpath
+                    self.pop_path(tree,subpath)
+                    res.append(full)
+                else:
+                    return SlotNotFilledError
             else:
                 raise SlotTreeCountError            
         return res      
@@ -239,6 +286,7 @@ class ParseMatcher(object):
         right = frame[center+1:]#O
         s = self.match_subject(left,v,tree)
         o = self.match_object(right,v,tree)
+        print 'svo for frame(',frame,'): ',[s,v,o]
         return [s,v,o]
         
     def match_frame(self,frame,parse):
@@ -259,6 +307,8 @@ class ParseMatcher(object):
             return None
         except AttributeError, e:
             print 'Attribute error trying to match frame: ',str(e)
+        except:
+            raise
         return match
         
 
