@@ -22,7 +22,7 @@ class exampePPAttachment(object):
     correct = Tree('''(S\n  (NP-SBJ-A (-NONE- *))\n  (VP\n    (VB Carry)\n    (NP-A (DT the) (NNS meals))\n    (PP-CLR (IN from) (NP-A (DT the) (NN kitchen)))\n    (PP-CLR (TO to) (NP-A (DT the) (NNS rooms))))\n  (. .))''')
     incorrect = Tree('''(S\n  (NP-SBJ-A (-NONE- *))\n  (VP\n    (VB Carry)\n    (NP-A (DT the) (NNS meals))\n    (PP-CLR\n      (IN from)\n      (NP-A\n        (NP (DT the) (NN kitchen))\n        (PP (TO to) (NP-A (DT the) (NN cafeteria))))))\n  (. .))''')
     frame_list = [
-                  [('NP', 'Agent', '', ''), ('VERB', 'VERB', '', ''), ('NP', 'Theme', '', '')],
+                  #[('NP', 'Agent', '', ''), ('VERB', 'VERB', '', ''), ('NP', 'Theme', '', '')],
                   [('NP', 'Agent', '', ''), ('VERB', 'VERB', '', ''), ('NP', 'Theme', '', ''), ('PREP', 'to towards', '', ''), ('NP', 'Destination', '', '')],
                   [('NP', 'Agent', '', ''), ('VERB', 'VERB', '', ''), ('NP', 'Theme', '', ''), ('PREP', 'PREP', '', ''), ('NP', 'Source', '', ''), ('PREP', 'to towards', '', ''), ('NP', 'Destination', '', '')],    
                   [('NP', 'Agent', '', ''), ('VERB', 'VERB', '', ''), ('NP', 'Theme', '', ''), ('PREP', 'to towards', '', ''), ('NP', 'Destination', '', ''), ('PREP', 'PREP', '', ''), ('NP', 'Source', '', '')],   
@@ -77,39 +77,58 @@ class TreeHandler(object):
         depthsplit = tree.node.split(self.depthdelim)#Split on depth delim
         possplit = depthsplit[0].split(self.posdelim)#split on pos delim
         if possplit[0] == '' and possplit[1] != '':
-            return possplit[1]
-        return possplit[0]        
+            return possplit[1], depthsplit[-1]
+        return possplit[0],depthsplit[-1]        
     
 #     def leaf_parent(self,tree):
 #         '''Dig down and get the parent of what should be the only leaf of this tree'''
 #         if tree[0]
         
-    def leftmost_pos(self,tree,pos):
-        '''Recursively returns the node for the leftmost pos'''
+    def leftmost_pos(self,tree,pos,cursor):
+        '''Recursively returns the node for the leftmost pos
+            Cursor is the current rightmost path for this traversal.
+        '''
         #If tree only has 1 branch       
         if len(tree) == 1:
             #If that branch 
             #if type(tree[0][0]) == type(''):                
             if type(tree[0]) == type(''):
-                npos = self.node_pos(tree)
+                npos,ndep = self.node_pos(tree)
                 #If this is the pos we are looking for         
                 if npos in pos:                    
                     return tree
-            for branch in tree:
-                if type(branch) == type(''):
-                    return None
+            for i,branch in enumerate(tree):
+                if i > cursor[0]:
+                    cursor = [-1]
+                if i >= cursor[0]:
+                    if type(branch) == type(''):
+                        return None
+                    else:
+                        if cursor[0] != -1:
+                            if len(cursor) == 1: return None                                          
+                            else: res = self.leftmost_pos(branch,pos,cursor[1:])
+                            return res
+                        else:
+                            res = self.leftmost_pos(branch,pos,cursor)
+                            return res                            
+        for i,branch in enumerate(tree):
+            if i > cursor[0]:
+                cursor = [-1]
+            if i >= cursor[0]:
+                if cursor[0] != -1:
+                    if len(cursor) == 1: return None                                         
+                    else: res = self.leftmost_pos(branch,pos,cursor[1:])
+                    if res:
+                        return res                
                 else:
-                    res = self.leftmost_pos(branch,pos)
-                    return res
-        for branch in tree:
-            res = self.leftmost_pos(branch,pos)
-            if res:
-                return res
+                    res = self.leftmost_pos(branch,pos,cursor)
+                    if res:
+                        return res                    
         return None
         
-    def get_main_pos_path(self,tree,pos,maxPosDepth):
-        '''Return path to the shallowest leftmost VB'''        
-        node = self.leftmost_pos(tree, pos)
+    def get_main_pos_path(self,tree,pos,maxPosDepth,cursor=[-1]):
+        '''Return path to the shallowest leftmost VB'''      
+        node = self.leftmost_pos(tree, pos,cursor)
         if not node:
             return False
         path = self.get_path_to_node(tree,node)
@@ -208,8 +227,8 @@ class ParseMatcher(object):
                           'maxIN': -1,
                           'maxPREP': -1}    
         
-    def get_path(self,tree,slot):
-        '''Return the path to the head of the slot'''
+    def get_path(self,tree,slot,cursor=[-1]):
+        '''Return the path to the head of the slot'''        
         pos, role, secondary, tertiary = slot      
         heads = self.pos_map[pos]
         if type(heads) == type({}):
@@ -218,22 +237,10 @@ class ParseMatcher(object):
         for head in heads:            
             if 'max'+head in self.depth_map:
                 maxd = self.depth_map['max'+head]        
-        mainpos = self.th.get_main_pos_path(tree,heads,maxd)
+        mainpos = self.th.get_main_pos_path(tree,heads,maxd,cursor)
         if DEBUG : print 'path to mainpos for slot(',slot,') ',mainpos
         return mainpos 
         
-    def match_subject(self,subframe,v,tree):
-        '''    Match the subject given the subframe([]), path(tup) and syntaxparse(Tree)
-                return [path] to each slot       
-            subject must be to the left of v from root 
-        ''' 
-        res = []
-        #rev = v.reverse()
-        nearestLeftBranch = self.th.nearest_left_sibling(v)       
-        for slot in subframe:            
-            res.append(self.get_path(tree,slot))
-        return res
-    
     def pop_path(self,tree,path):
         if len(path) < 2:
             sys.stderr.write('tried to pop_path for a path with no length')
@@ -241,6 +248,78 @@ class ParseMatcher(object):
             tree.pop(path[0])
         else: 
             self.pop_path(tree[path[0]],path[1:])
+            
+    def get_leaf(self,tree,path):    
+        if len(path) < 2:
+            sys.stderr.write('tried to print_path for a path with no length')
+        elif len(path) == 2:
+            return tree[path[0]][path[1]]
+        else: 
+            return self.get_leaf(tree[path[0]],path[1:])
+    
+
+    def match_subject_object(self,left,right,v,tree):
+        '''    Match the object/subject given the subframes(left,right), v(path to VB) and tree(full tree)
+                return [path] to each slot        
+            @input v is the path to the VP + the last item is the VB branch
+            @input tree is the VP itself
+            @input subframe is the object subframe 
+            object must be to the right of v
+        '''   
+        stree = copy.deepcopy(tree)
+        otree = copy.deepcopy(tree)        
+
+        '''Nearest siblings
+            nearest sibling methods return inclusive of head so we can pop greater than the last elmt
+        '''
+        sLeftBranch = self.th.nearest_left_sibling(v)   
+        for i in sLeftBranch[:-1]:
+            stree = stree.pop(i)
+
+        oRightBranch = self.th.nearest_right_sibling(v,otree)        
+        for i in oRightBranch[:-1]:
+            otree = otree.pop(i)
+            
+        '''At this point,   otree should be the constituent VP of the main verb
+                  and    stree should be the * branch to the left of the VP'''        
+        snext = 0
+        onext = oRightBranch[-1] + 1
+        
+        s = self.sequential_match_slots(snext,left, sLeftBranch, stree)
+        o = self.sequential_match_slots(onext,right, oRightBranch, otree)
+        return s,o
+        
+    def sequential_match_slots(self,next,subframe,base,tree):
+        #next is the index of the branch of tree for the nearest right neighbor of v
+        res = []
+        tree = copy.deepcopy(tree)
+        cursor = [-1]
+        for slot in subframe:            
+            if next < len(tree):     
+                if next > cursor[0]: cursor = [-1]
+                path = self.get_path(tree[next],slot,cursor)
+                #If a path to the head of the slot was not found
+                while not path and next+1 < len(tree):
+                    next += 1
+                    if next > cursor[0]: cursor = [-1]
+                    path = self.get_path(tree[next],slot,cursor)
+                if path:         
+                    #subpath from tree, which is prototypically the VP
+                    subpath = [next] + [w for w in path] 
+                    #full path from root of v, which is the path to the VP
+                    full = base[:-1] + subpath
+                    cursor = path
+                    #self.pop_path(tree,subpath)
+                                        
+                    res.append(full)
+                else:
+                    return SlotNotFilledError
+            else:
+                raise SlotTreeCountError            
+        return res        
+        for slot in subframe:            
+            res.append(self.get_path(tree,slot))
+        return res
     
     def match_object(self,subframe,v,tree):
         '''    Match the object given the subframe([]), path(tup) and syntaxparse(tree)
@@ -279,14 +358,19 @@ class ParseMatcher(object):
                 raise SlotTreeCountError            
         return res      
         
+    def print_svo(self,s,v,o,tree):
+        print 'subject: ',[self.get_leaf(tree,w) for w in s]
+        print 'verb: ',self.get_leaf(tree,v)
+        print 'object: ',[self.get_leaf(tree,b) for b in o]
+        
+            
     def proximity_match_frame(self,v,center,frame,tree):
         '''Given a v(tup) and center(int) match the frame around that path.'''        
         left = frame[:center]#S
         #V
         right = frame[center+1:]#O
-        s = self.match_subject(left,v,tree)
-        o = self.match_object(right,v,tree)
-        print 'svo for frame(',frame,'): ',[s,v,o]
+        s,o = self.match_subject_object(left,right,v,tree)
+        self.print_svo(s,v,o,tree)
         return [s,v,o]
         
     def match_frame(self,frame,parse):
