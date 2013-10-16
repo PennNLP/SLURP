@@ -336,6 +336,11 @@ class ParseMatcher(object):
         sLeftBranch = self.th.nearest_left_sibling(v)   
         for i in sLeftBranch[:-1]:
             stree = stree.pop(i)
+        else:
+            #last item of sLeftBranch is the branch to the verb, subtract one and you get the nearest left branch            
+            sLeftBranch[-1] -= 1
+            stree = stree.pop(sLeftBranch[-1])
+            
 
         oRightBranch = self.th.nearest_right_sibling(v,otree)        
         for i in oRightBranch[:-1]:
@@ -347,10 +352,13 @@ class ParseMatcher(object):
         onext = oRightBranch[-1] + 1
         
         s = self.sequential_match_slots(snext,left, sLeftBranch, stree)
-        o = self.sequential_match_slots(onext,right, oRightBranch, otree)
+        o = self.sequential_match_slots(onext,right, oRightBranch[:-1], otree)
         return s,o
         
     def sequential_match_slots(self,next,subframe,base,tree):
+        '''Match the slots in the subframe given the tree and base        
+            @input base where are we right now  
+        '''
         #next is the index of the branch of tree for the nearest right neighbor of v
         res = []
         tree = copy.deepcopy(tree)
@@ -375,7 +383,7 @@ class ParseMatcher(object):
                     #subpath from tree, which is prototypically the VP
                     subpath = [next] + [w for w in path] 
                     #full path from root of v, which is the path to the VP
-                    full = base[:-1] + subpath
+                    full = base + subpath
                     cursor = subpath
                     #self.pop_path(tree,subpath)
                                         
