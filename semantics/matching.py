@@ -9,9 +9,10 @@ import sys
 import copy
 DEBUG = False
 def main():
-    tests = [exampePPAttachment()]
-    for test in tests:
-        test.run_test()
+    testlist = [exampePPAttachment().tests]
+    for tests in testlist:
+        for test in tests:
+            test()
     
 class exampePPAttachment(object):
     '''    Syntax examples for the two sentences:
@@ -21,24 +22,66 @@ class exampePPAttachment(object):
     '''
     correct = Tree('''(S\n  (NP-SBJ-A (-NONE- *))\n  (VP\n    (VB Carry)\n    (NP-A (DT the) (NNS meals))\n    (PP-CLR (IN from) (NP-A (DT the) (NN kitchen)))\n    (PP-CLR (TO to) (NP-A (DT the) (NNS rooms))))\n  (. .))''')
     incorrect = Tree('''(S\n  (NP-SBJ-A (-NONE- *))\n  (VP\n    (VB Carry)\n    (NP-A (DT the) (NNS meals))\n    (PP-CLR\n      (IN from)\n      (NP-A\n        (NP (DT the) (NN kitchen))\n        (PP (TO to) (NP-A (DT the) (NN cafeteria))))))\n  (. .))''')
-    frame_list = [
-                  #[('NP', 'Agent', '', ''), ('VERB', 'VERB', '', ''), ('NP', 'Theme', '', '')],
+    
+    pp_attach_framelist = [
+                  [('NP', 'Agent', '', ''), ('VERB', 'VERB', '', ''), ('NP', 'Theme', '', '')],
                   [('NP', 'Agent', '', ''), ('VERB', 'VERB', '', ''), ('NP', 'Theme', '', ''), ('PREP', 'to towards', '', ''), ('NP', 'Destination', '', '')],
                   [('NP', 'Agent', '', ''), ('VERB', 'VERB', '', ''), ('NP', 'Theme', '', ''), ('PREP', 'PREP', '', ''), ('NP', 'Source', '', ''), ('PREP', 'to towards', '', ''), ('NP', 'Destination', '', '')],    
                   [('NP', 'Agent', '', ''), ('VERB', 'VERB', '', ''), ('NP', 'Theme', '', ''), ('PREP', 'to towards', '', ''), ('NP', 'Destination', '', ''), ('PREP', 'PREP', '', ''), ('NP', 'Source', '', '')],   
                   [('NP', 'Theme', '', ''), ('VERB', 'VERB', '', ''), ('NP', 'Value', '', '')],    
                   [('NP', 'Theme', '', ''), ('VERB', 'VERB', '', ''), ('NP', 'Beneficiary', '', ''), ('NP', 'Value', '', '')]                
-                ]   
+                ]
+    crazyframes = {"SUBPHRASE_PASS": 
+                   [('NP', 'Agent', '', ''), ('VERB', 'VERB', '', ''), ('DT','DT','',''),('NP', 'Theme', '', ''), ('PREP', 'to towards', '', ''), ('NP', 'Destination', '', '')],
+                   "SUBPHRASE_FAIL": 
+                   [('NP', 'Agent', '', ''), ('VERB', 'VERB', '', ''), ('NP', 'Theme', '', ''),('DT','DT','',''), ('PREP', 'to towards', '', ''), ('NP', 'Destination', '', '')]
+
+                   }
      
-    def run_test(self):
+    def __init__(self):
+        #tests = [self.cursor_test,self.pp_test]
+        tests = [self.pp_test]
+        self.tests = tests
+    
+    def pp_test(self):
+        matcher = ParseMatcher(0,2)
+        tree1 = self.correct
+        tree2 = self.incorrect
+        matcher.th.depth_augment(tree1,0)
+        matcher.th.depth_augment(tree2,0)
+        print 'Tests for correct and incorrect PP attachment for trees'
+        print 'Correct attachment:'
+        print tree1
+        print 'Incorrect attachment:',
+        print tree2                        
+        for frame in self.pp_attach_framelist:
+            print "For frame(",frame,"):"
+            print "Correct tree frame match:"
+            match = matcher.match_frame(frame,tree1)
+            s,v,o = match
+            if False in [(type(w)==type([])) for w in s]: sys.stderr.write("Error finding subject for frame. "+ str(s)+"\n"); sys.stderr.flush()
+            elif False in [(type(w)==type([])) for w in o]: sys.stderr.write("Error finding object for frame. "+ str(o)+"\n"); sys.stderr.flush()
+            else:            
+                matcher.print_svo(s,v,o, tree1)
+            print "Incorrect tree frame match:"
+            match = matcher.match_frame(frame, tree2)
+            s,v,o = match
+            if False in [(type(w)==type([])) for w in s]: sys.stderr.write("Error finding subject for frame. "+ str(s)+"\n")
+            elif False in [(type(w)==type([])) for w in o]: sys.stderr.write("Error finding object for frame. "+ str(o)+"\n")
+            else:            
+                matcher.print_svo(s,v,o, tree2)
+            
+    def cursor_test(self):
         matcher = ParseMatcher(0,2)
         matcher.th.depth_augment(self.correct,0)
-        matcher.th.depth_augment(self.incorrect,0)
-        for frame in self.frame_list:
-            cmatch = matcher.match_frame(frame,\
-                                 self.correct)
-            icmatch = matcher.match_frame(frame,\
-                                 self.incorrect)
+        tree = self.correct
+        print "Tests for tree: "
+        print tree
+        for key in self.crazyframes:
+            print "Running test(",key,")"
+            frame = self.crazyframes[key]            
+            match = matcher.match_frame(frame,tree)
+            matcher.print_svo(match[0],match[1],match[2], tree)
 
 
 class TreeHandler(object):
@@ -95,8 +138,11 @@ class TreeHandler(object):
             if type(tree[0]) == type(''):
                 npos,ndep = self.node_pos(tree)
                 #If this is the pos we are looking for         
-                if npos in pos:                    
-                    return tree
+                if npos in pos: 
+                    if len(cursor) == 1 and cursor[0] == 0:
+                        #already have this node, return None
+                        return None                   
+                    else: return tree
             for i,branch in enumerate(tree):
                 if i > cursor[0]:
                     cursor = [-1]
@@ -217,7 +263,8 @@ class ParseMatcher(object):
                          'prep' : 3,
                          'object' : 4
                          }
-        self.pos_map = { 'VERB' : ['VB'],
+        self.pos_map = {'DT' : ['DT'], 
+                        'VERB' : ['VB'],
                         'NP' : ['NONE','NNS','NN','NNP','NNPS'],
                         'PREP' : {"to towards" : ["TO"],
                                   "PREP": ["IN"]}}   
@@ -297,23 +344,31 @@ class ParseMatcher(object):
         for slot in subframe:            
             if next < len(tree):     
                 if next > cursor[0]: cursor = [-1]
-                path = self.get_path(tree[next],slot,cursor)
+                if len(cursor) > 1:
+                    path = self.get_path(tree[next],slot,cursor[1:])
+                else:
+                    path = self.get_path(tree[next],slot,cursor)
                 #If a path to the head of the slot was not found
                 while not path and next+1 < len(tree):
                     next += 1
                     if next > cursor[0]: cursor = [-1]
-                    path = self.get_path(tree[next],slot,cursor)
+                    if len(cursor) > 1:
+                        path = self.get_path(tree[next],slot,cursor[1:])
+                    else:
+                        path = self.get_path(tree[next],slot,cursor)
+                    
                 if path:         
                     #subpath from tree, which is prototypically the VP
                     subpath = [next] + [w for w in path] 
                     #full path from root of v, which is the path to the VP
                     full = base[:-1] + subpath
-                    cursor = path
+                    cursor = subpath
                     #self.pop_path(tree,subpath)
                                         
                     res.append(full)
                 else:
-                    return SlotNotFilledError
+                    res.append(SlotNotFilledError)
+                    res
             else:
                 raise SlotTreeCountError            
         return res        
@@ -359,9 +414,9 @@ class ParseMatcher(object):
         return res      
         
     def print_svo(self,s,v,o,tree):
-        print 'subject: ',[self.get_leaf(tree,w) for w in s]
+        print 'subject: ',[(w,self.get_leaf(tree,w)) for w in s]
         print 'verb: ',self.get_leaf(tree,v)
-        print 'object: ',[self.get_leaf(tree,b) for b in o]
+        print 'object: ',[(b,self.get_leaf(tree,b)) for b in o]
         
             
     def proximity_match_frame(self,v,center,frame,tree):
@@ -370,7 +425,7 @@ class ParseMatcher(object):
         #V
         right = frame[center+1:]#O
         s,o = self.match_subject_object(left,right,v,tree)
-        self.print_svo(s,v,o,tree)
+        if DEBUG: self.print_svo(s,v,o,tree)
         return [s,v,o]
         
     def match_frame(self,frame,parse):
@@ -380,8 +435,7 @@ class ParseMatcher(object):
             if len(verbslots) > 1: raise VerbFrameCountError
             verbindex, verbslot = verbslots[0]
             verbpath = self.get_path(parse,verbslot)
-            match = self.proximity_match_frame(verbpath,verbindex,frame,parse)      
-            print 'Done matching slots in frame(',frame,')'              
+            match = self.proximity_match_frame(verbpath,verbindex,frame,parse)             
         except PosTooDeep, pos:
             sys.stderr.write(pos+" found but too deep given max part-of-speech depth\n")
         except VerbFrameCountError:
