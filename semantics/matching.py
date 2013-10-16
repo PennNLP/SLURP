@@ -47,8 +47,8 @@ class exampePPAttachment(object):
         matcher = ParseMatcher(0,2)
         tree1 = self.correct
         tree2 = self.incorrect
-        matcher.th.depth_augment(tree1,0)
-        matcher.th.depth_augment(tree2,0)
+        matcher.th.depth_ulid_augment(tree1,0)
+        matcher.th.depth_ulid_augment(tree2,0)
         print 'Tests for correct and incorrect PP attachment for trees'
         print 'Correct attachment:'
         print tree1
@@ -73,7 +73,7 @@ class exampePPAttachment(object):
             
     def cursor_test(self):
         matcher = ParseMatcher(0,2)
-        matcher.th.depth_augment(self.correct,0)
+        matcher.th.depth_ulid_augment(self.correct,0)
         tree = self.correct
         print "Tests for tree: "
         print tree
@@ -86,7 +86,18 @@ class exampePPAttachment(object):
 
 class TreeHandler(object):
     depthdelim = "."
-    posdelim = "-"    
+    posdelim = "-"
+    
+    def __init__(self):
+        #A unique leaf identifier in case there are identical leaves
+        self.ulid = 0
+        
+    def get_ulid(self):
+        self.ulid += 1
+        return self.ulid-1
+    
+    def remove_ulid(self,leaf):
+        return leaf.split('__')[0]
 
     def common_acestor(self,tree,indexa,indexb):
         '''Returns the path to the common ancestor of the two indices'''
@@ -96,7 +107,7 @@ class TreeHandler(object):
             return [w for i,w in enumerate(patha) if w == pathb[i]]
         return [w for i,w in enumerate(pathb) if w == patha[i]]
 
-    def depth_augment(self,tree,depth):
+    def depth_ulid_augment(self,tree,depth):
         '''Recursive traversal that augments a tree with the depth of each node attached to each node'''        
         try:
             tree.node
@@ -106,8 +117,10 @@ class TreeHandler(object):
             #augment tree
             tree.node+=self.depthdelim+str(depth)
             if DEBUG: print '(',tree.node,
-            for child in tree:
-                self.depth_augment(child,depth+1)
+            for i,child in enumerate(tree):
+                if type(child) == str:
+                    tree[i] += '__'+str(self.get_ulid())+'__' 
+                self.depth_ulid_augment(child,depth+1)
             if DEBUG: print ')',    
             
     def get_subtree(self,tree,path):
@@ -300,7 +313,8 @@ class ParseMatcher(object):
         if len(path) < 2:
             sys.stderr.write('tried to print_path for a path with no length')
         elif len(path) == 2:
-            return tree[path[0]][path[1]]
+            leaf = self.th.remove_ulid(tree[path[0]][path[1]])
+            return leaf
         else: 
             return self.get_leaf(tree[path[0]],path[1:])
     
