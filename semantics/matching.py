@@ -59,16 +59,16 @@ class exampePPAttachment(object):
             print "Correct tree frame match:"
             match = matcher.match_frame(frame,tree1)
             s,v,o = match
-            if False in [(type(w)==type([])) for w in s]: sys.stderr.write("Error finding subject for frame. "+ str(s)+"\n"); sys.stderr.flush()
-            elif False in [(type(w)==type([])) for w in o]: sys.stderr.write("Error finding object for frame. "+ str(o)+"\n"); sys.stderr.flush()
+            if True in [(type(w)==type) for w in s]: sys.stderr.write("Error finding subject for frame. "+ str(s)+"\n"); sys.stderr.flush()
+            elif True in [(type(w)==type) for w in o]: sys.stderr.write("Error finding object for frame. "+ str(o)+"\n"); sys.stderr.flush()
             else:            
                 matcher.print_svo(s,v,o, tree1)
             print "Incorrect tree frame match:"
             match = matcher.match_frame(frame, tree2)
             s,v,o = match
-            if False in [(type(w)==type([])) for w in s]: sys.stderr.write("Error finding subject for frame. "+ str(s)+"\n")
-            elif False in [(type(w)==type([])) for w in o]: sys.stderr.write("Error finding object for frame. "+ str(o)+"\n")
-            else:            
+            if True in [(type(w)==type) for w in s]: sys.stderr.write("Error finding subject for frame. "+ str(s)+"\n")
+            elif True in [(type(w)==type) for w in o]: sys.stderr.write("Error finding object for frame. "+ str(o)+"\n")
+            else:
                 matcher.print_svo(s,v,o, tree2)
             
     def cursor_test(self):
@@ -379,16 +379,13 @@ class ParseMatcher(object):
                     cursor = subpath
                     #self.pop_path(tree,subpath)
                                         
-                    res.append(full)
+                    res.append((slot,full))
+                    #res.append(full)
                 else:
                     res.append(SlotNotFilledError)
-                    res
             else:
                 raise SlotTreeCountError            
         return res        
-        for slot in subframe:            
-            res.append(self.get_path(tree,slot))
-        return res
     
     def match_object(self,subframe,v,tree):
         '''    Match the object given the subframe([]), path(tup) and syntaxparse(tree)
@@ -428,9 +425,11 @@ class ParseMatcher(object):
         return res      
         
     def print_svo(self,s,v,o,tree):
-        print 'subject: ',[(w,self.get_leaf(tree,w)) for w in s]
+        print 'subject: ',[(w[0],w[1],self.get_leaf(tree,w[1])) for w in s]
+        #print 'subject: ',[(w,self.get_leaf(tree,w)) for w in s]
         print 'verb: ',self.get_leaf(tree,v)
-        print 'object: ',[(b,self.get_leaf(tree,b)) for b in o]
+        #print 'object: ',[(b,self.get_leaf(tree,b)) for b in o]
+        print 'object: ',[(b[0],b[1],self.get_leaf(tree,b[1])) for b in o]
         
             
     def proximity_match_frame(self,v,center,frame,tree):
@@ -469,5 +468,6 @@ if __name__=="__main__":
             
             
                 
+        
         
         
