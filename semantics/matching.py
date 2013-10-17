@@ -4,84 +4,20 @@ parse and tree are synonymous
 @author: tad
 '''
 from nltk import Tree
+from matchingTests import exampePPAttachment, exampleCoordination
 from _matchingExceptions import NoSChildVP, PosTooDeep, VerbFrameCountError,SlotTreeCountError, NoRightSibling, TreeProcError, NodeNotFound, SlotNotFilledError
 import sys
 import copy
 DEBUG = False
-def main():
-    testlist = [exampePPAttachment().tests]
-    for tests in testlist:
-        for test in tests:
-            test()
-    
-class exampePPAttachment(object):
-    '''    Syntax examples for the two sentences:
-            Carry the meals from the kitchen to the rooms.
-            *Carry the meals from the kitchen to the cafeteria. -> yield an incorrect syntax parse
-        Used to develop strict verbframe matching and pp attachment.
-    '''
-    correct = Tree('''(S\n  (NP-SBJ-A (-NONE- *))\n  (VP\n    (VB Carry)\n    (NP-A (DT the) (NNS meals))\n    (PP-CLR (IN from) (NP-A (DT the) (NN kitchen)))\n    (PP-CLR (TO to) (NP-A (DT the) (NNS rooms))))\n  (. .))''')
-    incorrect = Tree('''(S\n  (NP-SBJ-A (-NONE- *))\n  (VP\n    (VB Carry)\n    (NP-A (DT the) (NNS meals))\n    (PP-CLR\n      (IN from)\n      (NP-A\n        (NP (DT the) (NN kitchen))\n        (PP (TO to) (NP-A (DT the) (NN cafeteria))))))\n  (. .))''')
-    
-    pp_attach_framelist = [
-                  [('NP', 'Agent', '', ''), ('VERB', 'VERB', '', ''), ('NP', 'Theme', '', '')],
-                  [('NP', 'Agent', '', ''), ('VERB', 'VERB', '', ''), ('NP', 'Theme', '', ''), ('PREP', 'to towards', '', ''), ('NP', 'Destination', '', '')],
-                  [('NP', 'Agent', '', ''), ('VERB', 'VERB', '', ''), ('NP', 'Theme', '', ''), ('PREP', 'PREP', '', ''), ('NP', 'Source', '', ''), ('PREP', 'to towards', '', ''), ('NP', 'Destination', '', '')],    
-                  [('NP', 'Agent', '', ''), ('VERB', 'VERB', '', ''), ('NP', 'Theme', '', ''), ('PREP', 'to towards', '', ''), ('NP', 'Destination', '', ''), ('PREP', 'PREP', '', ''), ('NP', 'Source', '', '')],   
-                  [('NP', 'Theme', '', ''), ('VERB', 'VERB', '', ''), ('NP', 'Value', '', '')],    
-                  [('NP', 'Theme', '', ''), ('VERB', 'VERB', '', ''), ('NP', 'Beneficiary', '', ''), ('NP', 'Value', '', '')]                
-                ]
-    crazyframes = {"SUBPHRASE_PASS": 
-                   [('NP', 'Agent', '', ''), ('VERB', 'VERB', '', ''), ('DT','DT','',''),('NP', 'Theme', '', ''), ('PREP', 'to towards', '', ''), ('NP', 'Destination', '', '')],
-                   "SUBPHRASE_FAIL": 
-                   [('NP', 'Agent', '', ''), ('VERB', 'VERB', '', ''), ('NP', 'Theme', '', ''),('DT','DT','',''), ('PREP', 'to towards', '', ''), ('NP', 'Destination', '', '')]
 
-                   }
-     
-    def __init__(self):
-        #tests = [self.cursor_test,self.pp_test]
-        tests = [self.pp_test]
-        self.tests = tests
-    
-    def pp_test(self):
-        matcher = ParseMatcher(0,2)
-        tree1 = self.correct
-        tree2 = self.incorrect
-        matcher.th.depth_ulid_augment(tree1,0)
-        matcher.th.depth_ulid_augment(tree2,0)
-        print 'Tests for correct and incorrect PP attachment for trees'
-        print 'Correct attachment:'
-        print tree1
-        print 'Incorrect attachment:',
-        print tree2                        
-        for frame in self.pp_attach_framelist:
-            print "For frame(",frame,"):"
-            print "Correct tree frame match:"
-            match = matcher.match_frame(frame,tree1)
-            s,v,o = match
-            if True in [(type(w)==type) for w in s]: sys.stderr.write("Error finding subject for frame. "+ str(s)+"\n"); sys.stderr.flush()
-            elif True in [(type(w)==type) for w in o]: sys.stderr.write("Error finding object for frame. "+ str(o)+"\n"); sys.stderr.flush()
-            else:            
-                matcher.print_svo(s,v,o, tree1)
-            print "Incorrect tree frame match:"
-            match = matcher.match_frame(frame, tree2)
-            s,v,o = match
-            if True in [(type(w)==type) for w in s]: sys.stderr.write("Error finding subject for frame. "+ str(s)+"\n")
-            elif True in [(type(w)==type) for w in o]: sys.stderr.write("Error finding object for frame. "+ str(o)+"\n")
-            else:
-                matcher.print_svo(s,v,o, tree2)
+def main():
+    #testList = [exampePPAttachment().tests,exampleCoordination().tests]
+    testList = [exampleCoordination().tests]
+    matcher = ParseMatcher(0,2)
+    for tests in testList:
+        for test in tests:
+            test(matcher)
             
-    def cursor_test(self):
-        matcher = ParseMatcher(0,2)
-        matcher.th.depth_ulid_augment(self.correct,0)
-        tree = self.correct
-        print "Tests for tree: "
-        print tree
-        for key in self.crazyframes:
-            print "Running test(",key,")"
-            frame = self.crazyframes[key]            
-            match = matcher.match_frame(frame,tree)
-            matcher.print_svo(match[0],match[1],match[2], tree)
 
 
 class TreeHandler(object):
