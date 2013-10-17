@@ -21,6 +21,7 @@ except ImportError:
     import pickle
 import os
 import time
+import matching
 from collections import defaultdict
 # We cannot use cElementTree because its output cannot be pickled.
 from xml.etree.ElementTree import parse
@@ -111,6 +112,18 @@ class VerbFrame(object):
             else:
                 print str(element.tag)
 
+    def match_parse_sequential(self,parse_tree,strict=0,allow_leftoverpps=2):
+        '''Takes a treebank parse tree compiled into NLTK's tree structure and
+            sequential matches this frame's verb frame. Non-sequential match_parse
+            does not maintain the verbframe sequence.
+        '''
+        result_seq = []
+        matcher = matching.ParseMatcher(strict,allow_leftoverpps)
+        match = matcher.match_frame(self.frame_list,parse_tree)
+
+        
+            
+        
     def match_parse(self, parse_tree, strict=True, allow_leftovers=True):
         """Takes a Treebank parse tree compiled into NLTK's tree structure.
         Outputs a result dictionary mapping predicates to arguments"""
