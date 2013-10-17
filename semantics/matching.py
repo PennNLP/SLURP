@@ -11,14 +11,12 @@ import copy
 DEBUG = False
 
 def main():
-    #testList = [exampePPAttachment().tests,exampleCoordination().tests]
-    testList = [exampleCoordination().tests]
+    testList = [exampePPAttachment().tests,exampleCoordination().tests]
+    #testList = [exampleCoordination().tests]
     matcher = ParseMatcher(0,2)
     for tests in testList:
         for test in tests:
             test(matcher)
-            
-
 
 class TreeHandler(object):
     depthdelim = "."
@@ -290,83 +288,82 @@ class ParseMatcher(object):
         s = self.sequential_match_slots(snext,left, sLeftBranch, stree)
         o = self.sequential_match_slots(onext,right, oRightBranch[:-1], otree)
         return s,o
+    
+    def pp_acceptpath(self,prevpath,nextslot,next,path,tree):
+        '''Returns True if the path points to a leaf that is an acceptable distance from the most
+            recently filled slot's leaf, given the current slot that needs to be filled. "Acceptable distance"
+            changes depending on the preposition (if it is one). 
+            
+            Carry the meals from the kitchen to the cellar. -> should allow "to [the cellar]" to fill the PREP slot next to "the kitchen"
+            Carry the meals from the kitchen in the cellar to the hallway. -> should increment the cursor for "in [the cellar]" but keep looking for "to [the hallway]" if it exists whether or not it is embedded
+            Carry the meals from the kitchen in the cellar. -> should fail on [[NP],[VB],[PP],[NP-Source],[PP],[NP-dest]] iff "in the cellar" is an embedded PP in "the kitchen in the cellar"
+        
+            Simply: Any embedded non-"to" preposition will return False, everything else will return True
+             
+            @input cur is the currently filled frame
+            @input next is the slot that needs to be filled
+            @input path points to the leaf that could fill the next slot
+            @input tree that path belongs to            
+        '''
+        if nextslot[0] != "PREP": return True
+        if nextslot[1] == 'to towards': return True
+        if len(path) == 2 or len(prevpath) == 2: return False#siblings
+        path = [next] + [w for w in path]
+        prevparent = prevpath[:-3]#leafs are last two digits of path
+        curhead = path[:-2]
+        for i,n in enumerate(prevparent):
+            if len(curhead) < i:
+                #The previous path is a subset of the head of path
+                return False
+            elif curhead[i] != n:
+                #Head of previous is not a subset of head of path
+                return True
+        #The heads are (equal) => sisters
+        return False
         
     def sequential_match_slots(self,next,subframe,base,tree):
-        '''Match the slots in the subframe given the tree and base        
+        '''Match the slots in the subframe given the tree and base
+            If the slot is for a preposition that accepts embedding, fill slots as if it were not embedded.
+            Otherwise, increment the cursor as if it were the head but keep looking.
+            
             @input base where are we right now  
         '''
         #next is the index of the branch of tree for the nearest right neighbor of v
         res = []
         tree = copy.deepcopy(tree)
         cursor = [-1]
+        subpath = ""
         for slot in subframe:            
             if next < len(tree):     
                 if next > cursor[0]: cursor = [-1]
                 if len(cursor) > 1:
+                    #First item of cursor is "next", pass cursor[1:]
                     path = self.get_path(tree[next],slot,cursor[1:])
                 else:
                     path = self.get_path(tree[next],slot,cursor)
                 #If a path to the head of the slot was not found
                 while not path and next+1 < len(tree):
                     next += 1
+                    #If next is ever greater than cursor[0], we are on a new branch and no longer care
                     if next > cursor[0]: cursor = [-1]
                     if len(cursor) > 1:
                         path = self.get_path(tree[next],slot,cursor[1:])
                     else:
-                        path = self.get_path(tree[next],slot,cursor)
-                    
+                        path = self.get_path(tree[next],slot,cursor)                    
                 if path:         
-                    #subpath from tree, which is prototypically the VP
-                    subpath = [next] + [w for w in path] 
-                    #full path from root of v, which is the path to the VP
-                    full = base + subpath
-                    cursor = subpath
-                    #self.pop_path(tree,subpath)
-                                        
-                    res.append((slot,full))
-                    #res.append(full)
+                    prevpath = subpath
+                    subpath = [next] + [w for w in path]#subpath from tree, which is prototypically the VP 
+                    full = base + subpath               #full path from root                          
+                    cursor = subpath                    #Here, we increment the cursor but only fill the slot if it is acceptable
+                    if len(res) == 0:
+                        res.append((slot,full))       
+                    elif self.pp_acceptpath(prevpath,slot,next,path,tree):   
+                        res.append((slot,full))                        
                 else:
                     res.append(SlotNotFilledError)
             else:
                 raise SlotTreeCountError            
         return res        
-    
-    def match_object(self,subframe,v,tree):
-        '''    Match the object given the subframe([]), path(tup) and syntaxparse(tree)
-                return [path] to each slot        
-            @input v is the path to the VP + the last item is the VB branch
-            @input tree is the VP itself
-            @input subframe is the object subframe 
-            object must be to the right of v
-        '''        
-        tree = copy.deepcopy(tree)
-        res = []       
-        nearestRightBranch = self.th.nearest_right_sibling(v,tree)
-        #nearest sibling methods return inclusive so we can pop greater than the last elmt
-        for i in nearestRightBranch[:-1]:
-            tree = tree.pop(i)
-        #At this point, tree should be the constituent VP of the main verb
-        next = nearestRightBranch[-1] + 1
-        #next is the index of the branch of tree for the nearest right neighbor of v
-        for slot in subframe:            
-            if next < len(tree):     
-                path = self.get_path(tree[next],slot)
-                #If a path to the head of the slot was not found
-                while not path and next+1 < len(tree):
-                    next += 1
-                    path = self.get_path(tree[next],slot)
-                if path:         
-                    #subpath from tree, which is prototypically the VP                    
-                    subpath = [next] + [w for w in path] 
-                    #full path from root of v, which is the path to the VP
-                    full = nearestRightBranch[:-1] + subpath
-                    self.pop_path(tree,subpath)
-                    res.append(full)
-                else:
-                    return SlotNotFilledError
-            else:
-                raise SlotTreeCountError            
-        return res      
         
     def print_svo(self,s,v,o,tree):
         print 'subject: ',[(w[0],w[1],self.get_leaf(tree,w[1])) for w in s]
