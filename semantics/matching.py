@@ -42,9 +42,12 @@ class TreeHandler(object):
         return [w for i,w in enumerate(pathb) if w == patha[i]]
 
     def depth_ulid_augment(self,tree,depth):
-        '''Recursive traversal that augments a tree with the depth of each node attached to each node'''        
+        '''Recursive traversal that augments a tree with the depth of each node attached to each node
+            And also appends a unique identifier to each node in case of multiple lemmas
+        '''        
         try:
             tree.node
+            if self.depthdelim in tree.node: return True#Tree has already been augmented
         except AttributeError:
             if DEBUG: print tree
         else:
@@ -66,22 +69,19 @@ class TreeHandler(object):
     def node_pos(self,tree):
         depthsplit = tree.node.split(self.depthdelim)#Split on depth delim
         possplit = depthsplit[0].split(self.posdelim)#split on pos delim
-        if possplit[0] == '' and possplit[1] != '':
+        if len(possplit) > 1 and possplit[0] == '' and possplit[1] != '':
             return possplit[1], depthsplit[-1]
+        
         return possplit[0],depthsplit[-1]        
-    
-#     def leaf_parent(self,tree):
-#         '''Dig down and get the parent of what should be the only leaf of this tree'''
-#         if tree[0]
         
     def leftmost_pos(self,tree,pos,cursor):
         '''Recursively returns the node for the leftmost pos
             Cursor is the current rightmost path for this traversal.
+            Returned tree must be to the right of cursor by at least one branch
         '''
         #If tree only has 1 branch       
         if len(tree) == 1:
             #If that branch 
-            #if type(tree[0][0]) == type(''):                
             if type(tree[0]) == type(''):
                 npos,ndep = self.node_pos(tree)
                 #If this is the pos we are looking for         
@@ -90,11 +90,15 @@ class TreeHandler(object):
                         #already have this node, return None
                         return None                   
                     else: return tree
-            for i,branch in enumerate(tree):
+            #If only child is a long skinny branch:
+            for i,branch in enumerate(tree):                
                 if i > cursor[0]:
-                    cursor = [-1]
+                    #Just passed cursor, don't continue keeping track
+                    cursor = [-1]                
                 if i >= cursor[0]:
+                    #If this branch is to the right of cursor
                     if type(branch) == type(''):
+                        #leaf catch but we want the Tree
                         return None
                     else:
                         if cursor[0] != -1:
@@ -103,7 +107,8 @@ class TreeHandler(object):
                             return res
                         else:
                             res = self.leftmost_pos(branch,pos,cursor)
-                            return res                            
+                            return res    
+        #If more than one branch, call recursively on each of them                        
         for i,branch in enumerate(tree):
             if i > cursor[0]:
                 cursor = [-1]
@@ -143,15 +148,14 @@ class TreeHandler(object):
             destructive mthd, makes a copy of tree            
         '''
         #destructive mthd, make copy
-        tree = copy.deepcopy(tree)
-        #b for branch, r for reverse node order        
+        tree = copy.deepcopy(tree)                
         path = []
         for branch in leafpath:
             tree = tree.pop(branch)
             path.append((branch,tree))
         foundRSibling = False
         parentpath = []
-        #Reverse order traversal along path
+        #r for reverse node order
         last = -1
         for branch,r in reversed(path):
             #Because the list is popped trees, the first branch with any length
@@ -199,11 +203,6 @@ class ParseMatcher(object):
         self.strictMatching = smatch
         self.strictPPMatching = sppmatch
         self.th = TreeHandler()
-#         self.maxVBDepth = smatch + 3
-#         self.vbDepth = -1
-#         self.subjectDepth = -1
-#         self.directObjectDepth = -1
-#         self.indirectObjectDepth = -1
         self.role_dict= {
                          'subject' : 1,
                          'verb' : 2,
@@ -214,7 +213,14 @@ class ParseMatcher(object):
                         'VERB' : ['VB'],
                         'NP' : ['NONE','NNS','NN','NNP','NNPS'],
                         'PREP' : {"to towards" : ["TO"],
-                                  "PREP": ["IN"]}}   
+                                  "PREP": ["IN","TO"],
+                                  "in" : ["IN"],
+                                  "to" : ["TO"],
+                                  "as" : ["as"]
+                                  },
+                        'LEX' : ['there']
+                        
+                        }   
         self.depth_map = {'maxVB' : smatch + 3,
                           'maxNONE' : -1,
                           'maxTO': -1,
@@ -245,13 +251,22 @@ class ParseMatcher(object):
             
     def get_leaf(self,tree,path):    
         if len(path) < 2:
-            sys.stderr.write('tried to print_path for a path with no length')
+            sys.stderr.write('tried to print_path for a leaf string or no path')
         elif len(path) == 2:
             leaf = self.th.remove_ulid(tree[path[0]][path[1]])
             return leaf
         else: 
-            return self.get_leaf(tree[path[0]],path[1:])
-    
+            return self.get_leaf(tree[path[0]],path[1:])   
+        
+    def get_parent(self,tree,path):
+        if len(path) < 2:
+            sys.stderr.write('tried to print_path for a leaf string or no path')
+        elif len(path) == 2:
+            tree[path[0]][path[1]] = self.th.remove_ulid(tree[path[0]][path[1]])
+            return tree[path[0]]
+        else: 
+            return self.get_parent(tree[path[0]],path[1:])   
+         
 
     def match_subject_object(self,left,right,v,tree):
         '''    Match the object/subject given the subframes(left,right), v(path to VB) and tree(full tree)
@@ -271,7 +286,7 @@ class ParseMatcher(object):
         for i in sLeftBranch[:-1]:
             stree = stree.pop(i)
         else:
-            #last item of sLeftBranch is the branch to the verb, subtract one and you get the nearest left branch            
+            #last item of sLeftBranch is the branch to the VP, subtract one and you get the nearest left branch            
             sLeftBranch[-1] -= 1
             stree = stree.pop(sLeftBranch[-1])
             
@@ -295,7 +310,7 @@ class ParseMatcher(object):
             changes depending on the preposition (if it is one). 
             
             Carry the meals from the kitchen to the cellar. -> should allow "to [the cellar]" to fill the PREP slot next to "the kitchen"
-            Carry the meals from the kitchen in the cellar to the hallway. -> should increment the cursor for "in [the cellar]" but keep looking for "to [the hallway]" if it exists whether or not it is embedded
+            Carry the meals from the kitchen in the cellar to the hallway. -> should increment the cursor for "in [the cellar]" but keep looking for "to [the hallway]" if it exists whether or not [to] is embedded
             Carry the meals from the kitchen in the cellar. -> should fail on [[NP],[VB],[PP],[NP-Source],[PP],[NP-dest]] iff "in the cellar" is an embedded PP in "the kitchen in the cellar"
         
             Simply: Any embedded non-"to" preposition will return False, everything else will return True
@@ -309,14 +324,14 @@ class ParseMatcher(object):
         if nextslot[1] == 'to towards': return True
         if len(path) == 2 or len(prevpath) == 2: return False#siblings
         path = [next] + [w for w in path]
-        prevparent = prevpath[:-3]#leafs are last two digits of path
+        prevparent = prevpath[:-3]#leafs are last two digits of path + phrase
         curhead = path[:-2]
         for i,n in enumerate(prevparent):
             if len(curhead) < i:
-                #The previous path is a subset of the head of path
+                #The previous path is a subset of the head of path => embedded
                 return False
             elif curhead[i] != n:
-                #Head of previous is not a subset of head of path
+                #Head of previous is not a subset of head of path => !embedded
                 return True
         #The heads are (equal) => sisters
         return False
@@ -358,9 +373,11 @@ class ParseMatcher(object):
                     if len(res) == 0:
                         res.append((slot,full))       
                     elif self.pp_acceptpath(prevpath,slot,next,path,tree):   
-                        res.append((slot,full))                        
+                        res.append((slot,full))  
+                    else:
+                        pass                      
                 else:
-                    res.append(SlotNotFilledError)
+                    res.append((slot,SlotNotFilledError))
             else:
                 raise SlotTreeCountError            
         return res        
@@ -381,15 +398,53 @@ class ParseMatcher(object):
         s,o = self.match_subject_object(left,right,v,tree)
         if DEBUG: self.print_svo(s,v,o,tree)
         return [s,v,o]
+    
+    def frames_match_frame (self, svo, tree):
+        '''Format svo into the format frames expects:
+            {'<POS>' : tree,...}        '''
+        s, v, o = svo
+        res = {}
+        for i in s:
+            res[i[0][1]] = self.get_parent(tree,i[1])
+        res['VERB'] = self.get_parent(tree,v)
+        for i in o:
+            res[i[0][1]] = self.get_parent(tree,i[1])
+        return res    
+    
+    def invalid_pos(self,frame):
+        for slot in frame:
+            if not slot[0] in self.pos_map:
+                sys.stderr.write("Slot part of speech unknown for slot:" + str(slot))
+                return True
+        return False
+            
+    def check_for_augment(self,tree):
+        npos, ndepth = self.th.node_pos(tree)
+        try:
+            int(ndepth[-1])
+        except ValueError:
+            sys.stderr.write("Tree does not seem to be augmented for depth, please run depth_ulid_augment ONCE and then try calling this method again.")
         
     def match_frame(self,frame,parse):
         '''Try to match the frame to the parse'''
-        try:            
+        try:
+            if self.invalid_pos(frame):
+                return None            
+            self.check_for_augment(parse)
             verbslots = [(i,w) for i,w in enumerate(frame) if w[0] == "VERB"]            
             if len(verbslots) > 1: raise VerbFrameCountError
             verbindex, verbslot = verbslots[0]
             verbpath = self.get_path(parse,verbslot)
-            match = self.proximity_match_frame(verbpath,verbindex,frame,parse)             
+            pmatch = self.proximity_match_frame(verbpath,verbindex,frame,parse)
+            s,v,o = pmatch
+            if True in [(type(w[1])==type) for w in s]: 
+                sys.stderr.write("Error finding subject for frame. "+ str(s)+"\n")
+                return None
+            elif True in [(type(w[1])==type) for w in o]: 
+                sys.stderr.write("Error finding object for frame. "+ str(o)+"\n")
+                return None
+            if DEBUG: self.print_svo(pmatch[0],pmatch[1],pmatch[2],parse)
+            fmatch = self.frames_match_frame(pmatch,parse)             
         except PosTooDeep, pos:
             sys.stderr.write(pos+" found but too deep given max part-of-speech depth\n")
         except VerbFrameCountError:
@@ -401,7 +456,7 @@ class ParseMatcher(object):
             print 'Attribute error trying to match frame: ',str(e)
         except:
             raise
-        return match
+        return fmatch
         
 
 if __name__=="__main__":

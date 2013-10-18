@@ -113,16 +113,19 @@ class VerbFrame(object):
                 print str(element.tag)
 
     def match_parse_sequential(self,parse_tree,strict=0,allow_leftoverpps=2):
-        '''Takes a treebank parse tree compiled into NLTK's tree structure and
+        '''Should replace match_parse...for now there should be no difference in the results returned
+            
+            Eventually:
+            Takes a treebank parse tree compiled into NLTK's tree structure and
             sequential matches this frame's verb frame. Non-sequential match_parse
-            does not maintain the verbframe sequence.
+            does not maintain the verbframe sequence. Not that the sequence is informative,
+            but you never know.
         '''
         result_seq = []
         matcher = matching.ParseMatcher(strict,allow_leftoverpps)
+        matcher.th.depth_ulid_augment(parse_tree, 0)
         match = matcher.match_frame(self.frame_list,parse_tree)
-
-        
-            
+        return match           
         
     def match_parse(self, parse_tree, strict=True, allow_leftovers=True):
         """Takes a Treebank parse tree compiled into NLTK's tree structure.
@@ -294,7 +297,8 @@ def _create_vfos(word):
 def best_matching_frame(verb, tree):
     """Get the best matching frame for a tree."""
     frames = get_verb_frames(verb)
-    matches = [frame.match_parse(tree) for frame in frames]
+    #matches = [frame.match_parse(tree) for frame in frames]
+    matches = [frame.match_parse_sequential(tree) for frame in frames]
     valid_matches = [(args, frame.classid) for args, frame in zip(matches, frames) if args]
     best_match = _pick_best_match(valid_matches)
     return best_match

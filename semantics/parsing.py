@@ -659,7 +659,10 @@ def invert_clause(parse_tree):
 def split_conjunctions(parse_tree):
     """Find conjunctions in a given parse_tree, and create a list of parse trees
     with the conjunctions removed and the conjoined clauses in place of the
-    parent node of the conjunction."""
+    parent node of the conjunction.
+    
+    Addendum: If there is an embedded "TO" PP in any subsequent NP, raise it for both    
+    """
     split_tree_list = []
     conjunction_dict = {}
 
