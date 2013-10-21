@@ -5,7 +5,7 @@ parse and tree are synonymous
 '''
 from nltk import Tree
 from matchingTests import exampePPAttachment, exampleCoordination
-from _matchingExceptions import NoSChildVP, PosTooDeep, VerbFrameCountError,SlotTreeCountError, NoRightSibling, TreeProcError, NodeNotFound, SlotNotFilledError
+from _matchingExceptions import NoSChildVP, PosTooDeep, VerbFrameCountError,SlotTreeCountError, NoRightSibling, TreeProcError, NodeNotFound, SlotNotFilledError, NoSubjectFound, NoObjectFound
 import sys
 import copy
 DEBUG = False
@@ -32,6 +32,45 @@ class TreeHandler(object):
     
     def remove_ulid(self,leaf):
         return leaf.split('__')[0]
+    
+    def pop_path(self,tree,path):
+        if len(path) < 2:
+            sys.stderr.write('tried to pop_path for a path with no length')
+        elif len(path) == 2:
+            tree.pop(path[0])
+        else: 
+            self.pop_path(tree[path[0]],path[1:])
+            
+    def get_leaf(self,tree,path):    
+        if len(path) < 2:
+            sys.stderr.write('tried to print_path for a leaf string or no path')
+        elif len(path) == 2:
+            leaf = self.remove_ulid(tree[path[0]][path[1]])
+            return leaf
+        else: 
+            return self.get_leaf(tree[path[0]],path[1:])   
+        
+    def get_parent(self,tree,path):
+        if len(path) < 2:
+            sys.stderr.write('tried to print_path for a leaf string or no path')
+        elif len(path) == 2:
+            tree[path[0]][path[1]] = self.remove_ulid(tree[path[0]][path[1]])
+            return tree[path[0]]
+        else: 
+            return self.get_parent(tree[path[0]],path[1:])  
+        
+    def which_parent(self,tree,path,pos,curparent):
+        '''Recursively finds the closest parent in path that is in pos
+        '''
+        curpos, curdepth = self.node_pos(tree)
+        if curpos in pos:
+            curparent = tree.node         
+        if len(path) < 2:
+            sys.stderr.write('tried to print_path for a leaf string or no path')
+        elif len(path) == 2:            
+            return curparent
+        else: 
+            return self.which_parent(tree[path[0]],path[1:],pos,curparent)  
 
     def common_acestor(self,tree,indexa,indexb):
         '''Returns the path to the common ancestor of the two indices'''
@@ -161,12 +200,13 @@ class TreeHandler(object):
             #Because the list is popped trees, the first branch with any length
             if not foundRSibling and type(r) != str and len(r) > 0:
                 foundRSibling = True
-            elif not foundRSibling and branch > 0:
-                raise NoRightSibling 
-            if foundRSibling:
-                #initialize 
+            #Not sure why i put this conditional in...
+            #elif not foundRSibling and branch > 0:            
+                #raise NoRightSibling 
+            if foundRSibling:                  
                 if len(parentpath) == 0:
-                    parentpath.insert(0,last[0])
+                    #returned path is inclusive of final branch to leafpath, for first item append that to the result                    
+                    parentpath.insert(0,last[0])                    
                 parentpath.insert(0,branch)     
             last = (branch,r)        
         else:            
@@ -216,7 +256,8 @@ class ParseMatcher(object):
                                   "PREP": ["IN","TO"],
                                   "in" : ["IN"],
                                   "to" : ["TO"],
-                                  "as" : ["as"]
+                                  "as" : ["as"],
+                                  "with" : ["with"]
                                   },
                         'LEX' : ['there']
                         
@@ -239,34 +280,7 @@ class ParseMatcher(object):
                 maxd = self.depth_map['max'+head]        
         mainpos = self.th.get_main_pos_path(tree,heads,maxd,cursor)
         if DEBUG : print 'path to mainpos for slot(',slot,') ',mainpos
-        return mainpos 
-        
-    def pop_path(self,tree,path):
-        if len(path) < 2:
-            sys.stderr.write('tried to pop_path for a path with no length')
-        elif len(path) == 2:
-            tree.pop(path[0])
-        else: 
-            self.pop_path(tree[path[0]],path[1:])
-            
-    def get_leaf(self,tree,path):    
-        if len(path) < 2:
-            sys.stderr.write('tried to print_path for a leaf string or no path')
-        elif len(path) == 2:
-            leaf = self.th.remove_ulid(tree[path[0]][path[1]])
-            return leaf
-        else: 
-            return self.get_leaf(tree[path[0]],path[1:])   
-        
-    def get_parent(self,tree,path):
-        if len(path) < 2:
-            sys.stderr.write('tried to print_path for a leaf string or no path')
-        elif len(path) == 2:
-            tree[path[0]][path[1]] = self.th.remove_ulid(tree[path[0]][path[1]])
-            return tree[path[0]]
-        else: 
-            return self.get_parent(tree[path[0]],path[1:])   
-         
+        return mainpos          
 
     def match_subject_object(self,left,right,v,tree):
         '''    Match the object/subject given the subframes(left,right), v(path to VB) and tree(full tree)
@@ -283,6 +297,8 @@ class ParseMatcher(object):
             nearest sibling methods return inclusive of head so we can pop greater than the last elmt
         '''
         sLeftBranch = self.th.nearest_left_sibling(v)   
+        if len(sLeftBranch) < 1:
+            raise NoSubjectFound(left)
         for i in sLeftBranch[:-1]:
             stree = stree.pop(i)
         else:
@@ -291,7 +307,10 @@ class ParseMatcher(object):
             stree = stree.pop(sLeftBranch[-1])
             
 
-        oRightBranch = self.th.nearest_right_sibling(v,otree)        
+        oRightBranch = self.th.nearest_right_sibling(v,otree)    
+        if len(oRightBranch) < 1:
+            raise NoObjectFound(right)    
+        
         for i in oRightBranch[:-1]:
             otree = otree.pop(i)
             
@@ -383,11 +402,11 @@ class ParseMatcher(object):
         return res        
         
     def print_svo(self,s,v,o,tree):
-        print 'subject: ',[(w[0],w[1],self.get_leaf(tree,w[1])) for w in s]
+        print 'subject: ',[(w[0],w[1],self.th.get_leaf(tree,w[1])) for w in s]
         #print 'subject: ',[(w,self.get_leaf(tree,w)) for w in s]
-        print 'verb: ',self.get_leaf(tree,v)
+        print 'verb: ',self.th.get_leaf(tree,v)
         #print 'object: ',[(b,self.get_leaf(tree,b)) for b in o]
-        print 'object: ',[(b[0],b[1],self.get_leaf(tree,b[1])) for b in o]
+        print 'object: ',[(b[0],b[1],self.th.get_leaf(tree,b[1])) for b in o]
         
             
     def proximity_match_frame(self,v,center,frame,tree):
@@ -405,10 +424,10 @@ class ParseMatcher(object):
         s, v, o = svo
         res = {}
         for i in s:
-            res[i[0][1]] = self.get_parent(tree,i[1])
-        res['VERB'] = self.get_parent(tree,v)
+            res[i[0][1]] = self.th.get_parent(tree,i[1])
+        res['VERB'] = self.th.get_parent(tree,v)
         for i in o:
-            res[i[0][1]] = self.get_parent(tree,i[1])
+            res[i[0][1]] = self.th.get_parent(tree,i[1])
         return res    
     
     def invalid_pos(self,frame):
@@ -452,6 +471,12 @@ class ParseMatcher(object):
         except SlotTreeCountError:
             #Not all the slots could be filled for this frame given this parse
             return None
+        except NoObjectFound, obranch:
+            sys.stderr.write("Could not find the object in this parse, for this branch: "+str(obranch))
+            return None
+        except NoSubjectFound, sbranch:
+            sys.stderr.write("Could not find the subject in this parse, for this branch: "+str(sbranch))
+            return None            
         except AttributeError, e:
             print 'Attribute error trying to match frame: ',str(e)
         except:

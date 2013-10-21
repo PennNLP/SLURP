@@ -17,7 +17,13 @@ class exampleCoordination(object):
                 }
     exDict = {"Extracts VP, produces S trees with no verb" : {"sent" : "Go and defuse the bomb in the cellar.",
                 "tree" : Tree('S', [Tree('NP-SBJ-A', [Tree('-NONE-', ['*'])]), Tree('VP', [Tree('VB', ['Go']), Tree('CC', ['and']), Tree('VB', ['defuse']), Tree('NP-A', [Tree('DT', ['the']), Tree('NN', ['bomb'])]), Tree('PP-MNR', [Tree('IN', ['in']), Tree('NP-A', [Tree('DT', ['the']), Tree('NN', ['cellar'])])])]), Tree('.', ['.'])])
-                }
+                },
+              "Two carrys only one source-dest because of wrongly embedded 'to' pp": {"sent" : "Carry the hostages from the kitchen and the cafeteria to the cellar.",
+                                                                "tree" : Tree('S', [Tree('NP-SBJ-A', [Tree('-NONE-', ['*'])]), Tree('VP', [Tree('VB', ['Carry']), Tree('NP-A', [Tree('DT', ['the']), Tree('NNS', ['hostages'])]), Tree('PP-CLR', [Tree('IN', ['from']), Tree('NP-A', [Tree('NP', [Tree('DT', ['the']), Tree('NN', ['kitchen'])]), Tree('CC', ['and']), Tree('NP', [Tree('NP', [Tree('DT', ['the']), Tree('NN', ['cafeteria'])]), Tree('PP', [Tree('TO', ['to']), Tree('NP-A', [Tree('DT', ['the']), Tree('NN', ['cellar'])])])])])])]), Tree('.', ['.'])])
+                                                                },
+              "VP_NPNP_VP" : { "sent": "Defuse the bomb and the bomb and go to the hallway.",
+                              "tree" : Tree('S', [Tree('NP-SBJ-A', [Tree('-NONE-', ['*'])]), Tree('VP', [Tree('VP-A', [Tree('VB', ['Defuse']), Tree('NP-A', [Tree('NP', [Tree('DT', ['the']), Tree('NN', ['bomb'])]), Tree('CC', ['and']), Tree('NP', [Tree('DT', ['the']), Tree('NN', ['bomb'])])])]), Tree('CC', ['and']), Tree('VP-A', [Tree('VB', ['go']), Tree('PP-CLR', [Tree('TO', ['to']), Tree('NP-A', [Tree('DT', ['the']), Tree('NN', ['hallway'])])])])]), Tree('.', ['.'])])
+                              }
               }
     #Examples the current methods do not correctly parse
     hardDict = { "Carry_NP_NP" : {"sent" : "Carry the hostages from the kitchen and bathroom to the cellar.",
@@ -119,7 +125,6 @@ class exampePPAttachment(object):
             print "Running test(",key,")"
             frame = self.crazyframes[key]            
             match = matcher.match_frame(frame,tree)
-            matcher.print_svo(match[0],match[1],match[2], tree)
             
     def strict_test(self,matcher):
         matcher.th.depth_ulid_augment(self.correct,0)

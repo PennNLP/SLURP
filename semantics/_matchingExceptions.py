@@ -36,3 +36,11 @@ class NodeNotFound(Exception):
 class SlotNotFilledError(Exception):
     #Raise if the slot cannot be filled
     pass
+
+class NoSubjectFound(Exception):
+    #If no subject was found while parsing the tree
+    pass
+    
+class NoObjectFound(Exception):
+    #If no subject was found while parsing the tree
+    pass
