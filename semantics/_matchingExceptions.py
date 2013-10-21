@@ -25,6 +25,10 @@ class NoRightSibling(Exception):
     #Raised if operation over a tree contains no right sibling to a node
     pass
 
+class NoLeftSibling(Exception):
+    #Raised if operation over a tree contains no right sibling to a node
+    pass
+
 class TreeProcError(Exception):
     def __init__(self,e):
         return e
@@ -43,4 +47,8 @@ class NoSubjectFound(Exception):
     
 class NoObjectFound(Exception):
     #If no subject was found while parsing the tree
+    pass
+
+class UnlevelCCSiblings(Exception):
+    #If CC siblings are found but they are deeper or shallower than the CC, raise
     pass

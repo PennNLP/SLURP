@@ -41,6 +41,23 @@ class TreeHandler(object):
         else: 
             self.pop_path(tree[path[0]],path[1:])
             
+    def pop_path_two(self,tree,one,two):
+        '''This works like pop_path but requires two paths of the same length
+        '''
+        if len(one) < 2:
+            sys.stderr.write('tried to pop_path for a path with no length')
+        elif len(one) == 2:
+            if one[0] > two[0]:
+                tree.pop(one[0])
+                tree.pop(two[0])
+            else:
+                tree.pop(two[0])
+                tree.pop(one[0])
+        elif one[0] != two[0]:
+            sys.stderr.write('pop_path_two paths are not similar enough')                
+        else: 
+            self.pop_path_two(tree[one[0]],one[1:],two[1:])
+            
     def get_leaf(self,tree,path):    
         if len(path) < 2:
             sys.stderr.write('tried to print_path for a leaf string or no path')
@@ -72,7 +89,7 @@ class TreeHandler(object):
         else: 
             return self.which_parent(tree[path[0]],path[1:],pos,curparent)  
 
-    def common_acestor(self,tree,indexa,indexb):
+    def common_ancestor(self,tree,indexa,indexb):
         '''Returns the path to the common ancestor of the two indices'''
         patha = tree.leaf_treeposition(indexa)
         pathb = tree.leaf_treeposition(indexb)
@@ -209,9 +226,10 @@ class TreeHandler(object):
                     parentpath.insert(0,last[0])                    
                 parentpath.insert(0,branch)     
             last = (branch,r)        
-        else:            
-            return parentpath
-        raise TreeProcError("Error finding nearest right sibling of leafpath: "+str(leafpath))
+        if len(parentpath) < 1:
+            raise NoRightSibling  
+        else:
+            return parentpath        
                 
     def nearest_left_sibling(self,leafpath):
         '''Returns the path(inclusive) to the branch of the nearest left sibling of leafpath
