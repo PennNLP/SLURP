@@ -8,7 +8,7 @@ from matching import TreeHandler
 import sys
 from _matchingExceptions import NoRightSibling, NoLeftSibling, UnlevelCCSiblings
 import copy
-
+DEBUG = False
 def main():
     d = exampleCoordination.exDict
     splitter = Split()    
@@ -55,10 +55,8 @@ class Split(object):
                 self.th.pop_path_two(lefttree,right,ccpath)
                 res.append(lefttree) #Copy and put left branch in results and keep going
                 self.th.pop_path_two(tree, left,ccpath)#Pop for real, keep looking
-
-                print 'VP CC: ',ccpath
             else:
-                print pos,' CC: ',ccpath
+                if DEBUG: print pos,' CC: ',ccpath
             cursor = ccpath  
         res.append(tree)               
         return res
@@ -83,10 +81,8 @@ class Split(object):
                 self.th.pop_path_two(lefttree,right,ccpath)
                 res.append(lefttree) #Copy and put left branch in results and keep going
                 self.th.pop_path_two(tree, left,ccpath)#Pop for real, keep looking
-
-                print 'NP CC: ',ccpath
             else:
-                print pos,' CC: ',ccpath
+                if DEBUG: print pos,' CC: ',ccpath
             cursor = ccpath  
         res.append(tree)               
         return res
@@ -114,6 +110,7 @@ class Split(object):
         except UnlevelCCSiblings:
             sys.stderr.write("Unlevel CC parse. Check parse.")
             raise
+        for item in flatSplit: self.th.depth_ulid_deaugment(item)
         return flatSplit
 if __name__=="__main__":
     main()

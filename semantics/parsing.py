@@ -27,7 +27,7 @@ from semantics.new_structures import (
     Location, ObjectEntity, YNQuery, StatusQuery,
     EntityQuery, Command, LocationQuery, Assertion, Event)
 from semantics.lexical_constants import ACTION_ALIASES
-
+from coordinating import Split
 
 # Parse tree constants
 DASH = "-"
@@ -151,7 +151,8 @@ def extract_frames_from_parse(parse_tree_string, verbose=False):
     # for (clause, conjunction) in split_clause_dict.values():
     for clause, conjunction in ((parse_tree, ''),):
         # Split conjunctions and duplicate arguments if necessary
-        split_tree_dict = split_conjunctions(clause)
+        #split_tree_dict = split_conjunctions(clause)
+        split_tree_dict = split_conjunctions_sparse(clause)
 
         if conjunction != '':
             result_list.append(conjunction)
@@ -656,12 +657,21 @@ def invert_clause(parse_tree):
     return parse_tree
 
 
+def split_conjunctions_sparse(parse_tree):
+    splitter = Split()
+    
+    trees = splitter.split_on_cc(parse_tree)
+    #Abstracting away path to conjunction because it isn't used anyway
+    #Only support 'and' right now
+    res = {}
+    res[0] = (trees,"and")
+    return res
+    
 def split_conjunctions(parse_tree):
     """Find conjunctions in a given parse_tree, and create a list of parse trees
     with the conjunctions removed and the conjoined clauses in place of the
     parent node of the conjunction.
     
-    Addendum: If there is an embedded "TO" PP in any subsequent NP, raise it for both    
     """
     split_tree_list = []
     conjunction_dict = {}

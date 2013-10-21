@@ -116,6 +116,25 @@ class TreeHandler(object):
                 self.depth_ulid_augment(child,depth+1)
             if DEBUG: print ')',    
             
+    def depth_ulid_deaugment(self,tree):
+        '''Recursive traversal that augments a tree with the depth of each node attached to each node
+            And also appends a unique identifier to each node in case of multiple lemmas
+        '''        
+        try:
+            tree.node
+        except AttributeError:
+            if DEBUG: print tree
+        else:
+            #deaugment tree
+            tree.node = tree.node.split(self.depthdelim)[0]
+            if DEBUG: print '(',tree.node,
+            for i,child in enumerate(tree):
+                if type(child) == str:
+                    #tree[i] += '__'+str(self.get_ulid())+'__'
+                    tree[i] = tree[i].split('__')[0]                     
+                self.depth_ulid_deaugment(child)
+            if DEBUG: print ')',    
+            
     def get_subtree(self,tree,path):
         '''Recursive traversal that returns the subtree when no more path'''
         if len(path) == 0:
