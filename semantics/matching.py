@@ -205,8 +205,12 @@ class TreeHandler(object):
                 cursor = [-1]
             if i >= cursor[0]:
                 if cursor[0] != -1:
-                    if len(cursor) == 1: return None                                         
-                    else: res = self.leftmost_pos(branch,pos,cursor[1:])
+                    if len(cursor) == 1:
+                        if i < len(tree)-1: 
+                            sys.stderr.write("More branches in this tree but returning none because of cursor...check that initial cursor is correct. It should probably be longer than it is now.")  
+                        return None#We shouldn't get here when there are more branches
+                    #if len(cursor) == 1: cursor = [-1]                                         
+                    res = self.leftmost_pos(branch,pos,cursor[1:])
                     if res:
                         return res                
                 else:

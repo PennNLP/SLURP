@@ -55,9 +55,10 @@ class Split(object):
                 self.th.pop_path_two(lefttree,right,ccpath)
                 res.append(lefttree) #Copy and put left branch in results and keep going
                 self.th.pop_path_two(tree, left,ccpath)#Pop for real, keep looking
+                cursor = [-1]
             else:
                 if DEBUG: print pos,' CC: ',ccpath
-            cursor = ccpath  
+                cursor = ccpath  
         res.append(tree)               
         return res
     
@@ -83,9 +84,10 @@ class Split(object):
                 #self.th.replace_parent(lefttree,left)
                 res.append(lefttree) #Copy and put left branch in results and keep going
                 self.th.pop_path_two(tree, left,ccpath)#Pop for real, keep looking
+                cursor = [-1]
             else:
                 if DEBUG: print pos,' CC: ',ccpath
-            cursor = ccpath  
+                cursor = ccpath  
         res.append(tree)               
         return res
         
