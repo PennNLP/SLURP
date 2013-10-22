@@ -78,7 +78,9 @@ class Split(object):
                 if len(left) != len(ccpath) != len(right):
                     raise UnlevelCCSiblings
                 lefttree = copy.deepcopy(tree)
+                #Instead of popping, need to replace parent with correct branch or else change how I match frames
                 self.th.pop_path_two(lefttree,right,ccpath)
+                #self.th.replace_parent(lefttree,left)
                 res.append(lefttree) #Copy and put left branch in results and keep going
                 self.th.pop_path_two(tree, left,ccpath)#Pop for real, keep looking
             else:

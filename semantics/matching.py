@@ -43,20 +43,36 @@ class TreeHandler(object):
             
     def pop_path_two(self,tree,one,two):
         '''This works like pop_path but requires two paths of the same length
+            Intended to be used for popping siblings of a conjunction.
         '''
-        if len(one) < 2:
-            sys.stderr.write('tried to pop_path for a path with no length')
-        elif len(one) == 2:
-            if one[0] > two[0]:
-                tree.pop(one[0])
-                tree.pop(two[0])
+        if len(one) < 3:            
+            sys.stderr.write('tried to pop_path_two for a path that is too short')
+        elif len(one) == 3:
+            if one[1] > two[1]:
+                tree[one[0]].pop(one[1])
+                tree[two[0]].pop(two[1])
             else:
-                tree.pop(two[0])
-                tree.pop(one[0])
+                tree[two[0]].pop(two[1])
+                tree[one[0]].pop(one[1])                
+            if len(tree[one[0]]) == 1:
+                #If only one child left, which there should be
+                tree[one[0]] = tree[one[0]][0]
+                pass
+            else:
+                sys.stderr.write('Tried to replace CC parent but too many children')
         elif one[0] != two[0]:
             sys.stderr.write('pop_path_two paths are not similar enough')                
         else: 
             self.pop_path_two(tree[one[0]],one[1:],two[1:])
+            
+    def replace_parent(self,tree,path):
+        '''Replaces the parent of the last two digits of path with the path[-2] child'''
+        if len(path) < 2:
+            sys.stderr.write('tried to replace_parent for a path that is too short')
+        elif len(path) == 2:
+            tree = tree[path[0]]
+        else:
+            self.replace_parent(tree[path[0]],path[1:])                                     
             
     def get_leaf(self,tree,path):    
         if len(path) < 2:
@@ -160,7 +176,7 @@ class TreeHandler(object):
             if type(tree[0]) == type(''):
                 npos,ndep = self.node_pos(tree)
                 #If this is the pos we are looking for         
-                if npos in pos: 
+                if npos != '' and npos in pos: 
                     if len(cursor) == 1 and cursor[0] == 0:
                         #already have this node, return None
                         return None                   
