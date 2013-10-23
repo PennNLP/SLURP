@@ -195,6 +195,7 @@ class LTLMoPClient(object):
 
 
 class BarebonesDialogueManager(object):
+    activateExecute = ["go","go.","activate","activate.","execute","execute."]
     def __init__(self, ltlmopclient, executor, base_spec=None):
         """ take reference to execution context and gui_window
             optionally initialize with some base spec text """
@@ -249,7 +250,7 @@ class BarebonesDialogueManager(object):
         if msg == "clear":
             self.clear()
             return
-        elif msg == "go":
+        elif msg in self.activateExecute:
             return self.execute()
         elif msg == "wait":
             self.executor.pause()
