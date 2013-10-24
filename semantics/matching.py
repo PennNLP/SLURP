@@ -307,8 +307,8 @@ class ParseMatcher(object):
                          'object' : 4
                          }
         self.pos_map = {'DT' : ['DT'], 
-                        'VERB' : ['VB'],
-                        'NP' : ['NONE','NNS','NN','NNP','NNPS'],
+                        'VERB' : ['VB','VBP'],
+                        'NP' : ['NONE','NNS','NN','NNP','NNPS','PRP'],
                         'PREP' : {"to towards" : ["TO"],
                                   "PREP": ["IN","TO"],
                                   "in" : ["IN"],
@@ -319,7 +319,7 @@ class ParseMatcher(object):
                         'LEX' : ['there']
                         
                         }   
-        self.depth_map = {'maxVB' : smatch + 3,
+        self.depth_map = {'maxVB' : -1,
                           'maxNONE' : -1,
                           'maxTO': -1,
                           'maxIN': -1,
