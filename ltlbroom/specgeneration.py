@@ -26,13 +26,15 @@ from semantics.lexical_constants import (
     SEARCH_ACTION, GO_ACTION, FOLLOW_ACTION, SEE_ACTION, BEGIN_ACTION,
     AVOID_ACTION, PATROL_ACTION, CARRY_ACTION, STAY_ACTION, ACTIVATE_ACTION,
     DEACTIVATE_ACTION, UNDERSTOOD_SENSES)
-from semantics.new_structures import Event, Assertion
+from semantics.new_structures import Event, Assertion, Command
 from semantics.parsing import process_parse_tree
 from pipelinehost import PipelineClient
 from semantics.new_knowledge import KnowledgeBase
 from ltlbroom.ltl import (
     env, and_, or_, sys_, not_, iff, next_, always, always_eventually, implies,
     space, mutex_, ALWAYS, EVENTUALLY, OR)
+
+from semantics.matching import TreeHandler
 
 
 # Debug constants
@@ -423,7 +425,7 @@ class SpecGenerator(object):
         if isinstance(command.condition, Event):
             # Validate the condition
             if not command.condition.theme:
-                raise KeyError("Cannot understand condition:\n{}".format(command.condition))
+                raise KeyError("No condition theme, cannot understand condition:\n{!r}".format(command.condition))
             condition = command.condition.theme.name
             if condition not in self.sensors:
                 raise KeyError(
@@ -442,12 +444,25 @@ class SpecGenerator(object):
             # TODO: Add support for assertions not about "you". Ex: If there is a hostage...
             # Validate the condition
             if not command.condition.location:
-                raise KeyError("Cannot understand condition:\n{}".format(command.condition))
+                raise KeyError("No condition location, cannot understand condition:\n{}".format(command.condition))
             condition = command.condition.location.name
             condition_frag = sys_(condition)
             explanation = "When in {!r},".format(condition)
+        elif isinstance(command.condition, Command):
+            #Conditions are exclusively created as commands, so I'm going with that
+            #condition = command.condition.
+            conditional = command.condition.action
+            stimulus = conditional.args['Stimulus']
+            experiencer = conditional.args['Experiencer']
+            try:
+                phrase = stimulus.node
+            except AttributeError:
+                raise KeyError("Stimulus of condition command has no node, cannot understand condition:\n{}".format(command.condition))
+            condition = TreeHandler.phrase_head(stimulus,phrase)[0]
+            condition_frag = sys_(condition)
+            explanation = "When {} {} {}".format(experiencer,conditional.verb,stimulus)      
         else:
-            raise KeyError("Cannot understand condition:\n{}".format(command.condition))
+            raise KeyError("General problem generating conditional, cannot understand condition:\n{}".format(command.condition))
 
         # Validate the action
         action = command.action
@@ -665,7 +680,7 @@ class SpecGenerator(object):
         """Generate statements for activating an actuator."""
         try:
             actuator = command.theme.name
-        except AttributeError:
+        except AttributeError:            
             raise KeyError("Missing actuator for activate/deactivate.")
 
         # If negation isn't set, allow the command to set it

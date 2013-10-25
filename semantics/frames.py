@@ -297,8 +297,8 @@ def _create_vfos(word):
 def best_matching_frame(verb, tree):
     """Get the best matching frame for a tree."""
     frames = get_verb_frames(verb)
-    #matches = [frame.match_parse(tree) for frame in frames]
-    matches = [frame.match_parse_sequential(tree) for frame in frames]
+    matches = [frame.match_parse(tree) for frame in frames]
+    #matches = [frame.match_parse_sequential(tree) for frame in frames]
     valid_matches = [(args, frame.classid) for args, frame in zip(matches, frames) if args]
     best_match = _pick_best_match(valid_matches)
     return best_match

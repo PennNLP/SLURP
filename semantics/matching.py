@@ -21,10 +21,27 @@ def main():
 class TreeHandler(object):
     depthdelim = "."
     posdelim = "-"
+    nullnode = "NONE"
     
     def __init__(self):
         #A unique leaf identifier in case there are identical leaves
         self.ulid = 0
+        
+    @staticmethod
+    def phrase_head(tree,phrase):
+        phrase = phrase.split(TreeHandler.depthdelim)[0].split(TreeHandler.posdelim)[0]#Split dash-types off
+        try:
+            tree.node
+        except AttributeError:
+            if type(tree) == str: return None
+            if DEBUG: print tree
+        if phrase in ParseMatcher.pos_map:
+            if type(ParseMatcher.pos_map[phrase]) == list:
+                if tree.node in ParseMatcher.pos_map[phrase]:
+                    return tree   
+        for branch in tree:             
+            res = TreeHandler.phrase_head(branch,phrase)
+            if res: return res
         
     def get_ulid(self):
         self.ulid += 1
@@ -128,7 +145,11 @@ class TreeHandler(object):
             if DEBUG: print '(',tree.node,
             for i,child in enumerate(tree):
                 if type(child) == str:
-                    tree[i] += '__'+str(self.get_ulid())+'__' 
+                    tree[i] += '__'+str(self.get_ulid())+'__'
+                else:
+                    if child.node == self.posdelim+self.nullnode+self.posdelim:
+                        #(NP (-NONE- *)) to (NP (-NPNONE- *))
+                        child.node = self.posdelim+tree.node.split(self.depthdelim)[0].split(self.posdelim)[0]+self.nullnode+self.posdelim 
                 self.depth_ulid_augment(child,depth+1)
             if DEBUG: print ')',    
             
@@ -157,12 +178,12 @@ class TreeHandler(object):
             return tree
         self.get_subtree(tree[path[0]],path[1:])
         
-    def node_pos(self,tree):
-        depthsplit = tree.node.split(self.depthdelim)#Split on depth delim
-        possplit = depthsplit[0].split(self.posdelim)#split on pos delim
+    @staticmethod
+    def node_pos(tree):
+        depthsplit = tree.node.split(TreeHandler.depthdelim)#Split on depth delim
+        possplit = depthsplit[0].split(TreeHandler.posdelim)#split on pos delim
         if len(possplit) > 1 and possplit[0] == '' and possplit[1] != '':
-            return possplit[1], depthsplit[-1]
-        
+            return possplit[1], depthsplit[-1]        
         return possplit[0],depthsplit[-1]        
         
     def leftmost_pos(self,tree,pos,cursor):
@@ -292,7 +313,23 @@ class ParseMatcher(object):
     strictMatching is a numeric value that sets the acceptable depth distance from the main VP
     strictPPMatching is a numeric value that sets the acceptable depth distance from the NP head
     '''
-    
+    pos_map = {'DT' : ['DT'], 
+                        'VERB' : ['VB','VBP'],
+                        'NP' : ['NPNONE','NNS','NN','NNP','NNPS','PRP'],
+                        'PREP' : {"to towards" : ["TO"],
+                                  "PREP": ["IN","TO"],
+                                  "in" : ["IN"],
+                                  "to" : ["TO"],
+                                  "as" : ["as"],
+                                  "with" : ["with"]
+                                  },
+                        'LEX' : ['there']                        
+            }   
+    depth_map = {'maxVB' : -1,
+                      'maxNONE' : -1,
+                      'maxTO': -1,
+                      'maxIN': -1,
+                      'maxPREP': -1}    
     def __init__(self,smatch,sppmatch):
         '''
         Constructor
@@ -306,24 +343,7 @@ class ParseMatcher(object):
                          'prep' : 3,
                          'object' : 4
                          }
-        self.pos_map = {'DT' : ['DT'], 
-                        'VERB' : ['VB','VBP'],
-                        'NP' : ['NONE','NNS','NN','NNP','NNPS','PRP'],
-                        'PREP' : {"to towards" : ["TO"],
-                                  "PREP": ["IN","TO"],
-                                  "in" : ["IN"],
-                                  "to" : ["TO"],
-                                  "as" : ["as"],
-                                  "with" : ["with"]
-                                  },
-                        'LEX' : ['there']
-                        
-                        }   
-        self.depth_map = {'maxVB' : -1,
-                          'maxNONE' : -1,
-                          'maxTO': -1,
-                          'maxIN': -1,
-                          'maxPREP': -1}    
+
         
     def get_path(self,tree,slot,cursor=[-1]):
         '''Return the path to the head of the slot'''        
@@ -337,8 +357,9 @@ class ParseMatcher(object):
                 maxd = self.depth_map['max'+head]        
         mainpos = self.th.get_main_pos_path(tree,heads,maxd,cursor)
         if DEBUG : print 'path to mainpos for slot(',slot,') ',mainpos
-        return mainpos          
-
+        return mainpos 
+    
+        
     def match_subject_object(self,left,right,v,tree):
         '''    Match the object/subject given the subframes(left,right), v(path to VB) and tree(full tree)
                 return [path] to each slot        

@@ -151,8 +151,8 @@ def extract_frames_from_parse(parse_tree_string, verbose=False):
     # for (clause, conjunction) in split_clause_dict.values():
     for clause, conjunction in ((parse_tree, ''),):
         # Split conjunctions and duplicate arguments if necessary
-        #split_tree_dict = split_conjunctions(clause)
-        split_tree_dict = split_conjunctions_sparse(clause)
+        split_tree_dict = split_conjunctions(clause)
+        #split_tree_dict = split_conjunctions_sparse(clause)
 
         if conjunction != '':
             result_list.append(conjunction)
@@ -285,6 +285,9 @@ def create_semantic_structures(frame_semantic_list, verbose=True):
             current_command = _make_command(action, frame)
             # TODO: Figure out how to save the condition_head
             if frame.condition:
+                #This seems to be a problem...the specgeneration expects conditions to be events
+                #or assertions but here it looks like the only way conditions get set are as Commands
+                #This also explains why the action of the command is a frame match
                 current_command.condition = _make_command(frame.condition, frame)
             semantic_representation_list.append(current_command)
         # It's an assertion
