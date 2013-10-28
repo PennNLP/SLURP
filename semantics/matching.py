@@ -4,19 +4,13 @@ parse and tree are synonymous
 @author: tad
 '''
 from nltk import Tree
-from matchingTests import exampePPAttachment, exampleCoordination
 from _matchingExceptions import NoSChildVP, PosTooDeep, VerbFrameCountError,SlotTreeCountError, NoRightSibling, TreeProcError, NodeNotFound, SlotNotFilledError, NoSubjectFound, NoObjectFound
 import sys
 import copy
 DEBUG = False
 
 def main():
-    testList = [exampePPAttachment().tests,exampleCoordination().tests]
-    #testList = [exampleCoordination().tests]
-    matcher = ParseMatcher(0,2)
-    for tests in testList:
-        for test in tests:
-            test(matcher)
+    '''tests are in semantics/matchingTests'''
 
 class TreeHandler(object):
     depthdelim = "."
@@ -62,8 +56,22 @@ class TreeHandler(object):
         '''This works like pop_path but requires two paths of the same length
             Intended to be used for popping siblings of a conjunction.
         '''
-        if len(one) < 3:            
-            sys.stderr.write('tried to pop_path_two for a path that is too short')
+        if len(one) == 1:
+            sys.stderr.write('tried to pop_path_two on a path with no leaf (length==1)')
+        elif len(one) == 2:
+            #Spop            
+            tree.pop()
+            if one[0] > two[0]:
+                tree.pop(one[0])
+                tree.pop(two[0])
+            else:
+                tree.pop(two[0])
+                tree.pop(one[0])                
+            if len(tree) == 1:
+                #If only one child left, which there should be
+                return tree[0]
+            else:
+                sys.stderr.write('Tried to replace CC parent but too many children')
         elif len(one) == 3:
             if one[1] > two[1]:
                 tree[one[0]].pop(one[1])
@@ -74,7 +82,6 @@ class TreeHandler(object):
             if len(tree[one[0]]) == 1:
                 #If only one child left, which there should be
                 tree[one[0]] = tree[one[0]][0]
-                pass
             else:
                 sys.stderr.write('Tried to replace CC parent but too many children')
         elif one[0] != two[0]:
@@ -136,11 +143,14 @@ class TreeHandler(object):
         '''        
         try:
             tree.node
+            pos = self.get_pos(tree.node)
             if self.depthdelim in tree.node: return True#Tree has already been augmented
         except AttributeError:
             if DEBUG: print tree
         else:
             #augment tree
+            if pos == "S" and depth != 0:
+                tree.node = "S"#If we wanted to make subsentence S into SubS, this would be where we do it
             tree.node+=self.depthdelim+str(depth)
             if DEBUG: print '(',tree.node,
             for i,child in enumerate(tree):
@@ -184,7 +194,14 @@ class TreeHandler(object):
         possplit = depthsplit[0].split(TreeHandler.posdelim)#split on pos delim
         if len(possplit) > 1 and possplit[0] == '' and possplit[1] != '':
             return possplit[1], depthsplit[-1]        
-        return possplit[0],depthsplit[-1]        
+        return possplit[0],depthsplit[-1]   
+    
+    @staticmethod
+    def get_pos(node):
+        depthsplit = node.split(TreeHandler.depthdelim)#Split on depth delim
+        possplit = depthsplit[0].split(TreeHandler.posdelim)#split on pos delim
+        return possplit[0]
+             
         
     def leftmost_pos(self,tree,pos,cursor):
         '''Recursively returns the node for the leftmost pos
@@ -265,7 +282,7 @@ class TreeHandler(object):
         '''
         #destructive mthd, make copy
         tree = copy.deepcopy(tree)                
-        path = []
+        path = [(-1,tree)]#initialize path        
         for branch in leafpath:
             tree = tree.pop(branch)
             path.append((branch,tree))
@@ -282,9 +299,11 @@ class TreeHandler(object):
                 #raise NoRightSibling 
             if foundRSibling:                  
                 if len(parentpath) == 0:
-                    #returned path is inclusive of final branch to leafpath, for first item append that to the result                    
+                    #returned path is inclusive of final branch to leafpath, for first item append that to the result   
                     parentpath.insert(0,last[0])                    
-                parentpath.insert(0,branch)     
+                if branch != -1:
+                    #If this is not the root node, insert
+                    parentpath.insert(0,branch)     
             last = (branch,r)        
         if len(parentpath) < 1:
             raise NoRightSibling  
@@ -535,10 +554,10 @@ class ParseMatcher(object):
             pmatch = self.proximity_match_frame(verbpath,verbindex,frame,parse)
             s,v,o = pmatch
             if True in [(type(w[1])==type) for w in s]: 
-                sys.stderr.write("Error finding subject for frame. "+ str(s)+"\n")
+                if DEBUG: sys.stderr.write("Error finding subject for frame. "+ str(s)+"\n")
                 return None
             elif True in [(type(w[1])==type) for w in o]: 
-                sys.stderr.write("Error finding object for frame. "+ str(o)+"\n")
+                if DEBUG: sys.stderr.write("Error finding object for frame. "+ str(o)+"\n")
                 return None
             if DEBUG: self.print_svo(pmatch[0],pmatch[1],pmatch[2],parse)
             fmatch = self.frames_match_frame(pmatch,parse)             

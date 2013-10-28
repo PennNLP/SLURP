@@ -661,8 +661,9 @@ def invert_clause(parse_tree):
 
 
 def split_conjunctions_sparse(parse_tree):
-    splitter = Split()
-    
+    '''Find conjunctions, split them based on syntax tree. Return the result dictionary
+    '''
+    splitter = Split()    
     trees = splitter.split_on_cc(parse_tree)
     #Abstracting away path to conjunction because it isn't used anyway
     #Only support 'and' right now
