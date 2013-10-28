@@ -384,7 +384,39 @@ def _immediate_children(tree):
     """
     return [_first_leaf(subtree) for subtree in tree if len(subtree.leaves()) == 1]
 
-
+def match_via_submatches(parse_tree,verbose=False):
+    '''Search immediate children of parse_tree for conditional.
+        If conditional is found, return
+    '''
+    # Look for a condition in a sub-S
+    s_children = [child for child in parse_tree if main_tag(child.node).startswith(S_TAG)]
+    submatches = [match_verb(s_child) for s_child in s_children]
+    # Filter to non-none
+    valid_submatches = [match for match in submatches if match]
+    if valid_submatches:
+        match = valid_submatches[0]
+        # Check whether the current tree is a conditional by looking at the start of the tree
+        first_word = _first_leaf(parse_tree)
+        immed_children = _immediate_children(parse_tree)
+        is_conditional = \
+            immed_children and immed_children[0] == first_word and first_word in CONDITIONAL_MARKERS
+       
+        if is_conditional:
+            match.condition_head = first_word
+            if verbose:
+                print "Returning conditional:", match
+            return match, None
+        else:
+            # Check submatches for whether they are conditional
+            if match.condition_head:
+                # Set condition and then keep looking for VPs
+                condition = match
+                return None, condition
+            else:
+                # Otherwise, return what we've got so far
+                return match, None
+    return None, None
+            
 def match_verb(parse_tree, negated=False, subject=None, condition=None, verbose=False):
     """Returns a single matching verb frames for the given parse tree.
 
@@ -403,42 +435,24 @@ def match_verb(parse_tree, negated=False, subject=None, condition=None, verbose=
             print "Not matching in tree rooted at {}".format(main_tag(parse_tree.node))
         return result
 
-    # Look for a condition in a sub-S
-    s_children = [child for child in parse_tree if main_tag(child.node).startswith(S_TAG)]
-    submatches = [match_verb(s_child) for s_child in s_children]
-    # Filter to non-none
-    valid_submatches = [match for match in submatches if match]
-    if valid_submatches:
-        match = valid_submatches[0]
-        # Check whether the current tree is a conditional by looking at the start of the tree
-        first_word = _first_leaf(parse_tree)
-        immed_children = _immediate_children(parse_tree)
-        is_conditional = \
-            immed_children and immed_children[0] == first_word and first_word in CONDITIONAL_MARKERS
-        if is_conditional:
-            match.condition_head = first_word
-            if verbose:
-                print "Returning conditional:", match
-            return match
-        else:
-            # Check submatches for whether they are conditional
-            if match.condition_head:
-                # Set condition and then keep looking for VPs
-                condition = match
-            else:
-                # Otherwise, return what we've got so far
-                return match
+    match, condition = match_via_submatches(parse_tree,verbose)    
+    if match:
+        return match
 
     # Process VPs
     vps = [(child, parse_tree) for child in parse_tree if main_tag(child.node) == VP_TAG]
     for vp, parent in vps:
+        #Look in VP for conditional
+        if not condition: match,condition = match_via_submatches(vp,verbose)
+        
         # Check for support verbs (do, please)
         immed_children = _immediate_children(vp)
-        support_verb = None
+        support_verb = None        
         for idx, child in enumerate(immed_children):
             if child in SUPPORT_VERBS:
                 support_verb = (idx, child.lower())
                 break
+             
 
         if support_verb:
             idx, child = support_verb

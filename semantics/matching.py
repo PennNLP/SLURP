@@ -33,10 +33,24 @@ class TreeHandler(object):
     @staticmethod                
     def pop_sbars(tree):
         '''Given a tree pop any conditional sbars'''
-        for i, branch in enumerate(tree):
+        TreeHandler.pop_vp_sbars(tree)      
+        for i, branch in enumerate(tree):            
             if branch.node in TreeHandler.accepted_conditions:
-                if len(tree) > i and tree[i+1].node in TreeHandler.accepted_punc:
+                if len(tree) > i and tree[i+1].node in TreeHandler.accepted_punc:                    
                     tree.pop(i); tree.pop(i)#pop twice for sbar and punc
+                else:
+                    tree.pop(i)
+                    
+    @staticmethod                    
+    def pop_vp_sbars(tree):
+        '''Given a tree pop the sbars in any VPs'''
+        for i, branch in enumerate(tree):        
+            if branch.node == "VP":    
+                for j, vbranch in enumerate(branch):
+                    if vbranch.node in TreeHandler.accepted_conditions:
+                        tree[i].pop(j)#Pop once, no punc
+
+        
                     
     @staticmethod
     def phrase_head(tree,phrase):
