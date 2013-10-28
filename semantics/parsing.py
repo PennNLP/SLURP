@@ -151,8 +151,8 @@ def extract_frames_from_parse(parse_tree_string, verbose=False):
     # for (clause, conjunction) in split_clause_dict.values():
     for clause, conjunction in ((parse_tree, ''),):
         # Split conjunctions and duplicate arguments if necessary
-        split_tree_dict = split_conjunctions(clause)
-        #split_tree_dict = split_conjunctions_sparse(clause)
+        #split_tree_dict = split_conjunctions(clause)
+        split_tree_dict = split_conjunctions_sparse(clause)
 
         if conjunction != '':
             result_list.append(conjunction)

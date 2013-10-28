@@ -22,12 +22,16 @@ except ImportError:
 import os
 import time
 import matching
+import copy
+
 from collections import defaultdict
 # We cannot use cElementTree because its output cannot be pickled.
 from xml.etree.ElementTree import parse
 
 from semantics.lexical_constants import UNDERSTOOD_SENSES
 from semantics.wntools import morphy
+
+from coordinating import Condition
 
 PERF_DEBUG = False
 WORD_SENSE_FILENAME = 'word_sense_mapping.pkl'
@@ -117,14 +121,18 @@ class VerbFrame(object):
             
             Eventually:
             Takes a treebank parse tree compiled into NLTK's tree structure and
-            sequential matches this frame's verb frame. Non-sequential match_parse
+            sequentially matches this frame's verb frame. Non-sequential match_parse
             does not maintain the verbframe sequence. Not that the sequence is informative,
             but you never know.
+            
+            Also pops any SBAR-ADV and SBAR-TMP
         '''
         result_seq = []
+        tree = copy.deepcopy(parse_tree)        
         matcher = matching.ParseMatcher(strict,allow_leftoverpps)
-        matcher.th.depth_ulid_augment(parse_tree, 0)
-        match = matcher.match_frame(self.frame_list,parse_tree)
+        matcher.th.pop_sbars(tree)
+        matcher.th.depth_ulid_augment(tree, 0)
+        match = matcher.match_frame(self.frame_list,tree)
         return match           
         
     def match_parse(self, parse_tree, strict=True, allow_leftovers=True):
@@ -297,8 +305,8 @@ def _create_vfos(word):
 def best_matching_frame(verb, tree):
     """Get the best matching frame for a tree."""
     frames = get_verb_frames(verb)
-    matches = [frame.match_parse(tree) for frame in frames]
-    #matches = [frame.match_parse_sequential(tree) for frame in frames]
+    #matches = [frame.match_parse(tree) for frame in frames]
+    matches = [frame.match_parse_sequential(tree) for frame in frames]
     valid_matches = [(args, frame.classid) for args, frame in zip(matches, frames) if args]
     best_match = _pick_best_match(valid_matches)
     return best_match

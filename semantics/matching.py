@@ -16,11 +16,28 @@ class TreeHandler(object):
     depthdelim = "."
     posdelim = "-"
     nullnode = "NONE"
+    accepted_conditions = ["SBAR-TMP","SBAR-ADV"]
+    accepted_punc = [","]
     
     def __init__(self):
         #A unique leaf identifier in case there are identical leaves
-        self.ulid = 0
-        
+        self.ulid = 0        
+    
+    def append_period(self,tree):
+        if len(tree) > 0 and tree[-1].node != '.':
+            node = '.'+self.depthdelim+str(1)
+            children = ['.'+'__'+str(self.get_ulid())+'__']            
+            tree[1].append(Tree(node,children))
+
+            
+    @staticmethod                
+    def pop_sbars(tree):
+        '''Given a tree pop any conditional sbars'''
+        for i, branch in enumerate(tree):
+            if branch.node in TreeHandler.accepted_conditions:
+                if len(tree) > i and tree[i+1].node in TreeHandler.accepted_punc:
+                    tree.pop(i); tree.pop(i)#pop twice for sbar and punc
+                    
     @staticmethod
     def phrase_head(tree,phrase):
         phrase = phrase.split(TreeHandler.depthdelim)[0].split(TreeHandler.posdelim)[0]#Split dash-types off
@@ -42,6 +59,8 @@ class TreeHandler(object):
         return self.ulid-1
     
     def remove_ulid(self,leaf):
+        if type(leaf) == Tree and len(leaf) == 1 and type(leaf.node) == str:
+            leaf = leaf[0]
         return leaf.split('__')[0]
     
     def pop_path(self,tree,path):
@@ -173,7 +192,10 @@ class TreeHandler(object):
             if DEBUG: print tree
         else:
             #deaugment tree
-            tree.node = tree.node.split(self.depthdelim)[0]
+            if tree.node[0] != '.':
+                tree.node = tree.node.split(self.depthdelim)[0]
+            else: 
+                tree.node = '.'
             if DEBUG: print '(',tree.node,
             for i,child in enumerate(tree):
                 if type(child) == str:

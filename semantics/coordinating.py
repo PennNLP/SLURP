@@ -12,18 +12,20 @@ DEBUG = False
 class Condition(object):
     '''Class to extract S trees from a parent tree that contains conditional children.'''
     accepted_conditions = ["SBAR-TMP","SBAR-ADV"]
+    accepted_punc = [","]
     def __init__(self):
         self.th = TreeHandler()
         
     def split_on_sbar(self,tree):
         '''Return the subtrees of the tree if any SBAR present'''
-        subSents = self.split_on_s(tree)
         cursor = [-1]
-        for sentTree in subSents:
-            for condition in self.accepted_conditions:
-                path = self.th.leftmost_pos(sentTree, condition, cursor)
-                if path:
-                    print path
+        for condition in self.accepted_conditions:
+            path = self.th.leftmost_pos(tree, condition, cursor)
+            if path:
+                print path
+                
+
+                
         
 class Split(object):
     '''Class to split a syntax tree on CCs by replacing sibling nodes of the CC with the parent.'''
@@ -120,6 +122,7 @@ class Split(object):
         self.th.depth_ulid_augment(tree, 0)
         try:        
             ssplit = self.pos_split(tree,"S")
+            #for s in ssplit: self.th.append_period(s)
             vpSplit = [self.pos_split(v,"VP") for v in ssplit]
             vpSplit = [item for sublist in vpSplit for item in sublist]#Flatten list
             npSplit = [self.pos_split(s,"NP") for s in vpSplit]
