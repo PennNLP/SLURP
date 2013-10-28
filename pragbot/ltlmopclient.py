@@ -52,7 +52,7 @@ class LTLMoPClient(object):
         self.proj = project.Project()
         self.proj.loadProject(CONFIG.base_spec_file)
         self.chat_callback = chat_callback
-
+        
         # Start execution context
         print "Starting executor..."
         self.executor_ready_flag = threading.Event()
@@ -210,10 +210,9 @@ class BarebonesDialogueManager(object):
 
         self.spec = []
 
-        # Initiate a specCompiler to hang around and give us immediate parser feedback
-        self.compiler = SpecCompiler()
-        self.compiler.proj = self.ltlmop.proj
-
+        # Initiate a specCompiler to hang around and give us immediate parser feedback        
+        self.compiler = SpecCompiler(proj=self.ltlmop.proj)
+        
     def clear(self):
         self.spec = []
         self.ltlmop.append_log("Cleared the specification.", "System")
