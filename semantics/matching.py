@@ -25,7 +25,7 @@ class ParseMatcher(object):
                         'NP' : ['NPNONE','NNS','NN','NNP','NNPS','PRP'],
                         'PREP' : {"to towards" : ["TO","IN"],
                                   "against into onto" : ["IN"],
-                                  "to into" : ["IN"],
+                                  "to into" : ["IN","TO"],
                                   "PREP": ["IN","TO"],
                                   "in" : ["IN"],
                                   "to" : ["TO"],
@@ -80,10 +80,6 @@ class ParseMatcher(object):
                             if slot[0] == child:
                                 return eventualParent not in [self.th.get_pos(w[0]) for w in path]
         return True
-                          
-                 
-            
-        
 
     @staticmethod
     def phrase_head(tree,phrase):
@@ -120,12 +116,15 @@ class ParseMatcher(object):
         if mainpos:
             leaf = self.th.get_leaf(tree,[w[1] for w in mainpos])
             if roles and leaf.lower() in roles:
-                return mainpos
+                return [w[1] for w in mainpos]
             elif roles:
                 return None
         if DEBUG : print 'path to mainpos for slot(',slot,') ',mainpos
         
-        return [w[1] for w in mainpos] 
+        if mainpos:
+            return [w[1] for w in mainpos]
+        return mainpos
+     
     
         
     def match_subject_object(self,left,right,v,tree):
@@ -324,9 +323,9 @@ class ParseMatcher(object):
         except NoSubjectFound, sbranch:
             sys.stderr.write("Could not find the subject in this parse, for this branch: "+str(sbranch))
             return None            
-        except AttributeError, e:
-            return None
-            print 'Attribute error trying to match frame: ',str(e)
+#         except AttributeError, e:
+#             sys.stderr.write('Attribute error(s) trying to match frame: '+str(e))
+#             return None
         except:
             raise
         return fmatch

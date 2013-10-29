@@ -22,14 +22,12 @@ class Condition(object):
         for condition in self.accepted_conditions:
             path = self.th.leftmost_pos(tree, condition, cursor)
             if path:
-                print path
-                
-
-                
+                print path                
         
 class Split(object):
     '''Class to split a syntax tree on CCs by replacing sibling nodes of the CC with the parent.'''
-    validCCs = ["and"]
+    validCC = "and"
+    listCC = "," 
     def __init__(self):
         self.th = TreeHandler()     
         
@@ -48,45 +46,24 @@ class Split(object):
         return path
            
         
-    def vp_split(self,tree):
+    def pos_split(self,tree,pos,possibleParents=["S","VP","NP"],desiredCC="and",ccpos="CC"):
         '''The strategy for this is to find the CC in the VP (like the VB in matching),
-            find the nearest left or right siblings and if they are heads, pop        
+            find the nearest left or right siblings and if they are heads, pop   
+            
+            @input tree input tree to split on
+            @input pos is the part of speech we are splitting on
+            @input possibleParents are the possible phrase parents currently supported
+            @input desiredCC is the lemma of the CC we are looking for
+            @input ccpos is the cc part of speech we are looking for
         '''
         res = []        
         cursor = [-1]
-        count = self.num_ccs(tree) 
-        for i in range(count):
-            ccpath = self.th.get_main_pos_path(tree, "CC", -1, cursor=cursor)
-            nporvp = self.th.which_parent(tree, ccpath, ["VP","NP"], -1)
-            pos = nporvp.split(self.th.depthdelim)[0].split(self.th.posdelim)[0]
-            if pos == "VP":
-                left = self.sibling_cc_path(ccpath) 
-                right = self.sibling_cc_path(ccpath,tree=tree);
-                if len(left) != len(ccpath) != len(right):
-                    raise UnlevelCCSiblings
-                lefttree = copy.deepcopy(tree)
-                self.th.pop_path_two(lefttree,right,ccpath)
-                res.append(lefttree) #Copy and put left branch in results and keep going
-                self.th.pop_path_two(tree, left,ccpath)#Pop for real, keep looking
-                cursor = [-1]
-            else:
-                if DEBUG: print pos,' CC: ',ccpath
-                cursor = ccpath  
-        res.append(tree)               
-        return res
-    
-    def pos_split(self,tree,pos,possible=["S","VP","NP"]):
-        '''The strategy for this is to find the CC in the VP (like the VB in matching),
-            find the nearest left or right siblings and if they are heads, pop        
-        '''
-        res = []        
-        cursor = [-1]
-        count = self.num_ccs(tree) 
-        for i in range(count):
-            ccpath = self.th.get_main_pos_path(tree, "CC", -1, cursor=cursor)
-            parentNode = self.th.which_parent(tree, ccpath, possible, -1)
-            thispos = parentNode.split(self.th.depthdelim)[0].split(self.th.posdelim)[0]
-            if thispos == pos:
+        cccount = self.num_ccs(tree,desiredCC) 
+        for i in range(cccount):
+            ccpath = self.th.get_main_pos_path(tree, ccpos, -1, cursor=cursor)
+            parentPhrase = self.th.which_parent(tree, ccpath, possibleParents, -1)
+            parentpos = parentPhrase.split(self.th.depthdelim)[0].split(self.th.posdelim)[0]
+            if parentpos == pos:                
                 left = self.sibling_cc_path(ccpath) 
                 right = self.sibling_cc_path(ccpath,tree=tree);
                 if len(left) != len(ccpath) != len(right):
@@ -97,8 +74,9 @@ class Split(object):
                 if temp:
                     #If splitting on S, temp will be the parent replacement
                     lefttree = temp
-                #self.th.replace_parent(lefttree,left)
-                res.append(lefttree) #Copy and put left branch in results and keep going
+                #Recurse on "," list
+                lefttrees = self.pos_split(lefttree,pos,possibleParents=possibleParents,desiredCC=self.listCC,ccpos=self.listCC)                
+                res.extend(lefttrees) #Copy and put left branch in results and keep going
                 self.th.pop_path_two(tree, left,ccpath)#Pop for real, keep looking
                 cursor = [-1]
             else:
@@ -110,22 +88,22 @@ class Split(object):
         res.append(tree)               
         return res
         
-    def num_ccs(self,tree):
-        return [self.th.remove_ulid(w) in self.validCCs for w in tree.leaves()].count(True)
+    def num_ccs(self,tree,cc):
+        return [self.th.remove_ulid(w) in cc for w in tree.leaves()].count(True)
 
     def split_on_cc(self,tree):
         '''Split on "and"...extend to other CCs later.        
         '''
-        numCCs = self.num_ccs(tree)
+        numCCs = self.num_ccs(tree,self.validCC)
         if numCCs < 1:
             return [tree]
         self.th.depth_ulid_augment(tree, 0)
         try:        
-            ssplit = self.pos_split(tree,"S")
+            ssplit = self.pos_split(tree,"S",desiredCC=self.validCC)
             #for s in ssplit: self.th.append_period(s)
-            vpSplit = [self.pos_split(v,"VP") for v in ssplit]
+            vpSplit = [self.pos_split(v,"VP",desiredCC=self.validCC) for v in ssplit]
             vpSplit = [item for sublist in vpSplit for item in sublist]#Flatten list
-            npSplit = [self.pos_split(s,"NP") for s in vpSplit]
+            npSplit = [self.pos_split(s,"NP",desiredCC=self.validCC) for s in vpSplit]
             flatSplit = [item for sublist in npSplit for item in sublist]#Flatten list
         except NoRightSibling:
             sys.stderr.write("No right sibling found for tree on CC, should be impossible. Check parse.")

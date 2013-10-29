@@ -134,7 +134,7 @@ class TreeHandler(object):
             return self.get_parent(tree[path[0]],path[1:])  
         
     def which_parent(self,tree,path,pos,curparent):
-        '''Recursively finds the closest parent in path that is in pos
+        '''Recursively finds the closest parent in path that is in pos given tree
         '''
         curpos, curdepth = self.node_pos(tree)
         if curpos in pos:
@@ -297,7 +297,7 @@ class TreeHandler(object):
     def get_main_pos_phrasepath(self,tree,pos,maxPosDepth,cursor=[-1]):
         '''Return path to the shallowest leftmost pos, with phrases at each branch'''      
         subtree = self.leftmost_pos(tree, pos,cursor)
-        if not tree:
+        if not subtree:
             return False
         leaves = subtree.leaves()
         index = leaves.index(subtree[0])
