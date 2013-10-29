@@ -69,42 +69,40 @@ class TreeHandler(object):
         else: 
             self.pop_path(tree[path[0]],path[1:])
             
-    def pop_path_two(self,tree,one,two):
+    def pop_path_cc(self,tree,lemma,cc):
         '''This works like pop_path but requires two paths of the same length
             Intended to be used for popping siblings of a conjunction.
         '''
-        if len(one) == 1:
+        if len(lemma) == 1:
             sys.stderr.write('tried to pop_path_two on a path with no leaf (length==1)')
-        elif len(one) == 2:
+        elif len(lemma) == 2:
             #Spop            
             tree.pop()
-            if one[0] > two[0]:
-                tree.pop(one[0])
-                tree.pop(two[0])
+            if lemma[0] > cc[0]:
+                tree.pop(lemma[0])
+                tree.pop(cc[0])
             else:
-                tree.pop(two[0])
-                tree.pop(one[0])                
+                tree.pop(cc[0])
+                tree.pop(lemma[0])                
             if len(tree) == 1:
-                #If only one child left, which there should be
+                #If only one child left, replace
                 return tree[0]
+#             else:
+#                 sys.stderr.write('Tried to replace CC parent but too many children')
+        elif len(lemma) == 3:
+            if lemma[1] > cc[1]:
+                tree[lemma[0]].pop(lemma[1])
+                tree[cc[0]].pop(cc[1])
             else:
-                sys.stderr.write('Tried to replace CC parent but too many children')
-        elif len(one) == 3:
-            if one[1] > two[1]:
-                tree[one[0]].pop(one[1])
-                tree[two[0]].pop(two[1])
-            else:
-                tree[two[0]].pop(two[1])
-                tree[one[0]].pop(one[1])                
-            if len(tree[one[0]]) == 1:
-                #If only one child left, which there should be
-                tree[one[0]] = tree[one[0]][0]
-            else:
-                sys.stderr.write('Tried to replace CC parent but too many children')
-        elif one[0] != two[0]:
-            sys.stderr.write('pop_path_two paths are not similar enough')                
+                tree[cc[0]].pop(cc[1])
+                tree[lemma[0]].pop(lemma[1])                
+            if len(tree[lemma[0]]) == 1:
+                #If only one child left, 
+                tree[lemma[0]] = tree[lemma[0]][0]
+        elif lemma[0] != cc[0]:
+            sys.stderr.write('pop_path_cc paths are not similar enough')                
         else: 
-            self.pop_path_two(tree[one[0]],one[1:],two[1:])
+            self.pop_path_cc(tree[lemma[0]],lemma[1:],cc[1:])
             
     def replace_parent(self,tree,path):
         '''Replaces the parent of the last two digits of path with the path[-2] child'''

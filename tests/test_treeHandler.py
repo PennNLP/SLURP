@@ -23,6 +23,7 @@ class TestTreeHandler(unittest.TestCase):
                                                  "sent" : "Carry the meals from the kitchen to the rooms." ,
                                                  "tree" : Tree('''(S\n  (NP-SBJ-A (-NONE- *))\n  (VP\n    (VB Carry)\n    (NP-A (DT the) (NNS meals))\n    (PP-CLR (IN from) (NP-A (DT the) (NN kitchen)))\n    (PP-CLR (TO to) (NP-A (DT the) (NNS rooms))))\n  (. .))'''),
                                                  }
+
                                }
         
         self.crazyframes = {"SUBPHRASE_PASS": 

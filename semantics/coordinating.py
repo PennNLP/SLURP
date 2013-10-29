@@ -45,6 +45,23 @@ class Split(object):
         path.append(-1)#Faking the leaf
         return path
            
+    def pop_comma_and(self,tree):
+        '''Given a tree, pop the comma of any siblings ", and" as in "the horse, donkey, and carriage."
+            Functionally they are redundant.        
+        '''
+        prev = (0,'')
+        while True:
+            leaves = tree.leaves()
+            for i, leaf in enumerate(leaves):
+                dleaf = self.th.remove_ulid(leaf)
+                if self.th.remove_ulid(prev[1]) == "," and dleaf == "and":
+                    path = tree.leaf_treeposition(prev[0])
+                    break
+                prev = (i,leaf)
+            else:
+                return
+            self.th.pop_path(tree,path)        
+        
         
     def pos_split(self,tree,pos,possibleParents=["S","VP","NP"],desiredCC="and",ccpos="CC"):
         '''The strategy for this is to find the CC in the VP (like the VB in matching),
@@ -63,21 +80,21 @@ class Split(object):
             ccpath = self.th.get_main_pos_path(tree, ccpos, -1, cursor=cursor)
             parentPhrase = self.th.which_parent(tree, ccpath, possibleParents, -1)
             parentpos = parentPhrase.split(self.th.depthdelim)[0].split(self.th.posdelim)[0]
-            if parentpos == pos:                
+            if parentpos == pos:                               
                 left = self.sibling_cc_path(ccpath) 
                 right = self.sibling_cc_path(ccpath,tree=tree);
                 if len(left) != len(ccpath) != len(right):
                     raise UnlevelCCSiblings
                 lefttree = copy.deepcopy(tree)
                 #Instead of popping, need to replace parent with correct branch 
-                temp = self.th.pop_path_two(lefttree,right,ccpath)
+                temp = self.th.pop_path_cc(lefttree,right,ccpath)
                 if temp:
                     #If splitting on S, temp will be the parent replacement
                     lefttree = temp
                 #Recurse on "," list
                 lefttrees = self.pos_split(lefttree,pos,possibleParents=possibleParents,desiredCC=self.listCC,ccpos=self.listCC)                
                 res.extend(lefttrees) #Copy and put left branch in results and keep going
-                self.th.pop_path_two(tree, left,ccpath)#Pop for real, keep looking
+                self.th.pop_path_cc(tree, left,ccpath)#Pop for real, keep looking
                 cursor = [-1]
             else:
                 if DEBUG: print pos,' CC: ',ccpath
@@ -94,6 +111,7 @@ class Split(object):
     def split_on_cc(self,tree):
         '''Split on "and"...extend to other CCs later.        
         '''
+        self.pop_comma_and(tree)#Prepare the tree
         numCCs = self.num_ccs(tree,self.validCC)
         if numCCs < 1:
             return [tree]
