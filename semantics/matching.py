@@ -19,10 +19,13 @@ class ParseMatcher(object):
     strictMatching is a numeric value that sets the acceptable depth distance from the main VP
     strictPPMatching is a numeric value that sets the acceptable depth distance from the NP head
     '''
+    DEFAULT_SLOT_POS = ['PREP','NP','VERB','LEX']
     pos_map = {'DT' : ['DT'], 
-                        'VERB' : ['VB','VBP'],
+                        'VERB' : ['VB','VBP','VPNONE'],
                         'NP' : ['NPNONE','NNS','NN','NNP','NNPS','PRP'],
-                        'PREP' : {"to towards" : ["TO"],
+                        'PREP' : {"to towards" : ["TO","IN"],
+                                  "against into onto" : ["IN"],
+                                  "to into" : ["IN"],
                                   "PREP": ["IN","TO"],
                                   "in" : ["IN"],
                                   "to" : ["TO"],
@@ -30,7 +33,8 @@ class ParseMatcher(object):
                                   "with" : ["with"],
                                   "for" : ["for"]
                                   },
-                        'LEX' : ['there']                        
+                        'LEX' : ['there'],
+                        'ADJ' : ['ADJ']                        
             }   
     depth_map = {'maxVB' : -1,
                       'maxNONE' : -1,
@@ -72,13 +76,22 @@ class ParseMatcher(object):
         '''Return the path to the head of the slot'''        
         pos, role, secondary, tertiary = slot      
         heads = self.pos_map[pos]
+        roles = None
         if type(heads) == type({}):
             heads = heads[role]
+            if not role in self.DEFAULT_SLOT_POS: roles = role.split(" ")
         maxd = -1
         for head in heads:            
             if 'max'+head in self.depth_map:
                 maxd = self.depth_map['max'+head]        
         mainpos = self.th.get_main_pos_path(tree,heads,maxd,cursor)
+        #Check to see if the word is one of the roles
+        if mainpos:
+            leaf = self.th.get_leaf(tree,mainpos)
+            if roles and leaf.lower() in roles:
+                return mainpos
+            elif roles:
+                return None
         if DEBUG : print 'path to mainpos for slot(',slot,') ',mainpos
         return mainpos 
     

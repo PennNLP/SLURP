@@ -117,7 +117,7 @@ class TreeHandler(object):
             
     def get_leaf(self,tree,path):    
         if len(path) < 2:
-            sys.stderr.write('tried to print_path for a leaf string or no path')
+           return self.remove_ulid(tree[path[0]])
         elif len(path) == 2:
             leaf = self.remove_ulid(tree[path[0]][path[1]])
             return leaf
