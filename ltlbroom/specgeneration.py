@@ -34,7 +34,7 @@ from ltlbroom.ltl import (
     env, and_, or_, sys_, not_, iff, next_, always, always_eventually, implies,
     space, mutex_, ALWAYS, EVENTUALLY, OR)
 
-from semantics.matching import TreeHandler
+from semantics.matching import ParseMatcher
 
 
 # Semantics constants
@@ -466,7 +466,7 @@ class SpecGenerator(object):
                 phrase = stimulus.node
             except AttributeError:
                 raise KeyError("Stimulus of condition command has no node, cannot understand condition:\n{}".format(command.condition))
-            condition = TreeHandler.phrase_head(stimulus,phrase)[0]
+            condition = ParseMatcher.phrase_head(stimulus,phrase)[0]
             condition_frag = sys_(condition)
             explanation = "When {} {} {}".format(experiencer,conditional.verb,stimulus)      
         else:

@@ -22,6 +22,7 @@ except ImportError:
 import os
 import time
 import matching
+import treeHandler
 import copy
 
 from collections import defaultdict
