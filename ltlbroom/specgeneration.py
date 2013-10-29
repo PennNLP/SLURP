@@ -27,7 +27,7 @@ from semantics.lexical_constants import (
     AVOID_ACTION, PATROL_ACTION, CARRY_ACTION, STAY_ACTION, ACTIVATE_ACTION,
     DEACTIVATE_ACTION, UNDERSTOOD_SENSES)
 from semantics.new_structures import Event, Assertion, Command
-from semantics.parsing import process_parse_tree
+from semantics.parsing import extract_commands
 from pipelinehost import PipelineClient
 from semantics.new_knowledge import KnowledgeBase
 from ltlbroom.ltl import (
@@ -36,9 +36,6 @@ from ltlbroom.ltl import (
 
 from semantics.matching import TreeHandler
 
-
-# Debug constants
-COMMAND_DEBUG = False
 
 # Semantics constants
 LOCATION = "location"
@@ -216,7 +213,18 @@ class SpecGenerator(object):
             if verbose:
                 print "Response from parser:", repr(parse)
             frames, new_commands, kb_response = \
-                process_parse_tree(parse, line, self.kbase, verbose=verbose)
+                extract_commands(parse, self.kbase, verbose=False)
+
+            # Print information about matching
+            if verbose and frames:
+                print "Matching frames:"
+                for frame in frames:
+                    print frame.pprint()
+                    print
+                print
+            elif verbose:
+                print "No frames matched."
+
             # TODO: For now second pass through KBis disabled
             # frames, new_commands, kb_response = process_parse_tree(parse, line, self.kbase,
             #                                                        quiet=not verbose)
@@ -225,7 +233,7 @@ class SpecGenerator(object):
             success = bool(new_commands) or bool(kb_response)
             command_responses = [kb_response] if kb_response else []
             for command in new_commands:
-                if COMMAND_DEBUG:
+                if verbose:
                     print "Processing command:"
                     print command
                 try:
@@ -265,12 +273,12 @@ class SpecGenerator(object):
             if verbose:
                 print
 
-        if COMMAND_DEBUG:
+        if verbose:
             print "Generation trees:"
             for line, output in generation_trees.items():
                 print line
                 print output
-                print
+            print
 
         # We need to modify non-reaction goals to be or'd with the reactions
         if realizable_reactions and self.react_props:
@@ -893,10 +901,10 @@ def _test():
     # pylint: disable=W0612
     specgen = SpecGenerator()
     env_lines, sys_lines, custom_props, custom_sensors, results, responses, gen_tree = \
-        specgen.generate('\n'.join(sys.argv[1:]), ("bomb", "hostage", "badguy", "monkey"),
+        specgen.generate('\n'.join(sys.argv[1:]), ("bomb", "hostage", "badguy", "monkey", "camera"),
                          ("r1", "r2", "r3", "r4", "office", "classroom1", "classroom2"),
                          ("defuse", "pickup", "drop", "banana"),
-                         {'odd': ['r1', 'r3']})
+                         {'odd': ['r1', 'r3']}, verbose=True)
     for line in env_lines + sys_lines:
         print line
 

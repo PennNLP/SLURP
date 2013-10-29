@@ -243,7 +243,7 @@ def extract_entity(parse_tree, semantic_role='', verbose=False):
     return entity
 
 
-def create_semantic_structures(frame_semantic_list, verbose=True):
+def create_semantic_structures(frame_semantic_list):
     """Take in the list of VerbNet frames and generate the semantic
     representation structures from them."""
     semantic_representation_list = []
@@ -296,9 +296,7 @@ def create_semantic_structures(frame_semantic_list, verbose=True):
             semantic_representation_list.append(
                 Assertion(item_to_entity.get('Theme', None),
                           item_to_entity.get('Location', None), False))
-    if verbose:
-        print 'Semantic representation list:'
-        print semantic_representation_list
+
     return semantic_representation_list
 
 
@@ -322,38 +320,24 @@ def _framearg_entities(args):
     return {key: extract_entity(value, key) for key, value in args.items()}
 
 
-def process_parse_tree(parse_tree_input, text_input, knowledge_base=None, verbose=False):
+def extract_commands(parse, knowledge_base=None, verbose=False):
     """Produces semantic interpretations of parse trees."""
-    if verbose:
-        print "Processing:", repr(text_input)
-
-    # Perform tree operations
-    frames = extract_frames_from_parse(parse_tree_input)
-    if verbose:
-        print "Semantic frames:", frames
-
-    # Extract meaning
+    frames = extract_frames_from_parse(parse, verbose=verbose)
     semantic_structures = create_semantic_structures(frames)
 
+    # TODO: Re-enable KB when everything else is stable
     # Update KB
-    if knowledge_base:
-        kb_response = knowledge_base.process_semantic_structures(
-            semantic_structures, source='cmdr')
-    else:
-        kb_response = ''
+    # if knowledge_base:
+    #     kb_response = knowledge_base.process_semantic_structures(
+    #         semantic_structures, source='cmdr')
+    # else:
+    #     kb_response = ''
+    kb_response = None
 
     # Extract commands.
-    new_commands = [
-        item for item in semantic_structures if isinstance(item, Command)]
-    if knowledge_base:
-        knowledge_base.fill_commands(new_commands)
-    if new_commands and verbose:
-        print "New commands:"
-        for command in new_commands:
-            print command
-
-    if kb_response and verbose:
-        print "KB response:", kb_response
+    new_commands = [item for item in semantic_structures if isinstance(item, Command)]
+    # if knowledge_base:
+    #     knowledge_base.fill_commands(new_commands)
 
     return (frames, new_commands, kb_response)
 

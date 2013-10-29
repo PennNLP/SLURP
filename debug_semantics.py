@@ -2,7 +2,7 @@
 """An interactive test client for the pipeline host."""
 
 import sys
-from semantics.parsing import process_parse_tree
+from semantics.parsing import extract_commands
 import semantics.parsing
 from semantics.new_knowledge import KnowledgeBase
 from semantics.response import make_response
@@ -22,16 +22,17 @@ def from_stdin(kb):
         if not process_input(text, kb):
             break
 
+
 def process_input(text, kb, verbose=True):
     """Send given text to the semantics component"""
     msg = PipelineClient().parse(text)
     if msg:
         print msg
-        frames, new_commands, kb_response = process_parse_tree(msg, text, kb, quiet=True)
+        frames, new_commands, kb_response = extract_commands(msg, kb, verbose=True)
         if verbose:
-            print "Frames: %s" % '\n'.join(str(f) for f in frames);
+            print "Frames: %s" % '\n'.join(str(f) for f in frames)
             print "Knowledge base: %s" % str(kb)
-        
+
         print 'Response: %s' % make_response(new_commands, kb_response)
         print '\n'.join(str(c) for c in new_commands)
         return True
@@ -39,13 +40,15 @@ def process_input(text, kb, verbose=True):
         print 'Connection to server closed.'
         return False
 
+
 def run_test_cases(kb):
+    """Run test cases."""
     semantics.parsing.EXTRACT_DEBUG = False
     with open(TEST_CASES_FILE) as f:
         utterances = f.readlines()
     for u in utterances:
         process_input(u, kb, verbose=False)
-        print '_'*65
+        print '_' * 65
 
 if __name__ == "__main__":
     KB = KnowledgeBase(other_agents=['cmdr'])

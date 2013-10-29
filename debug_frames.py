@@ -49,7 +49,10 @@ def process(parse):
 
     # Extract semantic structures
     semantic_structures = create_semantic_structures(frames)
-    print semantic_structures
+    if semantic_structures:
+        print semantic_structures
+    else:
+        print "No semantic structures returned."
 
 
 def print_parse(parse, heading):
