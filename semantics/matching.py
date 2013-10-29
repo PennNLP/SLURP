@@ -37,7 +37,7 @@ class ParseMatcher(object):
                       'maxIN': -1,
                       'maxPREP': -1}    
     
-    def __init__(self,smatch,sppmatch):
+    def __init__(self,smatch=0,sppmatch=2):
         '''
         Constructor
         '''
