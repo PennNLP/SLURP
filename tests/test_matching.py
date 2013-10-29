@@ -6,6 +6,8 @@ Created on Oct 17, 2013
 from nltk import Tree
 import sys
 from semantics.matching import ParseMatcher
+from pipelinehost import PipelineClient
+from semantics.parsing import extract_frames_from_parse
 
 import unittest
 
@@ -31,7 +33,11 @@ class exampelPPAttachment(unittest.TestCase):
                                                        [('NP', 'Agent', '', ''), ('VERB', 'VERB', '', ''), ('NP', 'Theme', '', ''), ('PREP', 'PREP', '', ''), ('NP', 'Source', '', ''), ('PREP', 'to towards', '', ''), ('NP', 'Destination', '', '')],    
                                                        [('NP', 'Agent', '', ''), ('VERB', 'VERB', '', ''), ('NP', 'Theme', '', ''), ('PREP', 'to towards', '', ''), ('NP', 'Destination', '', ''), ('PREP', 'PREP', '', ''), ('NP', 'Source', '', '')]],
                                    "correct_frame" :   [('NP', 'Agent', '', ''), ('VERB', 'VERB', '', ''), ('NP', 'Theme', '', ''), ('PREP', 'PREP', '', ''), ('NP', 'Source', '', ''), ('PREP', 'to towards', '', ''), ('NP', 'Destination', '', '')] 
-                                   }              
+                                   },           
+                "defuse_in"   : {"sent" : "Defuse in the hallway.",
+                                 "tree" : Tree('S', [Tree('NP-SBJ-A', [Tree('-NONE-', ['*'])]), Tree('VP', [Tree('VB', ['Defuse']), Tree('PP-CLR', [Tree('IN', ['in']), Tree('NP-A', [Tree('DT', ['the']), Tree('NN', ['hallway'])])])]), Tree('.', ['.'])]),
+                                 "wrong_frame" : [('NP', 'Agent', '', ''), ('VERB', 'VERB', '', ''), ('NP', 'Theme', '', '')]
+                                 }
                   }
         
         self.crazyframes = {"SUBPHRASE_PASS": 
@@ -60,13 +66,24 @@ class exampelPPAttachment(unittest.TestCase):
                         
 
             
-    def test_strict(self,matcher):
+    def test_strict(self):
+        matcher = ParseMatcher()
         matcher.th.depth_ulid_augment(self.correct,0)
-        d = self.strict
-        for test in d:
-            tree = d[test]["tree"]
-            frame = d[test]["frame"]
-            match = matcher.match_frame(frame,tree)
+            
+    def test_theme_np_pp(self):
+        '''An NP inside of a PP should not be allowed to be a theme.'''
+        key = "defuse_in"
+        tree = self.exDict[key]["tree"]
+        wrongFrame = self.exDict[key]["wrong_frame"]
+        frames = extract_frames_from_parse(tree,verbose=True)
+        self.assertEqual(len(frames),1)
+        self.assertNotEqual(frames[0],wrongFrame)
+        
+        
+        
+        
+        
+        
             
 if __name__=="__main__":
     unittest.main()

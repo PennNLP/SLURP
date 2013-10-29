@@ -40,11 +40,22 @@ class ParseMatcher(object):
                       'maxNONE' : -1,
                       'maxTO': -1,
                       'maxIN': -1,
-                      'maxPREP': -1}    
+                      'maxPREP': -1}
+    #Put restrictions on slots    
+    semantic_rules = {'slot_keys' :{
+                                    1 :{
+                                           'Theme' : {
+                                                      'parentRestriction':{0 : 'NP',
+                                                                           1: 'PP',                                                                                  
+                                                                           }
+                                                      }
+                                             }
+                                    }
+                      }
     
     def __init__(self,smatch=0,sppmatch=2):
         '''
-        Constructor
+            Constructor
         '''
         self.strictMatching = smatch
         self.strictPPMatching = sppmatch
@@ -55,6 +66,24 @@ class ParseMatcher(object):
                          'prep' : 3,
                          'object' : 4
                          }
+        
+    def check_rules(self,slot,path):
+        '''Check rules in semantic_rules given a slot and a path'''
+        srules = self.semantic_rules['slot_keys']
+        for idx in srules:
+            for value in srules[idx]:
+                if slot[idx] == value:
+                    for rule in srules[idx][value]:
+                        if rule == "parentRestriction":
+                            child = srules[idx][value][rule][0]
+                            eventualParent = srules[idx][value][rule][1]
+                            if slot[0] == child:
+                                return eventualParent not in [self.th.get_pos(w[0]) for w in path]
+        return True
+                          
+                 
+            
+        
 
     @staticmethod
     def phrase_head(tree,phrase):
@@ -84,16 +113,19 @@ class ParseMatcher(object):
         for head in heads:            
             if 'max'+head in self.depth_map:
                 maxd = self.depth_map['max'+head]        
-        mainpos = self.th.get_main_pos_path(tree,heads,maxd,cursor)
+        #mainpos = self.th.get_main_pos_path(tree,heads,maxd,cursor)
+        mainpos = self.th.get_main_pos_phrasepath(tree,heads,maxd,cursor)
+        if not self.check_rules(slot,mainpos): return None
         #Check to see if the word is one of the roles
         if mainpos:
-            leaf = self.th.get_leaf(tree,mainpos)
+            leaf = self.th.get_leaf(tree,[w[1] for w in mainpos])
             if roles and leaf.lower() in roles:
                 return mainpos
             elif roles:
                 return None
         if DEBUG : print 'path to mainpos for slot(',slot,') ',mainpos
-        return mainpos 
+        
+        return [w[1] for w in mainpos] 
     
         
     def match_subject_object(self,left,right,v,tree):
@@ -293,6 +325,7 @@ class ParseMatcher(object):
             sys.stderr.write("Could not find the subject in this parse, for this branch: "+str(sbranch))
             return None            
         except AttributeError, e:
+            return None
             print 'Attribute error trying to match frame: ',str(e)
         except:
             raise
