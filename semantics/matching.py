@@ -27,7 +27,8 @@ class ParseMatcher(object):
                                   "in" : ["IN"],
                                   "to" : ["TO"],
                                   "as" : ["as"],
-                                  "with" : ["with"]
+                                  "with" : ["with"],
+                                  "for" : ["for"]
                                   },
                         'LEX' : ['there']                        
             }   
