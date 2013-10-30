@@ -7,7 +7,7 @@ from nltk import Tree
 import sys
 from semantics.coordinating import Split, Condition
 from semantics.matching import ParseMatcher
-from semantics.treeHandler import TreeHandler
+from semantics.treehandler import TreeHandler
 import unittest
     
 class exampleCoordination(unittest.TestCase):

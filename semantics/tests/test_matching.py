@@ -6,7 +6,7 @@ Created on Oct 17, 2013
 from nltk import Tree
 import sys
 from semantics.matching import ParseMatcher
-from semantics.treeHandler import TreeHandler
+from semantics.treehandler import TreeHandler
 from pipelinehost import PipelineClient
 from semantics.parsing import extract_frames_from_parse
 

@@ -3,7 +3,7 @@ Created on Oct 10, 2013
 parse and tree are synonymous
 @author: tad
 '''
-from treeHandler import TreeHandler 
+from treehandler import TreeHandler 
 from _matchingExceptions import NoSChildVP, PosTooDeep, VerbFrameCountError,SlotTreeCountError, NoRightSibling, TreeProcError, NodeNotFound, SlotNotFilledError, NoSubjectFound, NoObjectFound
 import sys
 import copy

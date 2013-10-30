@@ -5,7 +5,7 @@ Created on Oct 17, 2013
 '''
 from nltk import Tree
 import sys
-from semantics.treeHandler import TreeHandler
+from semantics.treehandler import TreeHandler
 from semantics.matching import ParseMatcher
 
 import unittest

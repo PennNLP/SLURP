@@ -3,7 +3,7 @@ Created on Oct 18, 2013
 
 @author: taylor
 '''
-from treeHandler import TreeHandler
+from treehandler import TreeHandler
 import sys
 from _matchingExceptions import NoRightSibling, NoLeftSibling, UnlevelCCSiblings
 import copy
@@ -77,7 +77,7 @@ class Split(object):
         cursor = [-1]
         cccount = self.num_ccs(tree,desiredCC) 
         for i in range(cccount):
-            ccpath = self.th.get_main_pos_path(tree, ccpos, -1, cursor=cursor)
+            ccpath = list(self.th.get_main_pos_path(tree, ccpos, -1, cursor=cursor))
             parentPhrase = self.th.which_parent(tree, ccpath, possibleParents, -1)
             parentpos = parentPhrase.split(self.th.depthdelim)[0].split(self.th.posdelim)[0]
             if parentpos == pos:                               
@@ -94,7 +94,8 @@ class Split(object):
                 #Recurse on "," list
                 lefttrees = self.pos_split(lefttree,pos,possibleParents=possibleParents,desiredCC=self.listCC,ccpos=self.listCC)                
                 res.extend(lefttrees) #Copy and put left branch in results and keep going
-                self.th.pop_path_cc(tree, left,ccpath)#Pop for real, keep looking
+                self.th.pop_left(tree,ccpath)#Pop everything to the left of ccpath and keep looking
+                #self.th.pop_path_cc(tree, left,ccpath)#Pop for real, keep looking
                 cursor = [-1]
             else:
                 if DEBUG: print pos,' CC: ',ccpath
