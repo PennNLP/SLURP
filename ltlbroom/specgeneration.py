@@ -3,7 +3,7 @@ Generates a logical specification from natural language.
 
 """
 
-# Copyright (C) 2011-2013 Kenton Lee, Constantine Lignos, and Ian Perera
+# Copyright (C) 2011-2013 Constantine Lignos
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,16 +25,13 @@ from copy import deepcopy
 from semantics.lexical_constants import (
     SEARCH_ACTION, GO_ACTION, FOLLOW_ACTION, SEE_ACTION, BEGIN_ACTION,
     AVOID_ACTION, PATROL_ACTION, CARRY_ACTION, STAY_ACTION, ACTIVATE_ACTION,
-    DEACTIVATE_ACTION, UNDERSTOOD_SENSES)
-from semantics.new_structures import Event, Assertion, Command
+    DEACTIVATE_ACTION, BE_ACTION, UNDERSTOOD_SENSES)
 from semantics.parsing import extract_commands
 from pipelinehost import PipelineClient
 from semantics.new_knowledge import KnowledgeBase
 from ltlbroom.ltl import (
     env, and_, or_, sys_, not_, iff, next_, always, always_eventually, implies,
     space, mutex_, ALWAYS, EVENTUALLY, OR)
-
-from semantics.matching import ParseMatcher
 
 
 # Semantics constants
@@ -430,7 +427,9 @@ class SpecGenerator(object):
         # TODO: Properly document and condition assume_eventual_relief
 
         env_chunks = []
-        if isinstance(command.condition, Event):
+        command_condition = command.condition
+        if command_condition.action == SEE_ACTION:
+            # Case 1: stimulus "If you see a bomb..."
             # Validate the condition
             if not command.condition.theme:
                 raise KeyError("No condition theme, cannot understand condition:\n{!r}".format(command.condition))
@@ -438,9 +437,6 @@ class SpecGenerator(object):
             if condition not in self.sensors:
                 raise KeyError(
                     "No sensor to detect condition {!r}".format(command.condition.theme.name))
-            if command.condition.sensor != SEE_ACTION:
-                raise KeyError(
-                    "Cannot use action {!r} as a condition".format(command.condition.action))
             condition_frag = env(condition)
             explanation = "To react to {!r},".format(condition)
             if assume_eventual_relief:
@@ -448,7 +444,8 @@ class SpecGenerator(object):
                 relief = always_eventually(not_(condition_frag))
                 relief_chunk = SpecChunk(relief_explanation, [relief], SpecChunk.ENV, command)
                 env_chunks.append(relief_chunk)
-        elif isinstance(command.condition, Assertion):
+        elif command_condition.action == BE_ACTION:
+            # Case 2: assertion "If you are in the cafeteria..."
             # TODO: Add support for assertions not about "you". Ex: If there is a hostage...
             # Validate the condition
             if not command.condition.location:
@@ -456,22 +453,8 @@ class SpecGenerator(object):
             condition = command.condition.location.name
             condition_frag = sys_(condition)
             explanation = "When in {!r},".format(condition)
-        elif isinstance(command.condition, Command):
-            #Conditions are exclusively created as commands, so I'm going with that
-            #condition = command.condition.
-#Tad's attempt to fix specgeneration
-#             conditional = command.condition.action
-#             stimulus = conditional.args['Stimulus']
-#             experiencer = conditional.args['Experiencer']
-#             try:
-#                 phrase = stimulus.node
-#             except AttributeError:
-#                 raise KeyError("Stimulus of condition command has no node, cannot understand condition:\n{}".format(command.condition))
-#             condition = ParseMatcher.phrase_head(stimulus,phrase)[0]
-#             condition_frag = sys_(condition)
-#             explanation = "When {} {} {}".format(experiencer,conditional.verb,stimulus)
-            raise KeyError("General problem generating conditional, cannot understand condition:\n{}".format(command.condition))      
         else:
+            # Not sure what to do
             raise KeyError("General problem generating conditional, cannot understand condition:\n{}".format(command.condition))
 
         # Validate the action
@@ -540,7 +523,7 @@ class SpecGenerator(object):
             react = always(implies(next_(reaction_prop), reaction_frag))
             stay_there = always(implies(or_([reaction_prop, next_(reaction_prop)]),
                                        self._frag_stay()))
-            sys_statements.extend([react, stay_there])
+            sys_statements.extend([stay_there, react])
 
         sys_chunk = SpecChunk(explanation, sys_statements, SpecChunk.SYS, command)
         return ([sys_chunk], env_chunks, new_props, [])
@@ -690,7 +673,7 @@ class SpecGenerator(object):
         """Generate statements for activating an actuator."""
         try:
             actuator = command.theme.name
-        except AttributeError:            
+        except AttributeError:
             raise KeyError("Missing actuator for activate/deactivate.")
 
         # If negation isn't set, allow the command to set it
@@ -903,9 +886,9 @@ def _test():
     # pylint: disable=W0612
     specgen = SpecGenerator()
     env_lines, sys_lines, custom_props, custom_sensors, results, responses, gen_tree = \
-        specgen.generate('\n'.join(sys.argv[1:]), ("bomb", "hostage", "badguy", "monkey", "camera"),
+        specgen.generate('\n'.join(sys.argv[1:]), ("bomb", "hostage", "badguy", "monkey"),
                          ("r1", "r2", "r3", "r4", "office", "classroom1", "classroom2"),
-                         ("defuse", "pickup", "drop", "banana"),
+                         ("defuse", "pickup", "drop", "banana", "camera"),
                          {'odd': ['r1', 'r3']}, verbose=True)
     for line in env_lines + sys_lines:
         print line

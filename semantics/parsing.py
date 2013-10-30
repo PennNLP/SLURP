@@ -2,7 +2,8 @@
 Takes a parse tree string and creates semantic structures to be read by Knowledge.
 """
 
-# Copyright (C) 2011-2013 Eric Doty, Constantine Lignos, Kenton Lee, and Ian Perera
+# Copyright (C) 2011-2013 Eric Doty, Constantine Lignos, Kenton Lee,
+# Ian Perera, and Taylor Turpen
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,12 +21,12 @@ Takes a parse tree string and creates semantic structures to be read by Knowledg
 import re
 from copy import deepcopy
 
-from semantics.frames import (best_matching_frame, get_verb_frames)
+from semantics.frames import best_matching_frame
 from semantics.tree import Tree
 from semantics.wntools import morphy
 from semantics.new_structures import (
     Location, ObjectEntity, YNQuery, StatusQuery,
-    EntityQuery, Command, LocationQuery, Assertion, Event)
+    EntityQuery, Command, LocationQuery, Assertion)
 from semantics.lexical_constants import ACTION_ALIASES
 from semantics.coordinating import Split
 
@@ -285,10 +286,6 @@ def create_semantic_structures(frame_semantic_list):
             current_command = _make_command(action, frame)
             # TODO: Figure out how to save the condition_head
             if frame.condition:
-                #This seems to be a problem...the specgeneration expects conditions to be events
-                #or assertions but here it looks like the only way conditions get set are as Commands
-                #This also explains why the action of the command is a frame match
-                #current_command.condition = _make_command(frame.condition, frame)
                 frameaction = ACTION_ALIASES.get(frame.condition.sense, frame.condition.verb)
                 current_command.condition = _make_command(frameaction, frame.condition)
             semantic_representation_list.append(current_command)

@@ -1,11 +1,26 @@
 """Test components of spec generation."""
 
+# Copyright (C) 2011-2013 Constantine Lignos
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import unittest
 
 from ltlbroom.specgeneration import SpecGenerator
 
 
 class TestSpecGenerator(unittest.TestCase):
+    """Test spec generation."""
 
     def setUp(self):
         self.specgen = SpecGenerator()
@@ -67,7 +82,7 @@ class TestSpecGenerator(unittest.TestCase):
         enl, syl = self.lines_from_gen(text)
         self.assertEqual(enl, [])
         # Assume actual safety is last line
-        self.assertEqual(syl[-1], '([]((next(e.bomb) -> next(s.camera))))')
+        self.assertEqual(syl[-1], '([]((next(s.react_bomb) -> next(s.camera))))')
 
     def lines_from_gen(self, text):
         """Return [env_lines, sys_lines] from a default generate call."""
