@@ -107,7 +107,7 @@ class Split(object):
         return res
         
     def num_ccs(self,tree,cc):
-        return [self.th.remove_ulid(w) in cc for w in tree.leaves()].count(True)
+        return [self.th.remove_ulid(w) in [cc] for w in tree.leaves()].count(True)
 
     def split_on_cc(self,tree):
         '''Split on "and"...extend to other CCs later.        
