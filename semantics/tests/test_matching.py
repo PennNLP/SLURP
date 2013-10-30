@@ -4,11 +4,8 @@ Created on Oct 17, 2013
 @author: taylor
 '''
 from semantics.tree import Tree
-import sys
 from semantics.matching import ParseMatcher
 from semantics.treehandler import TreeHandler
-from pipelinehost import PipelineClient
-from semantics.parsing import extract_frames_from_parse
 
 import unittest
 
@@ -70,11 +67,6 @@ class exampelPPAttachment(unittest.TestCase):
         wrongFrame = self.exDict[key]["wrong_frame"]
         match = self.matcher.match_frame(wrongFrame, tree)
         self.assertFalse(match)
-        
-        
-        
-        
-        
         
             
 if __name__=="__main__":

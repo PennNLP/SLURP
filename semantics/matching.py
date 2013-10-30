@@ -3,7 +3,7 @@ Created on Oct 10, 2013
 parse and tree are synonymous
 @author: tad
 '''
-from treehandler import TreeHandler 
+from semantics.treehandler import TreeHandler 
 from _matchingExceptions import NoSChildVP, PosTooDeep, VerbFrameCountError,SlotTreeCountError, NoRightSibling, TreeProcError, NodeNotFound, SlotNotFilledError, NoSubjectFound, NoObjectFound
 import sys
 import copy
@@ -20,7 +20,8 @@ class ParseMatcher(object):
     strictPPMatching is a numeric value that sets the acceptable depth distance from the NP head
     '''
     DEFAULT_SLOT_POS = ['PREP','NP','VERB','LEX']
-    pos_map = {'DT' : ['DT'], 
+    pos_map = {         'S' : ['S'],
+                        'DT' : ['DT'], 
                         'VERB' : ['VB','VBP','VPNONE'],
                         'NP' : ['NPNONE','NNS','NN','NNP','NNPS','PRP'],
                         'PREP' : {"to towards" : ["TO","IN"],

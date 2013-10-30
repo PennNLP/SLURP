@@ -27,7 +27,7 @@ from semantics.new_structures import (
     Location, ObjectEntity, YNQuery, StatusQuery,
     EntityQuery, Command, LocationQuery, Assertion, Event)
 from semantics.lexical_constants import ACTION_ALIASES
-from coordinating import Split
+from semantics.coordinating import Split
 
 # Parse tree constants
 DASH = "-"

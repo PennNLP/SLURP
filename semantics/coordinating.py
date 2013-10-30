@@ -3,7 +3,7 @@ Created on Oct 18, 2013
 
 @author: taylor
 '''
-from treehandler import TreeHandler
+from semantics.treehandler import TreeHandler
 import sys
 from _matchingExceptions import NoRightSibling, NoLeftSibling, UnlevelCCSiblings
 import copy

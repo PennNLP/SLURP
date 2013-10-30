@@ -4,9 +4,7 @@ Created on Oct 17, 2013
 @author: taylor
 '''
 from semantics.tree import Tree
-import sys
 from semantics.coordinating import Split, Condition
-from semantics.matching import ParseMatcher
 from semantics.treehandler import TreeHandler
 import unittest
     

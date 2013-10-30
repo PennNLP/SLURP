@@ -21,8 +21,7 @@ except ImportError:
     import pickle
 import os
 import time
-import matching
-import treehandler
+from semantics import matching
 import copy
 
 from collections import defaultdict
