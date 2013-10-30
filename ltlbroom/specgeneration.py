@@ -459,16 +459,18 @@ class SpecGenerator(object):
         elif isinstance(command.condition, Command):
             #Conditions are exclusively created as commands, so I'm going with that
             #condition = command.condition.
-            conditional = command.condition.action
-            stimulus = conditional.args['Stimulus']
-            experiencer = conditional.args['Experiencer']
-            try:
-                phrase = stimulus.node
-            except AttributeError:
-                raise KeyError("Stimulus of condition command has no node, cannot understand condition:\n{}".format(command.condition))
-            condition = ParseMatcher.phrase_head(stimulus,phrase)[0]
-            condition_frag = sys_(condition)
-            explanation = "When {} {} {}".format(experiencer,conditional.verb,stimulus)      
+#Tad's attempt to fix specgeneration
+#             conditional = command.condition.action
+#             stimulus = conditional.args['Stimulus']
+#             experiencer = conditional.args['Experiencer']
+#             try:
+#                 phrase = stimulus.node
+#             except AttributeError:
+#                 raise KeyError("Stimulus of condition command has no node, cannot understand condition:\n{}".format(command.condition))
+#             condition = ParseMatcher.phrase_head(stimulus,phrase)[0]
+#             condition_frag = sys_(condition)
+#             explanation = "When {} {} {}".format(experiencer,conditional.verb,stimulus)
+            raise KeyError("General problem generating conditional, cannot understand condition:\n{}".format(command.condition))      
         else:
             raise KeyError("General problem generating conditional, cannot understand condition:\n{}".format(command.condition))
 

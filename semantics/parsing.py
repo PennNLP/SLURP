@@ -288,7 +288,9 @@ def create_semantic_structures(frame_semantic_list):
                 #This seems to be a problem...the specgeneration expects conditions to be events
                 #or assertions but here it looks like the only way conditions get set are as Commands
                 #This also explains why the action of the command is a frame match
-                current_command.condition = _make_command(frame.condition, frame)
+                #current_command.condition = _make_command(frame.condition, frame)
+                frameaction = ACTION_ALIASES.get(frame.condition.sense, frame.condition.verb)
+                current_command.condition = _make_command(frameaction, frame.condition)
             semantic_representation_list.append(current_command)
         # It's an assertion
         else:
