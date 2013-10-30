@@ -300,6 +300,8 @@ class ParseMatcher(object):
             if len(verbslots) > 1: raise VerbFrameCountError
             verbindex, verbslot = verbslots[0]
             verbpath = self.get_path(parse,verbslot)
+            if not verbpath:
+                return None
             pmatch = self.proximity_match_frame(verbpath,verbindex,frame,parse)
             s,v,o = pmatch
             if True in [(type(w[1])==type) for w in s]: 
