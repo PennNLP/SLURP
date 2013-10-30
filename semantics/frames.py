@@ -324,9 +324,10 @@ def _pick_best_match(match_list):
     return _pick_most_complete_match(match_list)
 
 def _pick_most_complete_match(match_list):
-    longest = len(max(match_list, key=lambda x: len(x[0]))[0])
-    if sum(int(len(x[0]) == longest) for x in match_list) > 1:
-        return _pick_choice_match([x for x in match_list if len(x[0]) == longest])
+    longest = max(match_list, key=lambda x: len(x[0]))
+    longestlen = len(longest[0])
+    if sum(int(len(x[0]) == longestlen) for x in match_list) > 1:
+        return _pick_choice_match([x for x in match_list if len(x[0]) == longestlen])
         #return max(match_list, key=lambda x: int('Agent ' in x))
     else:
         return longest
