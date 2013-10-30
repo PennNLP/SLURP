@@ -3,7 +3,7 @@ Created on Oct 17, 2013
 
 @author: taylor
 '''
-from nltk import Tree
+from semantics.tree import Tree
 import sys
 from semantics.treehandler import TreeHandler
 from semantics.matching import ParseMatcher
