@@ -70,6 +70,7 @@ class exampleCoordination(unittest.TestCase):
                     }
         
     def test_list_cc(self):
+        """Test a list command separated by commands and a single 'and'"""
         key = "go_to_np_comma_np_comma"
         tree = self.exDict[key]["tree"]
         correct_list = self.exDict[key]["correct_list"]

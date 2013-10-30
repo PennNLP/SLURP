@@ -33,6 +33,7 @@ class TestTreeHandler(unittest.TestCase):
 
         
     def test_main_pos_phrasepath(self):
+        """Test that phrase pathing works for treehandler."""
         tree = self.exDict["carry_from_to"]["tree"]
         pos = "VB"
         cursor = [-1]
@@ -40,6 +41,7 @@ class TestTreeHandler(unittest.TestCase):
         self.assertEqual(path,[('S', 1), ('VP', 0), ('VB', 0)])
         
     def test_cursor(self): 
+        """Test that cursor works for treehandler."""
         #Test to see that cursor works for the treehandler, only difference should be the depth of the determiner       
         matcher = ParseMatcher(0,2)        
         tree = self.exDict["carry_from_to"]["tree"]

@@ -48,6 +48,7 @@ class exampelPPAttachment(unittest.TestCase):
         self.matcher = ParseMatcher(0,2)
         
     def test_from_to(self):
+        """Test frame matching on a carry from destination to source sentence."""
         tree = self.exDict["carry_from_to"]["tree"]
         possible_frames = self.exDict["carry_from_to"]["possible_frames"]
         correct_entry = self.exDict["carry_from_to"]["correct_entry"]
@@ -60,7 +61,7 @@ class exampelPPAttachment(unittest.TestCase):
         self.assertIn(correct_entry,matches)
      
     def test_theme_np_pp(self):
-        '''An NP inside of a PP should not be allowed to be a theme.'''
+        """Test that an NP inside of a PP should not be allowed to be a theme."""
         key = "defuse_in"
         tree = self.exDict[key]["tree"]
         self.th.depth_ulid_augment(tree, 0)
