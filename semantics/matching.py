@@ -21,7 +21,8 @@ class ParseMatcher(object):
     '''
     DEFAULT_SLOT_POS = ['PREP','NP','VERB','LEX']
     pos_map = {         'S' : ['S'],
-                        'DT' : ['DT'], 
+                        'DT' : ['DT'],
+                        'ADV' : ['ADV'], 
                         'VERB' : ['VB','VBP','VPNONE'],
                         'NP' : ['NPNONE','NNS','NN','NNP','NNPS','PRP'],
                         'PREP' : {"to towards" : ["TO","IN"],
