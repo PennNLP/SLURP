@@ -31,7 +31,8 @@ class exampleCoordination(unittest.TestCase):
                                   },
              "go_to_np_comma_np_comma" : {
                                           "sent" : "Go to the cellar, kitchen, and bathroom.",
-                                          "tree" : Tree('S', [Tree('NP-SBJ-A', [Tree('-NONE-', ['*'])]), Tree('VP', [Tree('VB', ['Go']), Tree('PP-CLR', [Tree('TO', ['to']), Tree('NP-A', [Tree('NP', [Tree('DT', ['the']), Tree('NN', ['cellar'])]), Tree(',', [',']), Tree('NP', [Tree('NNP', ['kitchen'])]), Tree(',', [',']), Tree('CC', ['and']), Tree('NP', [Tree('NN', ['bathroom'])])])])]), Tree('.', ['.'])])
+                                          "tree" : Tree('S', [Tree('NP-SBJ-A', [Tree('-NONE-', ['*'])]), Tree('VP', [Tree('VB', ['Go']), Tree('PP-CLR', [Tree('TO', ['to']), Tree('NP-A', [Tree('NP', [Tree('DT', ['the']), Tree('NN', ['cellar'])]), Tree(',', [',']), Tree('NP', [Tree('NNP', ['kitchen'])]), Tree(',', [',']), Tree('CC', ['and']), Tree('NP', [Tree('NN', ['bathroom'])])])])]), Tree('.', ['.'])]),
+                                          "correct_list" : [Tree('S', [Tree('NP-SBJ-A', [Tree('-NPNONE-', ['*'])]), Tree('VP', [Tree('VB', ['Go']), Tree('PP-CLR', [Tree('TO', ['to']), Tree('NP', [Tree('DT', ['the']), Tree('NN', ['cellar'])])])]), Tree('.', ['.'])]), Tree('S', [Tree('NP-SBJ-A', [Tree('-NPNONE-', ['*'])]), Tree('VP', [Tree('VB', ['Go']), Tree('PP-CLR', [Tree('TO', ['to']), Tree('NP-A', [Tree('NP', [Tree('NNP', ['kitchen'])])])])]), Tree('.', ['.'])]), Tree('S', [Tree('NP-SBJ-A', [Tree('-NPNONE-', ['*'])]), Tree('VP', [Tree('VB', ['Go']), Tree('PP-CLR', [Tree('TO', ['to']), Tree('NP-A', [Tree('NP', [Tree('NN', ['bathroom'])])])])]), Tree('.', ['.'])])]
                                           }
                   }
         self.ccConditionalDict = {"CC and adv conditional" : {"sent" : "Go to the cellar and if you see a bomb, activate your camera.",
@@ -73,10 +74,10 @@ class exampleCoordination(unittest.TestCase):
     def test_list_cc(self):
         key = "go_to_np_comma_np_comma"
         tree = self.exDict[key]["tree"]
+        correct_list = self.exDict[key]["correct_list"]
         self.th.depth_ulid_augment(tree, 0)        
         trees = self.splitter.split_on_cc(tree)
-        
-        
+        self.assertEqual(trees,correct_list)        
         
     def coordination(self,matcher):
         easy = self.easyDict
