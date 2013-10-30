@@ -31,8 +31,6 @@ from xml.etree.ElementTree import parse
 from semantics.lexical_constants import UNDERSTOOD_SENSES
 from semantics.wntools import morphy
 
-from coordinating import Condition
-
 PERF_DEBUG = False
 WORD_SENSE_FILENAME = 'word_sense_mapping.pkl'
 MODULE_PATH = os.path.dirname(os.path.abspath(__file__))
@@ -325,14 +323,24 @@ def _pick_best_match(match_list):
     # Otherwise use the all matches
     return _pick_most_complete_match(match_list)
 
-
 def _pick_most_complete_match(match_list):
-    longest = max(match_list, key=lambda x: len(x[0]))
-    if sum(int(len(x) == longest) for x in match_list) > 1:
-        return max(match_list, key=lambda x: int('Agent ' in x))
+    longest = len(max(match_list, key=lambda x: len(x[0]))[0])
+    if sum(int(len(x[0]) == longest) for x in match_list) > 1:
+        return _pick_choice_match([x for x in match_list if len(x[0]) == longest])
+        #return max(match_list, key=lambda x: int('Agent ' in x))
     else:
         return longest
-
+    
+def _pick_choice_match(match_list):
+    '''Given multiple matches of the same length, see which has the fewest default pos'''
+    least = -1
+    minidx = -1
+    for i,match in enumerate(match_list):        
+        count = sum(int(key in matching.ParseMatcher.pos_map) for key in match[0])
+        if count < least or minidx == -1:
+            minidx = i
+            least = count
+    return match_list[minidx]
 
 def load_word_sense_mapping(force_generate=False):
     """Loads the pickle file for mapping words to VerbNet frames. *Required*
