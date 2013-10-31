@@ -45,9 +45,11 @@ class ParseMatcher(object):
                                   "PREP": ["IN","TO"],
                                   "in" : ["IN"],
                                   "to" : ["TO"],
-                                  "as" : ["as"],
-                                  "with" : ["with"],
-                                  "for" : ["for"]
+                                  "at in with" : ["IN"],
+                                  "as" : ["IN"],
+                                  "with" : ["IN"],
+                                  "for" : ["IN"],
+                                  "from for on" : ["IN"]
                                   },
                         'LEX' : ['there'],
                         'ADJ' : ['ADJ']                        
@@ -113,9 +115,14 @@ class ParseMatcher(object):
     def get_path(self,tree,slot,cursor=[-1]):
         """Return the path to the head of the slot"""        
         pos, role, secondary, tertiary = slot      
+        if not pos in self.pos_map:
+            sys.stderr.write("WARNING: Verbframe slot pos ["+str(pos)+"] unknown.")
         heads = self.pos_map[pos]
         roles = None
         if type(heads) == type({}):
+            if not role in heads:
+                sys.stderr.write("WARNING: Verbframe slot role ["+str(role)+"] unknown.")
+                return None
             heads = heads[role]
             if not role in self.DEFAULT_SLOT_POS: roles = role.split(" ")
         maxd = -1
@@ -124,18 +131,19 @@ class ParseMatcher(object):
                 maxd = self.depth_map['max'+head]        
         #mainpos = self.th.get_main_pos_path(tree,heads,maxd,cursor)
         mainpos = self.th.get_main_pos_phrasepath(tree,heads,maxd,cursor)
-        if not self.check_rules(slot,mainpos): return None
         #Check to see if the word is one of the roles
         if mainpos:
+            if not self.check_rules(slot,mainpos): return None
             leaf = self.th.get_leaf(tree,[w[1] for w in mainpos])
             if roles and leaf.lower() in roles:
                 return [w[1] for w in mainpos]
             elif roles:
                 return None
+            return [w[1] for w in mainpos]
+        else:
+            return None
         if DEBUG : print 'path to mainpos for slot(',slot,') ',mainpos
         
-        if mainpos:
-            return [w[1] for w in mainpos]
         return mainpos
      
     
