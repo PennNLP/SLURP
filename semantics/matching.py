@@ -117,6 +117,7 @@ class ParseMatcher(object):
         pos, role, secondary, tertiary = slot      
         if not pos in self.pos_map:
             sys.stderr.write("WARNING: Verbframe slot pos ["+str(pos)+"] unknown.")
+            return None
         heads = self.pos_map[pos]
         roles = None
         if type(heads) == type({}):
