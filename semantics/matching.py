@@ -1,8 +1,21 @@
-'''
-Created on Oct 10, 2013
-parse and tree are synonymous
-@author: tad
-'''
+"""
+Matches Verbnet frames to NLTK style syntax parse trees.
+"""
+
+# Copyright (C) 2011-2013 Tad Turpen
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 from semantics.treehandler import TreeHandler 
 from _matchingExceptions import NoSChildVP, PosTooDeep, VerbFrameCountError,SlotTreeCountError, NoRightSibling, TreeProcError, NodeNotFound, SlotNotFilledError, NoSubjectFound, NoObjectFound
 import sys
@@ -10,15 +23,16 @@ import copy
 DEBUG = False
 
 def main():
-    '''tests are in semantics/matchingTests'''
+    """tests are in semantics/matchingTests"""
+
 
 class ParseMatcher(object):
-    '''
+    """
     This class keeps track of state (traversal) information
     given a verbnet frame and syntax parse.
     strictMatching is a numeric value that sets the acceptable depth distance from the main VP
     strictPPMatching is a numeric value that sets the acceptable depth distance from the NP head
-    '''
+    """
     DEFAULT_SLOT_POS = ['PREP','NP','VERB','LEX']
     pos_map = {         'S' : ['S'],
                         'DT' : ['DT'],
@@ -56,9 +70,6 @@ class ParseMatcher(object):
                       }
     
     def __init__(self,smatch=0,sppmatch=2):
-        '''
-            Constructor
-        '''
         self.strictMatching = smatch
         self.strictPPMatching = sppmatch
         self.th = TreeHandler()
@@ -70,7 +81,7 @@ class ParseMatcher(object):
                          }
         
     def check_rules(self,slot,path):
-        '''Check rules in semantic_rules given a slot and a path'''
+        """Check rules in semantic_rules given a slot and a path"""
         srules = self.semantic_rules['slot_keys']
         for idx in srules:
             for value in srules[idx]:
@@ -100,7 +111,7 @@ class ParseMatcher(object):
             if res: return res
         
     def get_path(self,tree,slot,cursor=[-1]):
-        '''Return the path to the head of the slot'''        
+        """Return the path to the head of the slot"""        
         pos, role, secondary, tertiary = slot      
         heads = self.pos_map[pos]
         roles = None
@@ -130,19 +141,19 @@ class ParseMatcher(object):
     
         
     def match_subject_object(self,left,right,v,tree):
-        '''    Match the object/subject given the subframes(left,right), v(path to VB) and tree(full tree)
+        """    Match the object/subject given the subframes(left,right), v(path to VB) and tree(full tree)
                 return [path] to each slot        
             @input v is the path to the VP + the last item is the VB branch
             @input tree is the VP itself
             @input subframe is the object subframe 
             object must be to the right of v
-        '''   
+        """   
         stree = copy.deepcopy(tree)
         otree = copy.deepcopy(tree)        
 
-        '''Nearest siblings
+        """Nearest siblings
             nearest sibling methods return inclusive of head so we can pop greater than the last elmt
-        '''
+        """
         sLeftBranch = self.th.nearest_left_sibling(v)   
         if len(sLeftBranch) < 1:
             raise NoSubjectFound(left)
@@ -161,8 +172,8 @@ class ParseMatcher(object):
         for i in oRightBranch[:-1]:
             otree = otree.pop(i)
             
-        '''At this point,   otree should be the constituent VP of the main verb
-                  and    stree should be the * branch to the left of the VP'''        
+        """At this point,   otree should be the constituent VP of the main verb
+                  and    stree should be the * branch to the left of the VP"""        
         snext = 0
         onext = oRightBranch[-1] + 1
         
@@ -171,7 +182,7 @@ class ParseMatcher(object):
         return s,o
     
     def pp_acceptpath(self,prevpath,nextslot,next,path,tree):
-        '''Returns True if the path points to a leaf that is an acceptable distance from the most
+        """Returns True if the path points to a leaf that is an acceptable distance from the most
             recently filled slot's leaf, given the current slot that needs to be filled. "Acceptable distance"
             changes depending on the preposition (if it is one). 
             
@@ -185,7 +196,7 @@ class ParseMatcher(object):
             @input next is the slot that needs to be filled
             @input path points to the leaf that could fill the next slot
             @input tree that path belongs to            
-        '''
+        """
         if nextslot[0] != "PREP": return True
         if nextslot[1] == 'to towards': return True
         if len(path) == 2 or len(prevpath) == 2: return False#siblings
@@ -203,12 +214,12 @@ class ParseMatcher(object):
         return False
         
     def sequential_match_slots(self,next,subframe,base,tree):
-        '''Match the slots in the subframe given the tree and base
+        """Match the slots in the subframe given the tree and base
             If the slot is for a preposition that accepts embedding, fill slots as if it were not embedded.
             Otherwise, increment the cursor as if it were the head but keep looking.
             
             @input base where are we right now  
-        '''
+        """
         #next is the index of the branch of tree for the nearest right neighbor of v
         res = []
         tree = copy.deepcopy(tree)
@@ -257,7 +268,7 @@ class ParseMatcher(object):
         
             
     def proximity_match_frame(self,v,center,frame,tree):
-        '''Given a v(tup) and center(int) match the frame around that path.'''        
+        """Given a v(tup) and center(int) match the frame around that path."""        
         left = frame[:center]#S
         #V
         right = frame[center+1:]#O
@@ -266,8 +277,8 @@ class ParseMatcher(object):
         return [s,v,o]
     
     def frames_match_frame (self, svo, tree):
-        '''Format svo into the format frames expects:
-            {'<POS>' : tree,...}        '''
+        """Format svo into the format frames expects:
+            {'<POS>' : tree,...}        """
         s, v, o = svo
         res = {}
         for i in s:
@@ -292,7 +303,7 @@ class ParseMatcher(object):
             sys.stderr.write("Tree does not seem to be augmented for depth, please run depth_ulid_augment ONCE and then try calling this method again.")
         
     def match_frame(self,frame,parse):
-        '''Try to match the frame to the parse'''
+        """Try to match the frame to the parse"""
         try:
             fmatch = None
             if self.invalid_pos(frame):

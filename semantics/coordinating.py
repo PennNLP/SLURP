@@ -1,8 +1,21 @@
-'''
-Created on Oct 18, 2013
+"""
+Handles coordination in sentences by coordinating conjunctions and lists.
+"""
 
-@author: taylor
-'''
+# Copyright (C) 2011-2013 Tad Turpen
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 from semantics.treehandler import TreeHandler
 import sys
 from _matchingExceptions import NoRightSibling, NoLeftSibling, UnlevelCCSiblings
@@ -10,14 +23,14 @@ import copy
 DEBUG = False
         
 class Condition(object):
-    '''Class to extract S trees from a parent tree that contains conditional children.'''
+    """Class to extract S trees from a parent tree that contains conditional children."""
     accepted_conditions = ["SBAR-TMP","SBAR-ADV"]
     accepted_punc = [","]
     def __init__(self):
         self.th = TreeHandler()
         
     def split_on_sbar(self,tree):
-        '''Return the subtrees of the tree if any SBAR present'''
+        """Return the subtrees of the tree if any SBAR present"""
         cursor = [-1]
         for condition in self.accepted_conditions:
             path = self.th.leftmost_pos(tree, condition, cursor)
@@ -25,17 +38,17 @@ class Condition(object):
                 print path                
         
 class Split(object):
-    '''Class to split a syntax tree on CCs by replacing sibling nodes of the CC with the parent.'''
+    """Class to split a syntax tree on CCs by replacing sibling nodes of the CC with the parent."""
     validCC = "and"
     listCC = "," 
     def __init__(self):
         self.th = TreeHandler()     
         
     def sibling_cc_path(self,ccpath,tree=None):
-        '''Returns the nearest appropriate sibling to ccpath given a tree (or not)
+        """Returns the nearest appropriate sibling to ccpath given a tree (or not)
             caveat #1 finding the leftmost sibling does not require a tree, so we can easily overload this method
             caveat #2 pop_path requires the leaf so we append a meaningless -1
-        '''
+        """
         if tree:
             path = self.th.nearest_right_sibling(ccpath,tree)
             path[-1] += 1
@@ -46,9 +59,9 @@ class Split(object):
         return path
            
     def pop_comma_and(self,tree):
-        '''Given a tree, pop the comma of any siblings ", and" as in "the horse, donkey, and carriage."
+        """Given a tree, pop the comma of any siblings ", and" as in "the horse, donkey, and carriage."
             Functionally they are redundant.        
-        '''
+        """
         prev = (0,'')
         while True:
             leaves = tree.leaves()
@@ -64,7 +77,7 @@ class Split(object):
         
         
     def pos_split(self,tree,pos,possibleParents=["S","VP","NP"],desiredCC="and",ccpos="CC"):
-        '''The strategy for this is to find the CC in the VP (like the VB in matching),
+        """The strategy for this is to find the CC in the VP (like the VB in matching),
             find the nearest left or right siblings and if they are heads, pop   
             
             @input tree input tree to split on
@@ -72,7 +85,7 @@ class Split(object):
             @input possibleParents are the possible phrase parents currently supported
             @input desiredCC is the lemma of the CC we are looking for
             @input ccpos is the cc part of speech we are looking for
-        '''
+        """
         res = []        
         cursor = [-1]
         cccount = self.num_ccs(tree,desiredCC) 
@@ -110,8 +123,8 @@ class Split(object):
         return [self.th.remove_ulid(w) in [cc] for w in tree.leaves()].count(True)
 
     def split_on_cc(self,tree):
-        '''Split on "and"...extend to other CCs later.        
-        '''
+        """Split on "and"...extend to other CCs later.        
+        """
         self.pop_comma_and(tree)#Prepare the tree
         numCCs = self.num_ccs(tree,self.validCC)
         if numCCs < 1:
