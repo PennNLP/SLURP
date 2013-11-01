@@ -92,7 +92,11 @@ class TreeHandler(object):
             for i in range(keep[0]):
                 #if idx of keep is 2-> 3rd item, pop twice
                 tree.pop(0)
-        else: self.pop_left(tree[path[0]],path[1:])
+        else: 
+            self.pop_left(tree[path[0]],path[1:])
+            if len(path) == 3 and len(tree[path[0]]) == 1:
+                #If we created an only-child, bump the child up
+                tree[path[0]] = tree[path[0]][0]
         
             
     def pop_path_cc(self,tree,lemma,cc):
