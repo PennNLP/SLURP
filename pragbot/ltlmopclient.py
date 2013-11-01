@@ -195,7 +195,7 @@ class LTLMoPClient(object):
 
 
 class BarebonesDialogueManager(object):
-    activateExecute = ["go","go.","activate","activate.","execute","execute."]
+    activateExecute = ["go","activate","execute"]
     def __init__(self, ltlmopclient, executor, base_spec=None):
         """ take reference to execution context and gui_window
             optionally initialize with some base spec text """
@@ -246,7 +246,7 @@ class BarebonesDialogueManager(object):
     def tell(self, message):
         """ take in a message from the user, return a response.
             WARNING: this is effectively running in non-main thread"""
-        msg = message.lower().strip()
+        msg = message.lower().strip().strip('.')
         if msg == "clear":
             self.clear()
             return
