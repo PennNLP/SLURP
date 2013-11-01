@@ -4,7 +4,7 @@
 from pipelinehost import PipelineClient
 from twisted.internet import protocol, reactor
 from semantics.new_knowledge import KnowledgeBase
-from semantics.parsing import process_parse_tree
+from semantics.parsing import extract_commands
 from semantics.response import make_response
 from semantics import tree
 import semantics.parsing
@@ -37,7 +37,8 @@ class PipelineProtocol(protocol.Protocol):
             parse = PipelineClient(verbose=True).parse(data)
 
         response = {}
-        frames, new_commands, kb_response = process_parse_tree(parse, data, self.kb if knowledge_demo else None, quiet=True)
+        frames, new_commands, kb_response = extract_commands(parse, self.kb if knowledge_demo
+                                                                else None, verbose=False)
         response['parse'] = parse
         if frames is not None:
             # We do a join and split to make sure all whitespace becomes single spaces
