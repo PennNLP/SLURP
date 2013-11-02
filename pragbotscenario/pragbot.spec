@@ -5,10 +5,8 @@
 ======== SETTINGS ========
 
 Actions: # List of action propositions and their state (enabled = 1, disabled = 0)
-pick_up, 0
-drop, 0
-radio, 0
-extinguish, 0
+defuse, 1
+sweep, 1
 
 CompileOptions:
 convexify: False
@@ -21,15 +19,14 @@ CurrentConfigName:
 pragbot
 
 Customs: # List of custom propositions
-carrying_item
 
 RegionFile: # Relative path of region description file
 pragbot.converted.regions
 
 Sensors: # List of sensor propositions and their state (enabled = 1, disabled = 0)
-bomb, 0
-hostage, 0
-badguy, 0
+bomb, 1
+hostage, 1
+badguy, 1
 
 
 ======== SPECIFICATION ========
@@ -46,10 +43,11 @@ hallway2 = hallway2
 hallway3 = hallway3
 study = study
 hallway1 = hallway1
+entrance = entrance
+hallway4 = hallway4
 computer_room = computer_room
 lounge = lounge
 billiard_room = billiard_room
-hallway4 = hallway4
 dining_room = dining_room
 library = library
 kitchen = kitchen
