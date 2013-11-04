@@ -6,7 +6,6 @@
 
 Actions: # List of action propositions and their state (enabled = 1, disabled = 0)
 defuse, 1
-sweep, 1
 
 CompileOptions:
 convexify: False
@@ -27,6 +26,7 @@ Sensors: # List of sensor propositions and their state (enabled = 1, disabled = 
 bomb, 1
 hostage, 1
 badguy, 1
+defuse_done, 1
 
 
 ======== SPECIFICATION ========
@@ -45,9 +45,9 @@ study = study
 hallway1 = hallway1
 entrance = entrance
 hallway4 = hallway4
-computer_room = computer_room
 lounge = lounge
 billiard_room = billiard_room
+computer_room = computer_room
 dining_room = dining_room
 library = library
 kitchen = kitchen
