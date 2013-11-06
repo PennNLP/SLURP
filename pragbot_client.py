@@ -45,6 +45,8 @@ class PragbotClient(object):
 
     KNOWN_OBJECTS = set(("bomb", "hostage", "badguy"))
     EVENT_LOCATION = "Location"
+    EVENT_MOVE_LOCATION = "Move_Location"
+    OBJECT_LOCATION = "Object_Location"
     EVENT_MOVE = "Move"
     EVENT_STOP = "Stop"
     EVENT_SENSOR = "Sensor"
@@ -100,6 +102,15 @@ class PragbotClient(object):
             destination = room.center
             self.ge.jr.set_waypoints([])
             self.ge.jr.plan_path(self.ge.grid[destination[0]][destination[1]])
+        elif event_type == self.EVENT_MOVE_LOCATION:
+            #self.ge.jr.set_waypoints([])
+            #self.ge.jr.plan_path(self.ge.grid[message])
+            pass
+        elif event_type == self.OBJECT_LOCATION:
+            if message == "bombs":
+                return self.sensor_states[message]
+            else:
+                logging.warning("Unknown location sensor: %s ", message)
         elif event_type == self.EVENT_STOP:
             self.ge.jr.set_waypoints([])
             logging.info("Movement waypoints cleared.")
@@ -123,11 +134,11 @@ class PragbotClient(object):
         elif event_type == self.EVENT_SENSOR:
             if message == "bomb":
                 #the bomb sensor checks the "bombs" state                    
-                return self.sensor_states["bombs"] > 0
+                return self.sensor_states["bombs"]
             elif message in self.sensor_states:
                 return self.sensor_states[message]
             logging.warning("Unknown sensor: %s ", message)                    
-            return False            
+            return False    
         else:
             logging.warning("Unknown event_type: %s %s", event_type, message)
 
@@ -197,11 +208,7 @@ class PragbotClient(object):
     def set_sensor_states(self,line):
         """set the sensor states from a state update."""
         pieces = [w.replace(" ","") for w in line.split(";")]
-        for key, value in [w.split("=") for w in pieces]:
-            try:
-                value = int(value)
-            except ValueError, e:
-                pass
+        for key, value in [w.split("=") for w in pieces]:            
             self.sensor_states[key] = value        
 
     def send_response(self, msg):
