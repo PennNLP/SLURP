@@ -60,6 +60,7 @@ class PragbotClient(object):
         self._waypoint_thread = None
         self.stop = False
         self.shutting_down = False
+        self.sensor_states ={} 
 
         # Connect to the pragbot server first
         try:
@@ -80,7 +81,7 @@ class PragbotClient(object):
 
         # Start the server and then kick off the LTLMoP client which will indirectly connect to it
         self.xmlrpc_server_thread.start()
-        logging.info("LTLMoPClient listening for XML-RPC calls on http://127.0.0.1:{} ...".
+        logging.info("Handler host listening for XML-RPC calls on http://127.0.0.1:{} ...".
                      format(self.handler_port))
         self.ltlmop = ltlmopclient.LTLMoPClient(self.handler_port, self.send_response)
 
@@ -89,8 +90,8 @@ class PragbotClient(object):
         # Wait for the environment to be loaded
         self.is_ready.wait()
 
-        # Skip location messages since we get them so often
-        if event_type != self.EVENT_LOCATION:
+        # Skip location and sensormessages since we get them so often
+        if event_type != self.EVENT_LOCATION and event_type != self.EVENT_SENSOR:
             logging.info("Received handler message: %s %s", event_type, message)
 
         # Handle events
@@ -118,7 +119,15 @@ class PragbotClient(object):
             for room in self.ge.rooms.itervalues():
                 if self.ge.jr.cell.location in room:
                     return room.name
-            return self.LOCATION_UNKNOWN
+            return self.LOCATION_UNKNOWN        
+        elif event_type == self.EVENT_SENSOR:
+            if message == "bomb":
+                #the bomb sensor checks the "bombs" state                    
+                return self.sensor_states["bombs"] > 0
+            elif message in self.sensor_states:
+                return self.sensor_states[message]
+            logging.warning("Unknown sensor: %s ", message)                    
+            return False            
         else:
             logging.warning("Unknown event_type: %s %s", event_type, message)
 
@@ -180,8 +189,20 @@ class PragbotClient(object):
             logging.info("Received JR flipped message: %s", line)
             self.ge.jr.flip_junior()
         elif line.startswith("JR_STATE"):
+            #JR_STATEroom=12;name= cellar;bombs=0;hostages=0;badguys=0
+            line = _remove_prefix(line,"JR_STATE")            
+            self.set_sensor_states(line)            
             logging.info("Received JR state message: %s",line)
             
+    def set_sensor_states(self,line):
+        """set the sensor states from a state update."""
+        pieces = [w.replace(" ","") for w in line.split(";")]
+        for key, value in [w.split("=") for w in pieces]:
+            try:
+                value = int(value)
+            except ValueError, e:
+                pass
+            self.sensor_states[key] = value        
 
     def send_response(self, msg):
         """Send a chat response to the server."""
