@@ -53,6 +53,7 @@ class PragbotClient(object):
     EVENT_FIND_BOMB = "Find Bomb"
     LOCATION_UNKNOWN = "Unknown"
     EVENT_DEFUSING = "Defusing"
+    EVENT_DEFUSE = "Defuse"
     
     JR_STATE = "JR_STATE"
     BOMBS_STATE = "bombs"
@@ -133,6 +134,17 @@ class PragbotClient(object):
                 return self.ge.object_positions[message]
             else:
                 return None
+        elif event_type == self.EVENT_DEFUSE:
+            # TODO: Make bomb disappear here, not when we hit it 
+
+            #Remove bomb from sensor states
+            destination = tuple(message)
+            destination_string = ',' + str(destination[0]) + ':' + destination[1] + ','
+            if destination_string in self.sensor_states:
+                self.sensor_states.replace(destination_string,",")
+            else:
+                logging.warning("Unable to defuse sensor_states at location: %s ", message)
+            
         elif event_type == self.EVENT_LOCATION:
             for room in self.ge.rooms.itervalues():
                 if self.ge.jr.cell.location in room:
