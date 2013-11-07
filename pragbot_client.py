@@ -52,6 +52,10 @@ class PragbotClient(object):
     EVENT_SENSOR = "Sensor"
     EVENT_FIND_BOMB = "Find Bomb"
     LOCATION_UNKNOWN = "Unknown"
+    
+    JR_STATE = "JR_STATE"
+    BOMBS_STATE = "bombs"
+    BOMB_SENSOR = "bomb"
 
     def __init__(self):
         # Set up basics before starting the server
@@ -100,14 +104,23 @@ class PragbotClient(object):
         if event_type == self.EVENT_MOVE:
             room = self.ge.rooms[message]
             destination = room.center
+            logging.info("EVENT_MOVE destination: "+str([destination]))
             self.ge.jr.set_waypoints([])
             self.ge.jr.plan_path(self.ge.grid[destination[0]][destination[1]])
         elif event_type == self.EVENT_MOVE_LOCATION:
-            #self.ge.jr.set_waypoints([])
-            #self.ge.jr.plan_path(self.ge.grid[message])
-            pass
+            #origin = self.ge.jr.location got float, not right variable
+            #Move to Goal
+            self.ge.jr.set_waypoints([])
+            destination = tuple(message)
+            logging.info("Trying to move pragbot to location: "+str(destination))
+            self.ge.jr.plan_path(self.ge.grid[destination[0]][destination[1]])
+            self.is_ready.set()
+            self._waypoint_thread = \
+                RepeatingCall(self.ge.jr.follow_waypoints, (self.sendMessage,), 0.05)
+            self._waypoint_thread.daemon = True
+            self._waypoint_thread.start()
         elif event_type == self.OBJECT_LOCATION:
-            if message == "bombs":
+            if message == self.BOMBS_STATE:
                 return self.sensor_states[message]
             else:
                 logging.warning("Unknown location sensor: %s ", message)
@@ -132,9 +145,9 @@ class PragbotClient(object):
                     return room.name
             return self.LOCATION_UNKNOWN        
         elif event_type == self.EVENT_SENSOR:
-            if message == "bomb":
+            if message == self.BOMB_SENSOR:
                 #the bomb sensor checks the "bombs" state                    
-                return self.sensor_states["bombs"]
+                return self.sensor_states[self.BOMBS_STATE]
             elif message in self.sensor_states:
                 return self.sensor_states[message]
             logging.warning("Unknown sensor: %s ", message)                    
@@ -199,9 +212,9 @@ class PragbotClient(object):
         elif line.startswith('JR_IS_FLIPPED') or line.startswith('JR_IS_UNFLIPPED'):
             logging.info("Received JR flipped message: %s", line)
             self.ge.jr.flip_junior()
-        elif line.startswith("JR_STATE"):
+        elif line.startswith(self.JR_STATE):
             #JR_STATEroom=12;name= cellar;bombs=0;hostages=0;badguys=0
-            line = _remove_prefix(line,"JR_STATE")            
+            line = _remove_prefix(line,self.JR_STATE)            
             self.set_sensor_states(line)            
             logging.info("Received JR state message: %s",line)
             
