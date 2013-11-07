@@ -52,6 +52,7 @@ class PragbotClient(object):
     EVENT_SENSOR = "Sensor"
     EVENT_FIND_BOMB = "Find Bomb"
     LOCATION_UNKNOWN = "Unknown"
+    EVENT_DEFUSING = "Defusing"
     
     JR_STATE = "JR_STATE"
     BOMBS_STATE = "bombs"
@@ -66,6 +67,7 @@ class PragbotClient(object):
         self._waypoint_thread = None
         self.stop = False
         self.shutting_down = False
+        self.defusing = False
         self.sensor_states ={} 
 
         # Connect to the pragbot server first
@@ -104,29 +106,21 @@ class PragbotClient(object):
         if event_type == self.EVENT_MOVE:
             room = self.ge.rooms[message]
             destination = room.center
-            logging.info("EVENT_MOVE destination: "+str([destination]))
-            self.ge.jr.set_waypoints([])
-            self.ge.jr.plan_path(self.ge.grid[destination[0]][destination[1]])
+            self.move_jr(destination)
         elif event_type == self.EVENT_MOVE_LOCATION:
-            #origin = self.ge.jr.location got float, not right variable
-            #Move to Goal
-            self.ge.jr.set_waypoints([])
+            #Move to destination
             destination = tuple(message)
-            logging.info("Trying to move pragbot to location: "+str(destination))
-            self.ge.jr.plan_path(self.ge.grid[destination[0]][destination[1]])
-            self.is_ready.set()
-            self._waypoint_thread = \
-                RepeatingCall(self.ge.jr.follow_waypoints, (self.sendMessage,), 0.05)
-            self._waypoint_thread.daemon = True
-            self._waypoint_thread.start()
+            self.move_jr(destination)
         elif event_type == self.OBJECT_LOCATION:
             if message == self.BOMBS_STATE:
                 return self.sensor_states[message]
             else:
                 logging.warning("Unknown location sensor: %s ", message)
         elif event_type == self.EVENT_STOP:
-            self.ge.jr.set_waypoints([])
-            logging.info("Movement waypoints cleared.")
+            if not self.defusing:
+                #If defusing, ignore EVENT_STOP commands
+                self.clear_jr_waypoints()
+                logging.info("Movement waypoints cleared.")
         elif event_type in self.KNOWN_OBJECTS:
             object_seen = False
             for thing in self.ge.objects:
@@ -151,7 +145,14 @@ class PragbotClient(object):
             elif message in self.sensor_states:
                 return self.sensor_states[message]
             logging.warning("Unknown sensor: %s ", message)                    
-            return False    
+            return False   
+        elif event_type == self.EVENT_DEFUSING:
+            if message == "True":
+                self.defusing = True
+            elif message == "False":
+                self.defusing = False
+            else:
+                logging.warning("Unknown defusing status value: %s ", message)
         else:
             logging.warning("Unknown event_type: %s %s", event_type, message)
 
@@ -223,6 +224,16 @@ class PragbotClient(object):
         pieces = [w.replace(" ","") for w in line.split(";")]
         for key, value in [w.split("=") for w in pieces]:            
             self.sensor_states[key] = value        
+            
+    def move_jr(self,destination):
+        """Move Junior to destination"""
+        logging.info("Moving JR to destination: "+str([destination]))
+        self.clear_jr_waypoints()
+        self.ge.jr.plan_path(self.ge.grid[destination[0]][destination[1]])
+
+    def clear_jr_waypoints(self):
+        """Clear Junior's waypoints"""
+        self.ge.jr.set_waypoints([])
 
     def send_response(self, msg):
         """Send a chat response to the server."""
