@@ -135,15 +135,15 @@ class PragbotClient(object):
             else:
                 return None
         elif event_type == self.EVENT_DEFUSE:
-            # TODO: Make bomb disappear here, not when we hit it 
-
-            #Remove bomb from sensor states
             destination = tuple(message)
-            destination_string = ',' + str(destination[0]) + ':' + destination[1] + ','
-            if destination_string in self.sensor_states:
-                self.sensor_states.replace(destination_string,",")
+            # Make bomb disappear here, not when we hit it
+            self.sendMessage("ADD_BOMB_DESTROYED", str(destination[0]) + "," + str(destination[1]))
+            #Remove bomb from sensor states            
+            destination_string = ',' + str(destination[0]) + ':' + str(destination[1]) + ','
+            if destination_string in self.sensor_states[self.BOMBS_STATE]:
+                self.sensor_states[self.BOMBS_STATE].replace(destination_string,",")
             else:
-                logging.warning("Unable to defuse sensor_states at location: %s ", message)
+                logging.warning("Unable to defuse sensor_states at location: %s for sensor_states: %s ", destination_string, self.sensor_states)
             
         elif event_type == self.EVENT_LOCATION:
             for room in self.ge.rooms.itervalues():
@@ -179,7 +179,7 @@ class PragbotClient(object):
         data = action + str(msg)
         # Skip player move messages
         if DEBUG_MOVE or not data.startswith("PLAYER_MOVE"):
-            logging.info('Sending: %s', data)
+            logging.info('Sending: %s', [data])
 
         # Send, but give up if the connection is dead
         try:
