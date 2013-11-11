@@ -113,7 +113,7 @@ class PragbotClient(object):
             destination = tuple(message)
             self.move_jr(destination)
         elif event_type == self.OBJECT_LOCATION:
-            if message == self.BOMBS_STATE:
+            if message == self.BOMBS_STATE:                             
                 return self.sensor_states[message]
             else:
                 logging.warning("Unknown location sensor: %s ", message)
@@ -148,6 +148,8 @@ class PragbotClient(object):
         elif event_type == self.EVENT_LOCATION:
             for room in self.ge.rooms.itervalues():
                 if self.ge.jr.cell.location in room:
+                    if message == "coordinates":
+                        return self.ge.jr.cell.location
                     return room.name
             return self.LOCATION_UNKNOWN        
         elif event_type == self.EVENT_SENSOR:
