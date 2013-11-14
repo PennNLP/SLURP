@@ -170,6 +170,7 @@ class SpecGenerator(object):
         parse_client = PipelineClient()
         results = []
         responses = []
+        problem = "UNKNOWN specgen problem on command"
         custom_props = set()
         self.react_props = set()  # TODO: Make this a local
         custom_sensors = set()
@@ -246,7 +247,8 @@ class SpecGenerator(object):
                     success = False
                     continue
                 else:
-                    command_responses.append(respond_okay(command.action))
+                    #We already know if the command was "OK" because of results, useful response
+                    command_responses.append(command.action)
 
                 # Add in the new lines
                 command_key = _format_command(command)
@@ -265,7 +267,11 @@ class SpecGenerator(object):
 
             # Add responses and successes
             results.append(success)
-            responses.append(' '.join(command_responses))
+            if success:
+                unique_res = [w for w in set(command_responses)]                
+                responses.append(respond_okay(", ".join(unique_res[:-1]) + " and " + unique_res[-1]))
+            else:
+                responses.append(problem)
             # Add some space between commands
             if verbose:
                 print
@@ -336,7 +342,7 @@ class SpecGenerator(object):
 
         return (env_lines, sys_lines, custom_props, custom_sensors, results, responses,
                 generation_trees)
-
+        
     def _apply_metapar(self, command):
         """Generate a metapar for a command."""
         # Patch up intransitives as activate if needed
