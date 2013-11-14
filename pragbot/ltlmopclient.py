@@ -214,20 +214,22 @@ class BarebonesDialogueManager(object):
         self.compiler.proj = self.ltlmop.proj
         
         self.chat_dict = {"clear_actions" : { "prompts": ["clear"],
-                                "response": ("clear_command","")},
-             "activate_actions" : {"prompts": ["go","activate","execute"],
-                                   "response": ("activate_command","")},
-             "pause_actions" : {"prompts" : ["wait","stop"],
-                                "response" : ("no_act","Paused.")},   
-             "status_requests" : {"prompts": ["status"],
-                                  "response": ("status_request","")},
-                               
-             "speclist_requests" : {"prompts": ["list"],
-                                    "response": ("speclist_request","")},
-             "non_actionable_chats" : {"prompts": ["hello","hi","how's it going?"],
-                                       "response": ("chatbot_response","Hi!")}
-             
-             } 
+                                               "response": ("clear_command","")},
+                            "activate_actions" : {"prompts": ["go","activate","execute"],
+                                                  "response": ("activate_command","")},
+                            "pause_actions" : {"prompts" : ["wait","stop"],
+                                               "response" : ("no_act","Stopping until you tell me to start " + \
+                                               "or give me new commands.")},
+                            "status_requests" : {"prompts": ["status"],
+                                                 "response": ("status_request","")},                                                         
+                            "resume_actions" : {"prompts": ["start","begin"],
+                                                 "response": ("resume_act","Picking up where I left off.")},  
+                            "speclist_requests" : {"prompts": ["list"],
+                                                   "response": ("speclist_request","")},
+                            "non_actionable_chats" : {"prompts": ["hello","hi","how's it going?"],
+                                                      "response": ("chatbot_response","Hi!")}
+                          } 
+        self.paused = False
 
     def clear(self):
         self.spec = []
@@ -276,10 +278,25 @@ class BarebonesDialogueManager(object):
             self.clear()
             return
         elif response_code == "activate_command":
-            return self.execute()
+            if not self.paused:
+                return self.execute()
+            self.paused = False
+            self.executor.resume()
+            return "Picking up where I left off."
         elif response_code == "no_act":
-            self.executor.pause()
-            return chat
+            if not self.paused and self.executor.isRunning():
+                self.paused = True
+                self.executor.pause()
+                return chat
+            elif not self.paused:
+                return "I wasn't doing anything so I cannot stop or pause."
+            return "Already paused execution."
+        elif response_code == "resume_act":
+            if self.paused:
+                self.paused = False
+                self.executor.resume()
+                return chat
+            return self.execute()
         elif response_code == "status_request":
             if not self.executor.isRunning():
                 return chat
