@@ -195,7 +195,6 @@ class LTLMoPClient(object):
 
 
 class BarebonesDialogueManager(object):
-    activateExecute = ["go","activate","execute"]
     def __init__(self, ltlmopclient, executor, base_spec=None):
         """ take reference to execution context and gui_window
             optionally initialize with some base spec text """
@@ -213,6 +212,22 @@ class BarebonesDialogueManager(object):
         # Initiate a specCompiler to hang around and give us immediate parser feedback
         self.compiler = SpecCompiler()
         self.compiler.proj = self.ltlmop.proj
+        
+        self.chat_dict = {"clear_actions" : { "prompts": ["clear"],
+                                "response": ("clear_command","")},
+             "activate_actions" : {"prompts": ["go","activate","execute"],
+                                   "response": ("activate_command","")},
+             "pause_actions" : {"prompts" : ["wait","stop"],
+                                "response" : ("no_act","Paused.")},   
+             "status_requests" : {"prompts": ["status"],
+                                  "response": ("status_request","")},
+                               
+             "speclist_requests" : {"prompts": ["list"],
+                                    "response": ("speclist_request","")},
+             "non_actionable_chats" : {"prompts": ["hello","hi","how's it going?"],
+                                       "response": ("chatbot_response","Hi!")}
+             
+             } 
 
     def clear(self):
         self.spec = []
@@ -242,31 +257,42 @@ class BarebonesDialogueManager(object):
             self.clear()
             return ("Sorry, I can't come up with a plan that will carry out all your orders. "
                     "Try giving fewer commands at a time.")
+            
+    def handle_chats(self,message):
+        """Return the response code and text if appropriate"""
+        msg = message.lower().strip().strip('.')
+        for entry in self.chat_dict:
+            if msg in self.chat_dict[entry]["prompts"]:                
+                return self.chat_dict[entry]["response"]            
+        return "other",""
+    
 
     def tell(self, message):
         """ take in a message from the user, return a response.
             WARNING: this is effectively running in non-main thread"""
-        msg = message.lower().strip().strip('.')
-        if msg == "clear":
+            
+        response_code, chat = self.handle_chats(message)
+        if response_code == "clear_command":
             self.clear()
             return
-        elif msg in self.activateExecute:
+        elif response_code == "activate_command":
             return self.execute()
-        elif msg == "wait":
+        elif response_code == "no_act":
             self.executor.pause()
-            return "Paused."
-        elif msg == "status":
+            return chat
+        elif response_code == "status_request":
             if not self.executor.isRunning():
-                return "Currently paused."
-
+                return chat
             curr_goal_num = self.executor.getCurrentGoalNumber()
             if curr_goal_num is None:
-                return "I'm not doing anything right now."
+                return chat
             else:
                 return self.executor.getCurrentGoalDescription()
-        elif msg == "list":
+        elif response_code == "chatbot_response":
+            return chat
+        elif response_code == "speclist_request":
             return "\n".join(self.spec)
-        else:
+        elif response_code == "other":
             # Ask parser if this individual line is OK
             # FIXME: Because _writeLTLFile() is so monolithic, this will
             # clobber the `.ltl` file
