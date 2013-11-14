@@ -29,6 +29,7 @@ from semantics.new_structures import (
     EntityQuery, Command, LocationQuery, Assertion)
 from semantics.lexical_constants import ACTION_ALIASES
 from semantics.coordinating import Split
+from semantics.treehandler import TreeHandler
 
 # Parse tree constants
 DASH = "-"
@@ -37,6 +38,7 @@ VP_TAG = "VP"
 S_TAG = "S"
 SUBJ_TAG = "NP-SBJ"
 VERB_TAG = "VB"
+TO_TAG = "TO"
 ADVP_TAG = "ADVP"
 DO_WORD = "do"
 SUPPORT_VERBS = set((DO_WORD, "please"))
@@ -44,7 +46,8 @@ NOT_WORDS = set(("not", "n't"))
 NEVER_WORD = "never"
 CONDITIONAL_MARKERS = set(['if', 'when'])
 AUXILIARY_VERBS = set(['was', 'is', 'get', 'are', 'got', 'were', 'been', 'being'])
-
+ASSERTION_VERBS = ['is', 'are', 'be']
+th = TreeHandler()
 
 def split_tag(tag):
     """Split a tag into (tag, dash_tag), excluding tags like -A.
@@ -170,6 +173,7 @@ def extract_frames_from_parse(parse_tree_string, verbose=False):
 
                 # Transformational grammar stuff
                 orig_tree = tree
+                tree = assertion_filter(tree)
                 tree = existential_there_insertion(tree)
                 tree = invert_clause(tree)
                 tree = wh_movement(tree)
@@ -184,7 +188,13 @@ def extract_frames_from_parse(parse_tree_string, verbose=False):
 
     return result_list
 
-
+def assertion_filter(tree):
+    """Takes a sentence that makes an assertion about a sentence and just returns the sentence.    
+    """    
+    tree = th.right_sibling_if_it_fits(tree,ASSERTION_VERBS,"VBP","S")
+    return tree
+    
+    
 def extract_entity(parse_tree, semantic_role='', verbose=False):
     """Creates an entity object given a snippet of a parse tree."""
     entity = Location() if semantic_role in (
@@ -282,7 +292,7 @@ def create_semantic_structures(frame_semantic_list):
                 semantic_representation_list.append(
                     YNQuery(item_to_entity['Theme'], item_to_entity['Location']))
         # It's a regular command
-        elif action is not None and action not in ('is', 'are', 'be'):
+        elif action is not None and action not in ASSERTION_VERBS:
             current_command = _make_command(action, frame)
             # TODO: Figure out how to save the condition_head
             if frame.condition:
@@ -459,18 +469,21 @@ def match_verb(parse_tree, negated=False, subject=None, condition=None, verbose=
                 if main_tag(child.node) == ADVP_TAG and _first_leaf(child) == NEVER_WORD:
                     negated = True
                     break
+                elif _first_leaf(child) in NOT_WORDS:                    
+                    negated = True
+                    break
 
             # Check for verbs
-            for child in vp:
+            for i, child in enumerate(vp):
                 if child.node.startswith(VERB_TAG):
-                    result_tree = (parent if not subject else Tree('S', [subject, vp]))
-                    verb = child[0].lower()
-                    match = best_matching_frame(verb, result_tree)
-                    if match != (None, None):
-                        match = FrameMatch(verb, match[1], match[0], negated, result_tree)
-                        result = match
-                        # TODO: for now we just return the first match
-                        break
+                    result = verb_child_frame_match(child,parent,subject,vp,negated)
+                    if result: break
+                elif child.node.startswith(TO_TAG) and vp[i+1].node.startswith(VP_TAG):
+                    #Handles the case of "[You are not] to go to the store"
+                    mvp = vp[i+1]
+                    for vchild in mvp:
+                        result = verb_child_frame_match(vchild,parent,subject,mvp,negated)
+                        if result: break                        
 
             # Break out if we've found something
             if result:
@@ -485,7 +498,14 @@ def match_verb(parse_tree, negated=False, subject=None, condition=None, verbose=
 
     return result
 
-
+def verb_child_frame_match(child,parent,subject,vp,negated):
+    result_tree = (parent if not subject else Tree('S', [subject, vp]))
+    verb = child[0].lower()
+    match = best_matching_frame(verb, result_tree)
+    if match != (None, None):
+        match = FrameMatch(verb, match[1], match[0], negated, result_tree)
+        return match
+        
 def _find_subject(parse_tree):
     """Return our best guess for what the subject is at the top level of a tree."""
     subjects = [child for child in parse_tree if child.node.startswith(SUBJ_TAG)]

@@ -34,6 +34,7 @@ class ParseMatcher(object):
     strictPPMatching is a numeric value that sets the acceptable depth distance from the NP head
     """
     DEFAULT_SLOT_POS = ['PREP','NP','VERB','LEX']
+    TO_TAG = "TO"
     pos_map = {         'S' : ['S'],
                         'DT' : ['DT'],
                         'ADV' : ['ADV'], 
@@ -163,13 +164,19 @@ class ParseMatcher(object):
         """Nearest siblings
             nearest sibling methods return inclusive of head so we can pop greater than the last elmt
         """
-        sLeftBranch = self.th.nearest_left_sibling(v)   
+        sLeftBranch = self.th.nearest_left_sibling(v)
+        sLeftSibling = copy.deepcopy(sLeftBranch)
+        sLeftSibling[-1] -= 1   
+        if self.th.get_pos(tree[sLeftSibling].node).startswith(self.TO_TAG):
+            #This verb is in its infinitive form, therefore try checking one level up for subject
+            sLeftBranch = sLeftBranch[:-1]
         if len(sLeftBranch) < 1:
             raise NoSubjectFound(left)
         for i in sLeftBranch[:-1]:
             stree = stree.pop(i)
         else:
-            #last item of sLeftBranch is the branch to the VP, subtract one and you get the nearest left branch            
+            #last item of sLeftBranch is the branch to the VP, 
+            #subtract one and you get the nearest left branch            
             sLeftBranch[-1] -= 1
             stree = stree.pop(sLeftBranch[-1])
             

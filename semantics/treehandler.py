@@ -234,7 +234,7 @@ class TreeHandler(object):
         '''Recursive traversal that returns the subtree when no more path'''
         if len(path) == 0:
             return tree
-        self.get_subtree(tree[path[0]],path[1:])
+        self.get_subtree(tree[path[0]],path[1:])    
         
     @staticmethod
     def node_pos(tree):
@@ -249,6 +249,27 @@ class TreeHandler(object):
         depthsplit = node.split(TreeHandler.depthdelim)#Split on depth delim
         possplit = depthsplit[0].split(TreeHandler.posdelim)#split on pos delim
         return possplit[0]
+    
+    def right_sibling_if_it_fits(self,tree,accepted,center,right):
+        """This is a specific filter that returns the right sibling of the leftmost 'center' pos
+            iff the right sibling of center is 'right' pos and the leaf at 'center' is in accepted.
+            
+            The purpose of this filter is to accomadate assertions about sentences...
+            when all you care about is the sentence, i.e. "You are [not to go to the hallway]."        
+        """
+        cursor = [-1]
+        be_verb_phrasepath = self.get_main_pos_phrasepath(tree, center,cursor=cursor)
+        if be_verb_phrasepath:
+            cursor = [w[1] for w in be_verb_phrasepath]
+            be_verb = tree[cursor]         
+            if be_verb in accepted:            
+                right_sibling_cursor = self.nearest_right_sibling(cursor, tree)
+                right_sibling_cursor[-1] += 1
+                if self.get_pos(tree[right_sibling_cursor].node) == 'S':           
+                    s = tree[right_sibling_cursor]
+                    return s
+        return tree
+        
              
         
     def leftmost_pos(self,tree,pos,cursor):
@@ -256,6 +277,9 @@ class TreeHandler(object):
             Cursor is the current rightmost path for this traversal.
             Returned tree must be to the right of cursor by at least one branch
         '''
+        if type(tree) == str:
+            #At leaf, return none
+            return None
         #If tree only has 1 branch       
         if len(tree) == 1:
             #If that branch 
@@ -322,7 +346,7 @@ class TreeHandler(object):
         index = leaves.index(node[0])
         return tree.leaf_treeposition(index)
     
-    def get_main_pos_phrasepath(self,tree,pos,maxPosDepth,cursor=[-1]):
+    def get_main_pos_phrasepath(self,tree,pos,maxPosDepth=-1,cursor=[-1]):
         '''Return path to the shallowest leftmost pos, with phrases at each branch'''      
         subtree = self.leftmost_pos(tree, pos,cursor)
         if not subtree:
