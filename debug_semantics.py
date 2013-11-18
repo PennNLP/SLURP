@@ -22,9 +22,12 @@ import sys
 from semantics.parsing import (extract_frames_from_parse, create_semantic_structures)
 from semantics.tree import Tree
 from pipelinehost import PipelineClient
+from semantics_logger import SemanticsLogger
 
 
 HEADER_WIDTH = 72
+MONGODB = True
+if MONGODB: semlog = SemanticsLogger()
 
 
 def process(parse):
@@ -51,8 +54,10 @@ def process(parse):
     semantic_structures = create_semantic_structures(frames)
     if semantic_structures:
         print semantic_structures
+        return semantic_structures
     else:
         print "No semantic structures returned."
+    
 
 
 def print_parse(parse, heading):
@@ -73,7 +78,7 @@ def main():
         text = " ".join(sys.argv[1:])
         parse = client.parse(text)
         if parse:
-            process(parse)
+            process(parse)            
         else:
             print "Connection to server closed."
     else:
@@ -84,7 +89,9 @@ def main():
                 break
             parse = client.parse(text)
             if parse:
-                process(parse)
+                semantic_structures = process(parse)
+                if semantic_structures and MONGODB:
+                    semlog.log_structures(text,semantic_structures)
             else:
                 print "Connection to server closed."
                 break
