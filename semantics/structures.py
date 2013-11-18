@@ -117,6 +117,16 @@ class Quantifier:
                '\tExhaustive: ' + str(self.exhaustive) + '\n' +\
                '\tProportionality: ' + str(self.proportionality) + '\n' +\
                '\tNumber: ' + str(self.number) + '\n'
+               
+    def __dict__(self):
+        return {'Quantifier': {
+                               'Plural' : self.plural ,\
+                               'Definite' : self.definite ,\
+                               'Exhaustive' : str(self.exhaustive) ,\
+                               'Proportionality' : str(self.proportionality) ,\
+                               'Number' : self.number
+                            }
+                }
 
     def __repr__(self):
         return self.__str__()
