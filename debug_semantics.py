@@ -22,13 +22,18 @@ import sys
 from semantics.parsing import (extract_frames_from_parse, create_semantic_structures)
 from semantics.tree import Tree
 from pipelinehost import PipelineClient
-from semantics_logger import SemanticsLogger
+from semantics.semantics_logger import SemanticsLogger
 
 
 HEADER_WIDTH = 72
 MONGODB = True
-if MONGODB: semlog = SemanticsLogger()
+ALL_SENTS_COMMAND = "/allsents"
+USER_SENTS_COMMAND = "/usersents"
+COMMANDS_BY_SENT = "/getcommands"
+SET_USER_ID_COMMAND = "/setuserid"
+SET_USER_NAME_COMMAND = "/setusername"
 
+if MONGODB: semlog = SemanticsLogger()
 
 def process(parse):
     """Show the steps of transformation for a parse."""
@@ -87,14 +92,27 @@ def main():
                 text = raw_input('> ')
             except (KeyboardInterrupt, EOFError):
                 break
-            parse = client.parse(text)
-            if parse:
-                semantic_structures = process(parse)
-                if semantic_structures and MONGODB:
-                    semlog.log_structures(text,semantic_structures)
+            print "text: ",[text]
+            split = text.split(" ")
+            if split[0] == ALL_SENTS_COMMAND:
+                print semlog.get_all_sents_by_user()
+            elif split[0] == USER_SENTS_COMMAND:
+                print semlog.get_all_sents_by_user(user_id=int(split[1]))
+            elif split[0] == COMMANDS_BY_SENT:
+                print semlog.get_all_commands(sentence=split[1:])    
+            elif split[0] == SET_USER_ID_COMMAND:
+                print semlog.set_user(user_id=int(split[1]))
+            elif split[0] == SET_USER_NAME_COMMAND:
+                print semlog.set_user(user_name=split[1])                                
             else:
-                print "Connection to server closed."
-                break
+                parse = client.parse(text)
+                if parse:
+                    semantic_structures = process(parse)
+                    if semantic_structures and MONGODB:
+                        semlog.log_structures(text,semantic_structures)
+                else:
+                    print "Connection to server closed."
+                    break
 
 
 if __name__ == "__main__":
