@@ -18,14 +18,42 @@ from semantics.new_structures import Command
 from semantics.mongo_handler import MongoHandler, Sentence
 
 class SemanticsLogger(object):
+    ALL_SENTS_COMMAND = "/allsents"
+    USER_SENTS_COMMAND = "/usersents"
+    COMMANDS_BY_SENT = "/getcommands"
+    SET_USER_ID_COMMAND = "/setuserid"
+    SET_USER_NAME_COMMAND = "/setusername"
+
+    
     def __init__(self,user_name="default_user",user_id=1):
         self.current_user_name = user_name
         self.current_user_id = user_id
         self.mdb = MongoHandler(user_name,user_id)
         self.sent = Sentence("test_sent")
+        self.command_dict = {
+                        "/allsents" : { "function" : self.get_all_sents, "param" : []}, 
+                        "/usersents" : { "function" : self.get_all_sents, "param" : []},
+                        "/getcommands" : { "function" : self.get_all_commands, "param" : ["sentence"]},
+                        "/setuserid" : { "function" : self.set_user, "param" : ["user_id"]},
+                        "/setusername" : { "function" : self.set_user, "param" : ["user_name"]},                     
+                }
         
+    def is_command(self,text):
+        split = text.split(" ")
+        command = split[0]
+        args = None
+        if len(split) > 1:
+            args = split[1:]
+        if command in self.command_dict:
+            if args:
+                return self.command_dict[command]["function"](" ".join(args))
+            else:
+                return self.command_dict[command]["function"]()
+        else:
+            return False        
+            
     def get_all_sents(self,user_id=None,user_name=None):
-        return self.mdb.get_all_sents(user_id, user_name)
+        return self.mdb.get_all_sents_by_user(user_id, user_name)
     
     def get_all_commands(self,sentence=None):
         if sentence:

@@ -38,9 +38,10 @@ class MongoHandler(object):
     default_db_loc = 'mongodb://localhost:27017'
     default_user_id = 1
     default_user_name = "default_user"
-    def __init__(self,user_name,user_id):
-        client = MongoClient(self.default_db_loc)
+    def __init__(self,user_name,user_id,password="default_password"):
+        client = MongoClient(self.default_db_loc)        
         self.db = client.slurp_db
+        self.db.authenticate(user_name,password)
         self.collection = self.db.sentence_semantics_collection
         self.user_id = user_id
         self.user_name = user_name

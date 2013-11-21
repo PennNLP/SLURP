@@ -32,11 +32,12 @@ from semantics.new_knowledge import KnowledgeBase
 from ltlbroom.ltl import (
     env, and_, or_, sys_, not_, iff, next_, always, always_eventually, implies,
     space, mutex_, ALWAYS, EVENTUALLY, OR)
-
+from semantics.semantics_logger import SemanticsLogger
 
 # Semantics constants
 LOCATION = "location"
 UNDERSPECIFIED = "*"
+MONGODB = True
 
 # Generation constants
 MEM = "mem"
@@ -140,6 +141,9 @@ class SpecGenerator(object):
 
         # Knowledge base
         self.kbase = KnowledgeBase()
+        
+        # Semantics Logging
+        #if MONGODB: self.semlog = SemanticsLogger()
 
     def generate(self, text, sensors, regions, props, tag_dict, realizable_reactions=True,
                  verbose=True):

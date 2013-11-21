@@ -27,12 +27,6 @@ from semantics.semantics_logger import SemanticsLogger
 
 HEADER_WIDTH = 72
 MONGODB = True
-ALL_SENTS_COMMAND = "/allsents"
-USER_SENTS_COMMAND = "/usersents"
-COMMANDS_BY_SENT = "/getcommands"
-SET_USER_ID_COMMAND = "/setuserid"
-SET_USER_NAME_COMMAND = "/setusername"
-
 if MONGODB: semlog = SemanticsLogger()
 
 def process(parse):
@@ -93,17 +87,10 @@ def main():
             except (KeyboardInterrupt, EOFError):
                 break
             print "text: ",[text]
-            split = text.split(" ")
-            if split[0] == ALL_SENTS_COMMAND:
-                print semlog.get_all_sents_by_user()
-            elif split[0] == USER_SENTS_COMMAND:
-                print semlog.get_all_sents_by_user(user_id=int(split[1]))
-            elif split[0] == COMMANDS_BY_SENT:
-                print semlog.get_all_commands(sentence=split[1:])    
-            elif split[0] == SET_USER_ID_COMMAND:
-                print semlog.set_user(user_id=int(split[1]))
-            elif split[0] == SET_USER_NAME_COMMAND:
-                print semlog.set_user(user_name=split[1])                                
+
+            semlog_command = semlog.is_command(text) 
+            if semlog_command:
+                print semlog_command
             else:
                 parse = client.parse(text)
                 if parse:
