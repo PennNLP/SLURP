@@ -176,7 +176,10 @@ class LTLMoPClient(object):
             except IOError:
                 self.append_log("Could not connect to NLPipeline.")
                 raise
-            self.on_receive_reply(reply)
+            if type(reply) == list:
+                for w in reply: self.on_receive_reply(w)
+            else:
+                self.on_receive_reply(reply)
 
     def on_receive_reply(self, result):
         """ when the dialoguemanager has gotten back to us """
@@ -198,7 +201,7 @@ class LTLMoPClient(object):
 class BarebonesDialogueManager(object):
     
     #GOTIT responsibility was on specgen but now it is on the dialogue manager    
-    GOTIT = "Got it. I can {!r}."
+    GOTIT = "Got it. I can {!r}"
     DEFAULT_SPECGEN_PROBLEM = "UNKNOWN specgen problem on command"
     SPECIFIC_SPECGEN_PROBLEM = "Could not understand"
     
@@ -330,28 +333,42 @@ class BarebonesDialogueManager(object):
                 talkback_responses = [w for w in responses if w.startswith(self.SPECIFIC_SPECGEN_PROBLEM)][0]
                 if len(talkback_responses) == 0:
                     talkback_responses= [self.DEFAULT_SPECGEN_PROBLEM]
-            return talkback_responses[0] 
+            return talkback_responses 
                  
             
     def get_command_talkback(self,responses):
-        print "SPECGEN TYPES: ",[type(w) for w in responses]
         print "SPECGEN RESPONSES: ",responses
         response_dicts = [ast.literal_eval(w) for w in responses if not self._error_on_specgen(w)]
         command_dicts = [w["Command"] for w in response_dicts]
-        command_actions = list(set([w["Action"] for w in command_dicts]))
-        talkback_responses = []
-        if len(command_actions) == 1:    
-            talkback_responses.append(self.respond_okay(command_actions[0]))
-        else:
-            talkback_responses.append(self.respond_okay(", ".join(command_actions[:-1]) + " and " + command_actions[-1]))
+        talkback_responses = [ self.respond_okay(w) for w in command_dicts]        
         return talkback_responses
         
     def _error_on_specgen(self,reponse):
         return reponse.startswith(self.SPECIFIC_SPECGEN_PROBLEM) or reponse == self.DEFAULT_SPECGEN_PROBLEM
     
-    def respond_okay(self,action):
+    def respond_okay(self,command):
         """Respond that we will perform the action."""
-        return self.GOTIT.format(action)
+        print "respond_okay command: ",command
+        action = command["Action"]
+        ok = self.GOTIT.format(action)
+        for toplevel in command: 
+            #toplevels are agents, actions, themes, conditions etc.
+            if type(command[toplevel]) == type({}) and toplevel != "Agent":
+                #sublevels are Objects, locations etc.
+                for sublevel in command[toplevel]:
+                    if type(command[toplevel][sublevel]) == type({}):
+                        ok += ", "
+                        if "Name" in command[toplevel][sublevel]:
+                            if toplevel != sublevel:
+                                ok += toplevel + ", " + sublevel + ": " + \
+                                command[toplevel][sublevel]["Name"] 
+                            else:
+                                ok += toplevel + ": " + \
+                                command[toplevel][sublevel]["Name"]                                
+                        else:
+                            ok += toplevel  + ": unknown Name"
+        ok += "."
+        return ok
 
     def get_spec(self):
         """ return the current specification as one big string """
