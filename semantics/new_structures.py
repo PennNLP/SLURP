@@ -62,7 +62,7 @@ class Entity(object):
                 {
                  'Name' : str(self.name) , \
                  'Quantifier' : (self.quantifier.__dict__() if self.quantifier else '') , \
-                 'Description' : str(self.description)
+                 'Description' : self.description
                 }
                 }
 
