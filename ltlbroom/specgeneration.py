@@ -37,7 +37,6 @@ from semantics.semantics_logger import SemanticsLogger
 # Semantics constants
 LOCATION = "location"
 UNDERSPECIFIED = "*"
-MONGODB = True
 
 # Generation constants
 MEM = "mem"
@@ -141,9 +140,6 @@ class SpecGenerator(object):
 
         # Knowledge base
         self.kbase = KnowledgeBase()
-        
-        # Semantics Logging
-        #if MONGODB: self.semlog = SemanticsLogger()
 
     def generate(self, text, sensors, regions, props, tag_dict, realizable_reactions=True,
                  verbose=True):
