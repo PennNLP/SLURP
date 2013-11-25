@@ -348,7 +348,6 @@ class BarebonesDialogueManager(object):
     
     def respond_okay(self,command):
         """Respond that we will perform the action."""
-        print "respond_okay command: ",command
         action = command["Action"]
         ok = self.GOTIT.format(action)
         for toplevel in command: 
