@@ -337,7 +337,6 @@ class BarebonesDialogueManager(object):
                  
             
     def get_command_talkback(self,responses):
-        print "SPECGEN RESPONSES: ",responses
         response_dicts = [ast.literal_eval(w) for w in responses if not self._error_on_specgen(w)]
         command_dicts = [w["Command"] for w in response_dicts]
         talkback_responses = [ self.respond_okay(w) for w in command_dicts]        
