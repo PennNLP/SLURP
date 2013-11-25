@@ -26,7 +26,7 @@ from semantics.semantics_logger import SemanticsLogger
 
 
 HEADER_WIDTH = 72
-MONGODB = True
+MONGODB = False
 if MONGODB: semlog = SemanticsLogger()
 
 def process(parse):
@@ -88,7 +88,8 @@ def main():
                 break
             print "text: ",[text]
 
-            semlog_command = semlog.is_command(text) 
+            semlog_command = False
+            if MONGODB: semlog_command = semlog.is_command(text)
             if semlog_command:
                 print semlog_command
             else:
@@ -97,6 +98,8 @@ def main():
                     semantic_structures = process(parse)
                     if semantic_structures and MONGODB:
                         semlog.log_structures(text,semantic_structures)
+                    for s in semantic_structures:
+                        print "semantic_structure dict: ",s.__dict__()
                 else:
                     print "Connection to server closed."
                     break
