@@ -32,7 +32,6 @@ from semantics.new_knowledge import KnowledgeBase
 from ltlbroom.ltl import (
     env, and_, or_, sys_, not_, iff, next_, always, always_eventually, implies,
     space, mutex_, ALWAYS, EVENTUALLY, OR)
-from semantics.semantics_logger import SemanticsLogger
 
 # Semantics constants
 LOCATION = "location"
@@ -248,7 +247,8 @@ class SpecGenerator(object):
                     continue
                 else:
                     #We already know if the command was "OK" because of results, useful response
-                    command_responses.append(command.action)
+                    #command_responses.append(command.action)
+                    command_responses.append(command.__dict__())
 
                 # Add in the new lines
                 command_key = _format_command(command)
@@ -268,10 +268,10 @@ class SpecGenerator(object):
             # Add responses and successes
             results.append(success)
             if success:
-                unique_res = [w for w in set(command_responses)]                
-                responses.append(respond_okay(", ".join(unique_res[:-1]) + " and " + unique_res[-1]))
+                responses = [str(w) for w in command_responses]
             else:
-                responses.append(problem)
+                responses = [problem]
+                
             # Add some space between commands
             if verbose:
                 print

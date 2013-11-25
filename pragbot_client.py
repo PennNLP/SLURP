@@ -252,6 +252,10 @@ class PragbotClient(object):
     def send_response(self, msg):
         """Send a chat response to the server."""
         self.sendMessage('CHAT_MESSAGE_PREFIX<JR> ', msg)
+        
+    def send_semantic_frame_response(self,frame_dict_string):
+        """Send a dictionary string of a semantic frame to the PragbotClient for logging."""
+        self.sendMessage('SEMANTIC_FRAME_PREFIX',frame_dict_string)
 
     def run(self):
         """Process requests from the server."""

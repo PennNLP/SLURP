@@ -2,6 +2,7 @@
 
 import os
 import sys
+import ast
 import getpass
 import socket
 import multiprocessing
@@ -195,6 +196,12 @@ class LTLMoPClient(object):
 
 
 class BarebonesDialogueManager(object):
+    
+    #GOTIT responsibility was on specgen but now it is on the dialogue manager    
+    GOTIT = "Got it. I can {!r}."
+    DEFAULT_SPECGEN_PROBLEM = "UNKNOWN specgen problem on command"
+    SPECIFIC_SPECGEN_PROBLEM = "Could not understand"
+    
     def __init__(self, ltlmopclient, executor, base_spec=None):
         """ take reference to execution context and gui_window
             optionally initialize with some base spec text """
@@ -315,10 +322,36 @@ class BarebonesDialogueManager(object):
             # clobber the `.ltl` file
             # FIXME: This may only work with SLURP
             self.compiler.proj.specText = message.strip()
-            spec, traceback_tree, response = self.compiler._writeLTLFile()
+            spec, traceback_tree, responses = self.compiler._writeLTLFile()            
             if spec is not None:
                 self.spec.append(message.strip())
-            return response[0]
+                talkback_responses = self.get_command_talkback(responses)
+            else:
+                talkback_responses = [w for w in responses if w.startswith(self.SPECIFIC_SPECGEN_PROBLEM)][0]
+                if len(talkback_responses) == 0:
+                    talkback_responses= [self.DEFAULT_SPECGEN_PROBLEM]
+            return talkback_responses[0] 
+                 
+            
+    def get_command_talkback(self,responses):
+        print "SPECGEN TYPES: ",[type(w) for w in responses]
+        print "SPECGEN RESPONSES: ",responses
+        response_dicts = [ast.literal_eval(w) for w in responses if not self._error_on_specgen(w)]
+        command_dicts = [w["Command"] for w in response_dicts]
+        command_actions = list(set([w["Action"] for w in command_dicts]))
+        talkback_responses = []
+        if len(command_actions) == 1:    
+            talkback_responses.append(self.respond_okay(command_actions[0]))
+        else:
+            talkback_responses.append(self.respond_okay(", ".join(command_actions[:-1]) + " and " + command_actions[-1]))
+        return talkback_responses
+        
+    def _error_on_specgen(self,reponse):
+        return reponse.startswith(self.SPECIFIC_SPECGEN_PROBLEM) or reponse == self.DEFAULT_SPECGEN_PROBLEM
+    
+    def respond_okay(self,action):
+        """Respond that we will perform the action."""
+        return self.GOTIT.format(action)
 
     def get_spec(self):
         """ return the current specification as one big string """
