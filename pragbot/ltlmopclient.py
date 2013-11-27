@@ -19,20 +19,24 @@ import execute
 # TODO: This class with one instance is overkill
 # pylint: disable=W0201
 class Config(object):
-    pass
-CONFIG = Config()
-CONFIG.base_spec_file = os.path.join("pragbotscenario", "pragbot.spec")
-CONFIG.executor_base_port = 11000
-CONFIG.ltlmop_base_port = 12000
-CONFIG.max_port_tries = 100
-
+    executor_base_port = 11000
+    ltlmop_base_port = 12000
+    max_port_tries = 100
+    
+    def __init__(self):        
+        self.base_spec_dir = "pragbotscenario"
+        self.base_spec = "pragbot.spec"        
+        
+    def get_spec_file(self):
+        return os.path.join(self.base_spec_dir, self.base_spec)
+    
 RESPONSE_ERROR = "Sorry, something went wrong when I tried to understand that."
 
 
 def find_port(base):
     """Try to find an open port starting at base."""
     port = base
-    while (port - base) < CONFIG.max_port_tries:
+    while (port - base) < Config.max_port_tries:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
@@ -47,27 +51,51 @@ def find_port(base):
 class LTLMoPClient(object):
 
     def __init__(self, handler_port, chat_callback):
+        self.CONFIG = Config()
+        spec_file = self.CONFIG.get_spec_file()           
+        self.handler_port = handler_port
         self.map_bitmap = None
         self.robot_pos = None
         self.fiducial_positions = {}
-        self.proj = project.Project()
-        self.proj.loadProject(CONFIG.base_spec_file)
+        self.proj = project.Project()        
+        self.proj.loadProject(spec_file)
         self.chat_callback = chat_callback
+        self.executor_proxy = self.get_executor(spec_file)
+        self.dialogue_manager = self.get_dialogue_manager()
+        
+    def get_dialogue_manager(self):
+        # Start dialogue manager
+        dialogue_manager = BarebonesDialogueManager(self, self.executor_proxy)
 
+        self.user_name = "User"
+
+        # Wait for executor to fully boot
+        self.append_log(">> Please wait, initializing...")
+        while not self.executor_ready_flag.wait(0.1):
+            time.sleep(.1)
+        self.append_log(">> Ready!")
+        self.append_log("  ")
+
+        # Tell the user we are ready
+        self.append_log("Hello.", "System")
+        
+        return dialogue_manager
+        
+    def get_executor(self,spec_file):        
         # Start execution context
         print "Starting executor..."
         self.executor_ready_flag = threading.Event()
-        self.executor_port = find_port(CONFIG.executor_base_port)
+        self.executor_port = find_port(self.CONFIG.executor_base_port)
         print "Using port {} for executor".format(self.executor_port)
         self.executor_process = multiprocessing.Process(
             target=execute.execute_main,
             args=(self.executor_port,
-                  self.proj.getFilenamePrefix() + ".spec",
-                  None, False, {'handler_port': handler_port}))
+                  spec_file,
+                  None, False, {'handler_port': self.handler_port}))
         self.executor_process.start()
 
         # Start our own xml-rpc server to receive events from execute
-        self.server_port = find_port(CONFIG.ltlmop_base_port)
+        self.server_port = find_port(self.CONFIG.ltlmop_base_port)
         print "Using port {} for LTLMoP client".format(self.server_port)
         self.xmlrpc_server = SimpleXMLRPCServer(("127.0.0.1", self.server_port),
                                                 logRequests=False, allow_none=True)
@@ -86,34 +114,30 @@ class LTLMoPClient(object):
         print "Connecting to executor...",
         while True:
             try:
-                self.executor_proxy = xmlrpclib.ServerProxy(
+                executor_proxy = xmlrpclib.ServerProxy(
                     "http://127.0.0.1:{}".format(self.executor_port),
                     allow_none=True)
 
                 # Register with executor for event callbacks
-                self.executor_proxy.registerExternalEventTarget(
+                executor_proxy.registerExternalEventTarget(
                     "http://127.0.0.1:{}".format(self.server_port))
             except socket.error:
                 sys.stdout.write(".")
             else:
                 break
-
         print
+        return executor_proxy
+            
+    def set_project(self,specfile):
+        """Set the project of this client via a new specfile"""
+        self.CONFIG.base_spec = specfile
+        new_spec_file = self.CONFIG.get_spec_file()
+        self.proj = project.Project()        
+        self.proj.loadProject(new_spec_file)
+        self.executor_proxy.initialize(new_spec_file,None)
 
         # Start dialogue manager
-        self.dialogue_manager = BarebonesDialogueManager(self, self.executor_proxy)
-
-        self.user_name = "User"
-
-        # Wait for executor to fully boot
-        self.append_log(">> Please wait, initializing...")
-        while not self.executor_ready_flag.wait(0.1):
-            time.sleep(.1)
-        self.append_log(">> Ready!")
-        self.append_log("  ")
-
-        # Tell the user we are ready
-        self.append_log("Hello.", "System")
+        self.dialogue_manager = self.get_dialogue_manager()
 
     def handleEvent(self, event_type, event_data):
         """Processes messages from the controller, and updates the GUI accordingly"""

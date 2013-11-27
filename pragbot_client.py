@@ -208,6 +208,10 @@ class PragbotClient(object):
                 self.ltlmop.on_receive_reply(RESPONSE_CRASH)
                 self.stop = True
                 self.shutdown()
+        elif line.startswith('RESET_SLURP_PROJECT_SPEC'):
+            logging.info("Trying to create new ltlmop client" + line)            
+            line = _remove_prefix(line, 'RESET_SLURP_PROJECT_SPEC')
+            self.ltlmop.set_project(line)
         elif line.startswith('MOVE_PLAYER_CELL'):
             line = _remove_prefix(line, 'MOVE_PLAYER_CELL')
             new_x, old_x, new_y, old_y = line.split(',')
