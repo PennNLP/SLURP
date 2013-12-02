@@ -35,8 +35,8 @@ class SemanticsHandler(object):
         
     def get_semantic_structures(self,sentence):
         parse = self.client.parse(sentence)
-        return process(parse,verbose=False)
-
+        return process(parse,verbose=False)    
+     
 def process(parse,verbose=True):
     """Show the steps of transformation for a parse."""
     # Original parse
