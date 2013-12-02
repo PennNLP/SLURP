@@ -1,5 +1,5 @@
 """
-A web interface for Pragbot
+A web interface for SLURP semantic command interpretation.
 """
 
 # Copyright (C) 2013 Taylor Turpen
@@ -17,6 +17,7 @@ A web interface for Pragbot
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import web
+from web import form
 import sys
 import logging
 
@@ -27,17 +28,38 @@ class PragbotWeb(object):
     def __init__(self):
         self.urls = self._default_urls()  
         self.app = web.application(self.urls,globals())
+        self.get_text = form.Form(
+                         form.Textbox("Command:"),
+                         form.Button("Send")                         
+                         )
         self.renderer = web.template.render('templates/')       
 
-    def run(self):        
+    def run(self):    
         self.app.run()
+        
+    def get_user_text(self):
+        return form.Form(
+                         form.Textbox("Command:"),
+                         form.Button("Send")                         
+                         )
         
     def _default_urls(self):
         return ('/', 'PragbotWeb')
     
     def GET(self):
         #return "Hello World!"
-        return self.renderer.index()
+        form = self.get_text()
+        return self.renderer.command_page(form)
+        #return self.renderer.index()
+    
+    def POST(self): 
+        form = self.get_text() 
+        if not form.validates(): 
+            return self.renderer.command_page(form)
+        else:
+            # form.d.boe and form['boe'].value are equivalent ways of
+            # extracting the validated arguments from the form.
+            return "Grrreat success! boe: %s, bax: %s" % (form.d.boe, form['bax'].value)
     
 def main():
     args = ["/home/taylor/repos/Pragbot/build/jar/"]
