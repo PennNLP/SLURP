@@ -29,33 +29,42 @@ HEADER_WIDTH = 72
 MONGODB = False
 if MONGODB: semlog = SemanticsLogger()
 
-def process(parse):
+class SemanticsHandler(object):
+    def __init__(self):
+        self.client = PipelineClient(verbose=True)
+        
+    def get_semantic_structures(self,sentence):
+        parse = self.client.parse(sentence)
+        return process(parse,verbose=False)
+
+def process(parse,verbose=True):
     """Show the steps of transformation for a parse."""
     # Original parse
     parse_tree = Tree.parse(parse)
     print_parse(parse_tree, "Parse")
 
-    frames = extract_frames_from_parse(parse, verbose=True)
-    print
-    for frame in frames:
-        print frame.pprint()
-        if frame.condition:
-            print "Condition:"
-            print frame.condition.pprint()
-    print
+    frames = extract_frames_from_parse(parse, verbose=verbose)
+    if verbose:
+        print
+        for frame in frames:
+            print frame.pprint()
+            if frame.condition:
+                print "Condition:"
+                print frame.condition.pprint()
+        print
 
     # Bail if no frames matched
     if not frames:
-        print "No frames matched."
+        if verbose: print "No frames matched."
         return
 
     # Extract semantic structures
     semantic_structures = create_semantic_structures(frames)
     if semantic_structures:
-        print semantic_structures
+        if verbose: print semantic_structures
         return semantic_structures
     else:
-        print "No semantic structures returned."
+        if verbose: print "No semantic structures returned."
     
 
 
