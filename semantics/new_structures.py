@@ -31,7 +31,7 @@ class Entity(object):
         # Using mutable object as default argument causes
         # it to be aliased across instances
         self.description = description if description is not None else []
-
+        
     def merge(self, other):
         """Merge this entity with another entity"""
         if other.name is not None:
@@ -47,7 +47,7 @@ class Entity(object):
             return self.name
         else:
             return '%s %s' % (self.quantifier.readable(), self.name)
-
+        
     def __str__(self, lvl=0):
         if self.name == '*':
             return self.name
@@ -60,7 +60,7 @@ class Entity(object):
     def __dict__(self):
         return { str(self.TYPES[self.TYPE_ID]): \
                 {
-                 'Name' : str(self.name) , \
+                 'Name' : self.name , \
                  'Quantifier' : (self.quantifier.__dict__() if self.quantifier else '') , \
                  'Description' : self.description
                 }
@@ -69,9 +69,6 @@ class Entity(object):
     def __repr__(self):
         return str(self)
 
-    def __eq__(self, other):
-        return self.name == other.name
-
     def __hash__(self):
         return hash(self.name)
 
@@ -79,12 +76,41 @@ class ObjectEntity(Entity):
     """Class representing an object entity"""
 
     TYPE_ID = 0
+    def __eq__(self,other):
+        return (isinstance(other,ObjectEntity) and
+                self.name == other.name and
+                self.quantifier == other.quantifier and
+                self.description == other.description
+                )
+        
+    @staticmethod
+    def from_dict(d):
+        default = ObjectEntity(d["Name"],d["Description"])
+        quantifier = Quantifier.from_dict(d["Quantifier"])       
+        default.description = d["Description"] 
+        default.quantifier = quantifier
+        return default
 
 
 class Location(Entity):
     """Class representing a location entity"""
 
     TYPE_ID = 1
+    
+    def __eq__(self,other):
+        return (isinstance(other,Location) and
+                self.name == other.name and
+                self.quantifier == other.quantifier and
+                self.description == other.description
+                )
+        
+    @staticmethod
+    def from_dict(d):
+        default = Location(d["Name"],d["Description"])
+        quantifier = Quantifier.from_dict(d["Quantifier"])   
+        default.description = d["Description"]     
+        default.quantifier = quantifier
+        return default
 
 
 class Quantifier(object):
@@ -115,6 +141,21 @@ class Quantifier(object):
             self.number = 1
         if cd != None:
             self.number = cd if cd.isdigit() else text2int(cd)
+            
+    def __eq__(self,other):
+        return (isinstance(other,Quantifier) and
+                self.type == other.type and
+                self.definite == other.definite and
+                self.number == other.number
+                )
+        
+    @staticmethod
+    def from_dict(d):
+        default = Quantifier()
+        default.type = d["Type"]
+        default.definite = d["Definite"]
+        default.number = d["Number"]
+        return default 
 
     def readable(self):
         if self.definite:
@@ -255,7 +296,7 @@ class Command(object):
         self.action = action
         self.condition = condition
         self.negation = negation
-
+        
     def __str__(self, lvl=0):
         indent = '\t'*(lvl + 1)
         return 'Command: \n' + \
@@ -280,7 +321,21 @@ class Command(object):
                'Destination' : (self.destination.__dict__() if self.destination else ''), \
                'Condition' : (self.condition.__dict__() if self.condition else ''), \
                'Negation' : self.negation}}
-
+                
+    def __eq__(self,other):
+        # TODO: consolidate this, useful for debugging for now
+        z = isinstance(other,Command)
+        a = self.agent == other.agent             
+        b = self.action == other.action
+        c = self.theme == other.theme
+        d = self.patient == other.patient
+        e = self.location == other.location
+        f = self.source == other.source
+        g = self.destination == other.destination
+        h = self.condition == other.condition
+        i = self.negation == other.negation
+        return z and a and b and c and d and e and f and g and h and i
+    
     def __repr__(self):
         return str(self)
 
