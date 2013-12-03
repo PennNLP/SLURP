@@ -15,11 +15,11 @@ A web interface for SLURP semantic command interpretation.
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 import web
 from web import form
 import sys
 import logging
+from training.basic_training import Go
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("[web]")
@@ -27,7 +27,8 @@ logger = logging.getLogger("[web]")
 class PragbotWeb(object):
     def __init__(self):
         self.urls = self._default_urls()  
-        self.app = web.application(self.urls,globals())
+        self.trainer = Go()
+        self.app = web.application(self.urls,globals())        
         self.get_text = form.Form(
                          form.Textbox("Command:"),
                          form.Button("Send")                         
@@ -38,9 +39,8 @@ class PragbotWeb(object):
         self.app.run()
         
     def get_user_text(self):
-        return form.Form(
-                         form.Textbox("Command:"),
-                         form.Button("Send")                         
+        return form.Form(form.Textbox("Command:"),
+                         form.Button("Send"),
                          )
         
     def _default_urls(self):
@@ -48,8 +48,11 @@ class PragbotWeb(object):
     
     def GET(self):
         #return "Hello World!"
-        form = self.get_text()
-        return self.renderer.command_page(form)
+        form = self.get_user_text()
+        prompt = self.trainer.get_next_prompt()
+        command_prompt = self.renderer.command_prompt(prompt)        
+        command_form = self.renderer.command_page(form)
+        return str(command_prompt) + str(command_form)
         #return self.renderer.index()
     
     def POST(self): 
@@ -59,7 +62,7 @@ class PragbotWeb(object):
         else:
             # form.d.boe and form['boe'].value are equivalent ways of
             # extracting the validated arguments from the form.
-            return "Grrreat success! boe: %s, bax: %s" % (form.d.boe, form['bax'].value)
+            return "Received Command: %s" % (form['Command:'].value)
     
 def main():
     args = ["/home/taylor/repos/Pragbot/build/jar/"]

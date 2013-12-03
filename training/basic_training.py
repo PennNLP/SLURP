@@ -16,14 +16,14 @@ A basic training instance for SLURP semantic command interpretation.
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from debug_semantics import SemanticsHandler
 from semantics.new_structures import Command, ObjectEntity, Location
-
-import unittest 
-
-class Go(unittest.TestCase):
-    def setUp(self):
-        self.handler = SemanticsHandler()
+def main():
+    trainer = Go()
+    
+class Go(object):
+    def __init__(self):
+        #self.handler = SemanticsHandler()
+        self.next = "next"
         self.prompt = "prompt"
         self.response = "response"
         self.agent_object = "object"
@@ -44,6 +44,7 @@ class Go(unittest.TestCase):
                         "cellar" : "cellar"
                     }   
         self.ccs = { "and" : "and"}
+        self.current_exercise = "go_simple"
         self.train_dict = {"go_simple" : {self.prompt : "Tell Junior to go to the %s" % self.regions["office"],
                                self.default_action : "go",
                                self.correct_commands : [self.command_from_dict({'Source': '',
@@ -58,7 +59,8 @@ class Go(unittest.TestCase):
                                                   'Negation': False,
                                                   'Agent': {'Object': {'Quantifier': {'Type': 'exact', 'Definite': True, 'Number': 1},
                                                                        'Name': None, 'Description': []}}})],
-                               self.response: "Good work! Junior will go."
+                               self.response: "Good work! Junior will go.",
+                               self.next : "go_moderate"
                                },
                 "go_moderate" : {self.prompt : "Tell Junior to go to the office and the conservatory.",
                                self.default_action : "go",
@@ -74,7 +76,8 @@ class Go(unittest.TestCase):
                                                   'Negation': False,
                                                   'Agent': {'Object': {'Quantifier': {'Type': 'exact', 'Definite': True, 'Number': 1},
                                                                        'Name': None, 'Description': []}}}) for w in self.moderate_regions],
-                               self.response: "Good work! Junior will go."
+                               self.response: "Good work! Junior will go.",
+                               self.next: "go_advanced"
                                },    
                 "go_advanced" : {self.prompt : "Tell Junior to go to the office, the conservatory, and the cellar.",
                              self.default_action : "go",
@@ -90,30 +93,33 @@ class Go(unittest.TestCase):
                                                    'Negation': False,
                                                    'Agent': {'Object': {'Quantifier': {'Type': 'exact', 'Definite': True, 'Number': 1},
                                                                         'Name': None, 'Description': []}}}) for w in self.advanced_regions],
-                               self.response: "Good work! Junior will go."
+                               self.response: "Good work! Junior will go.",
+                               self.next: "done."
                                }          
                 }
 
-#     def test_go_moderate(self):
-#         exercise = self.train_dict["go_moderate"]
-#         success = False
-#         while not success:
-#             success = True
-#             response = self.get_input(exercise[self.prompt]+":\n")
-#             commands = self.handler.get_semantic_structures(response)            
-#             for command in commands:                
-#                 self.assertIn(str(command),[str(w) for w in exercise[self.correct_commands]])
-                        
-    def test_go_simple(self):
-        exercise = self.train_dict["go_simple"]
+    def go_moderate(self):
+        exercise = self.train_dict["go_moderate"]
         success = False
         while not success:
             success = True
             response = self.get_input(exercise[self.prompt]+":\n")
             commands = self.handler.get_semantic_structures(response)            
             for command in commands:                
-                self.assertIn(command,exercise[self.correct_commands])
+                self.assertIn(str(command),[str(w) for w in exercise[self.correct_commands]])
+                        
+    def go_simple(self):
+        exercise = self.train_dict["go_simple"]
+        success = True
+        response = self.get_input(exercise[self.prompt]+":\n")
+        commands = self.handler.get_semantic_structures(response)            
+        for command in commands:                
+            self.assertIn(command,exercise[self.correct_commands])
+        return success
                 
+    def get_next_prompt(self):
+        return self.train_dict[self.current_exercise][self.prompt]
+    
     def command_from_dict(self,d):
         #agents and patients
         if d["Patient"] != "":
@@ -160,7 +166,7 @@ class Go(unittest.TestCase):
         return Command(agent,theme,patient,location,source,destination,d["Action"],condition,d["Negation"])
 
 if __name__=="__main__":
-    unittest.main()
+    main()
         
 
         

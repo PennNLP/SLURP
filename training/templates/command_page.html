@@ -1,0 +1,5 @@
+$def with (form)
+<form name="main" method="post"> 
+$if not form.valid: <p class="error">Error with form:</p>
+$:form.render()
+</form>
