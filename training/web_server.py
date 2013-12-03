@@ -24,46 +24,92 @@ from training.basic_training import Go
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("[web]")
     
+OK = "OK"
+NOT_OK = "NOT_OK"
+web.config.session_parameters.update(cookie_name="current_exercise", cookie_domain="localhost",cookie_value="go_simple") 
 class PragbotWeb(object):
     def __init__(self):
-        self.urls = self._default_urls()  
-        self.trainer = Go()
+        self.urls = self._default_urls()
+        web.config.session_parameters.update(cookie_name="current_exercise", cookie_domain="localhost")                
+        #cookie = web.cookies(current_exercise="go_simple")
+        self.head = "<html>"
+        self.tail = "</html>" 
+        self.trainer = None   
+        self.current_exercise = None
         self.app = web.application(self.urls,globals())        
         self.get_text = form.Form(
                          form.Textbox("Command:"),
                          form.Button("Send")                         
-                         )
-        self.renderer = web.template.render('templates/')       
+                         )        
+        self.renderer = web.template.render('templates/')
+        self.current_page = ""
 
+    def get_trainer(self):
+        if self.current_exercise:
+            #If the current exercise is already known, don't check the cookie
+            if self.trainer:
+                if self.trainer.current_exercise == self.current_exercise: 
+                        return
+            self.trainer = Go(self.current_exercise)
+            return        
+        current_exercise = web.cookies().get("current_exercise")
+        #Get the cookie, set the trainer
+        if current_exercise:
+            if self.trainer:
+                if self.trainer.current_exercise == current_exercise: 
+                    return
+            self.trainer = Go(current_exercise)
+        else:
+            self.trainer = Go()
+            
     def run(self):    
         self.app.run()
         
     def get_user_text(self):
         return form.Form(form.Textbox("Command:"),
                          form.Button("Send"),
-                         )
-        
+                         )        
+    
     def _default_urls(self):
         return ('/', 'PragbotWeb')
     
     def GET(self):
         #return "Hello World!"
-        form = self.get_user_text()
-        prompt = self.trainer.get_next_prompt()
+        self.get_trainer()
+        form = self.get_user_text()        
+        prompt = self.trainer.get_current_prompt()
         command_prompt = self.renderer.command_prompt(prompt)        
         command_form = self.renderer.command_page(form)
-        return str(command_prompt) + str(command_form)
+        page = self.head + str(command_prompt) + str(command_form) + self.tail
+        self.current_page = ""
+        return page
         #return self.renderer.index()
     
     def POST(self): 
-        form = self.get_text() 
+        form = self.get_user_text() 
+        if not self.trainer:
+            self.get_trainer()
+            
         if not form.validates(): 
             return self.renderer.command_page(form)
         else:
-            # form.d.boe and form['boe'].value are equivalent ways of
-            # extracting the validated arguments from the form.
-            return "Received Command: %s" % (form['Command:'].value)
-    
+            user_input = form['Command:'].value
+            training_response = self.trainer.run_current_exercise(user_input)
+            if training_response.startswith(OK):
+                #If response is ok, set the cookie, set self.current_exercise
+                training_response = training_response.lstrip(OK)         
+                next_exercise = self.trainer.get_next_exercise()        
+                self.current_exercise = next_exercise           
+                web.setcookie("current_exercise", next_exercise, 3600)                              
+            elif training_response.startswith(NOT_OK):
+                #Leave cookie alone
+                training_response = training_response.lstrip(NOT_OK)
+            self.head = str(self.renderer.command_response(training_response))
+            #return self.current_page            
+            return self.GET()
+            
+            #return "Received Command: %s and got response from training: %s" % (form['Command:'].value,self.current_page)
+        
 def main():
     args = ["/home/taylor/repos/Pragbot/build/jar/"]
     if len(args) < 1:

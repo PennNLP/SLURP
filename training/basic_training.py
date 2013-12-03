@@ -17,12 +17,16 @@ A basic training instance for SLURP semantic command interpretation.
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from semantics.new_structures import Command, ObjectEntity, Location
-def main():
-    trainer = Go()
-    
+from training.semantics_handler import SemanticsHandler
+from pipelinehost import PipelineClient
+from semantics.tree import Tree
+
+OK = "OK"
+NOT_OK = "NOT_OK"
+
 class Go(object):
-    def __init__(self):
-        #self.handler = SemanticsHandler()
+    def __init__(self,exercise="go_simple"):
+        self.handler = SemanticsHandler()
         self.next = "next"
         self.prompt = "prompt"
         self.response = "response"
@@ -44,7 +48,8 @@ class Go(object):
                         "cellar" : "cellar"
                     }   
         self.ccs = { "and" : "and"}
-        self.current_exercise = "go_simple"
+        self.current_exercise = exercise
+        self.train_functions = {"go_simple" : self.go_simple, "go_moderate" : self.go_moderate, "go_advanced" : self.go_advanced}
         self.train_dict = {"go_simple" : {self.prompt : "Tell Junior to go to the %s" % self.regions["office"],
                                self.default_action : "go",
                                self.correct_commands : [self.command_from_dict({'Source': '',
@@ -77,7 +82,7 @@ class Go(object):
                                                   'Agent': {'Object': {'Quantifier': {'Type': 'exact', 'Definite': True, 'Number': 1},
                                                                        'Name': None, 'Description': []}}}) for w in self.moderate_regions],
                                self.response: "Good work! Junior will go.",
-                               self.next: "go_advanced"
+                               self.next: "go_simple"
                                },    
                 "go_advanced" : {self.prompt : "Tell Junior to go to the office, the conservatory, and the cellar.",
                              self.default_action : "go",
@@ -94,30 +99,78 @@ class Go(object):
                                                    'Agent': {'Object': {'Quantifier': {'Type': 'exact', 'Definite': True, 'Number': 1},
                                                                         'Name': None, 'Description': []}}}) for w in self.advanced_regions],
                                self.response: "Good work! Junior will go.",
-                               self.next: "done."
+                               self.next: "go_simple"
                                }          
                 }
 
-    def go_moderate(self):
-        exercise = self.train_dict["go_moderate"]
-        success = False
-        while not success:
-            success = True
-            response = self.get_input(exercise[self.prompt]+":\n")
-            commands = self.handler.get_semantic_structures(response)            
-            for command in commands:                
-                self.assertIn(str(command),[str(w) for w in exercise[self.correct_commands]])
-                        
-    def go_simple(self):
+    def go_exercise(self,exercise,sentence):
+        if not sentence:
+            sentence = self.get_input(exercise[self.prompt]+":\n")
+        commands = self.handler.get_semantic_structures(sentence)  
+        answers = exercise[self.correct_commands]          
+        success =  all(command in answers for command in commands)
+        if len(commands) < len(answers):
+            for answer in answers:
+                if not answer in commands:
+                    response = "You forgot to tell Junior to " + answer.action
+                    if answer.location:
+                        response += " to the " + answer.location.name
+            response = NOT_OK + response            
+        elif success:
+            response = exercise[self.response] 
+            response = OK+response
+        else:
+            #Return the diff response for the first failed command only
+            for command in commands:
+                if not command in answers: 
+                    diffs = [self.get_command_diff(command,w) for w in answers]
+                    response = self.get_diff_response(diffs)
+                    response = NOT_OK + response
+        return response
+    
+    def go_simple(self,sentence=None):
         exercise = self.train_dict["go_simple"]
-        success = True
-        response = self.get_input(exercise[self.prompt]+":\n")
-        commands = self.handler.get_semantic_structures(response)            
-        for command in commands:                
-            self.assertIn(command,exercise[self.correct_commands])
-        return success
+        return self.go_exercise(exercise, sentence)
+        
+    def go_moderate(self,sentence=None):
+        exercise = self.train_dict["go_moderate"]
+        return self.go_exercise(exercise, sentence)
+    
+    def go_advanced(self,sentence=None):
+        exercise = self.train_dict["go_advanced"]
+        return self.go_exercise(exercise, sentence)
+                    
+    def get_diff_response(self,diffs):
+        unique_diffs = [(w,diff[w]) for diff in diffs for w in diff if not diff[w]]
+        return str(unique_diffs)
                 
-    def get_next_prompt(self):
+    def get_command_diff(self,this,that):
+        d = {"instance": isinstance(that,Command),
+             "agent":  this.agent == that.agent,             
+             "action":  this.action == that.action,
+             "theme": this.theme == that.theme,             
+             "patient": this.patient == that.patient,
+             "location": this.location == that.location,
+             "source": this.source == that.source,
+             "destination": this.destination == that.destination,
+             "condition": this.condition == that.condition,
+             "negation": this.negation == that.negation
+             }
+        return d
+                    
+                
+    def run_current_exercise(self,sentence):
+        if self.validate_sentence(sentence):
+            return self.train_functions[self.current_exercise](sentence)
+        
+    def get_next_exercise(self):
+        return self.train_dict[self.current_exercise][self.next]
+            
+    def validate_sentence(self,sentence):
+        if sentence[-1] == ".": return True
+        return False
+        
+    def get_current_prompt(self):
         return self.train_dict[self.current_exercise][self.prompt]
     
     def command_from_dict(self,d):
@@ -164,10 +217,6 @@ class Go(object):
         else:
             condition = None     
         return Command(agent,theme,patient,location,source,destination,d["Action"],condition,d["Negation"])
-
-if __name__=="__main__":
-    main()
-        
 
         
         
