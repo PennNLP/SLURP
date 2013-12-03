@@ -29,14 +29,6 @@ HEADER_WIDTH = 72
 MONGODB = False
 if MONGODB: semlog = SemanticsLogger()
 
-class SemanticsHandler(object):
-    def __init__(self):
-        self.client = PipelineClient(verbose=True)
-        
-    def get_semantic_structures(self,sentence):
-        parse = self.client.parse(sentence)
-        return process(parse,verbose=False)    
-     
 def process(parse,verbose=True):
     """Show the steps of transformation for a parse."""
     # Original parse
@@ -107,8 +99,9 @@ def main():
                     semantic_structures = process(parse)
                     if semantic_structures and MONGODB:
                         semlog.log_structures(text,semantic_structures)
-                    for s in semantic_structures:
-                        print "semantic_structure dict: ",s.__dict__()
+                    if semantic_structures: 
+                        for s in semantic_structures:
+                            print "semantic_structure dict: ",s.__dict__()
                 else:
                     print "Connection to server closed."
                     break
