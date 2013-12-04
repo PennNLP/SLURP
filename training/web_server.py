@@ -32,8 +32,6 @@ class PragbotWeb(object):
         self.urls = self._default_urls()
         web.config.session_parameters.update(cookie_name="current_exercise", cookie_domain="localhost")                
         #cookie = web.cookies(current_exercise="go_simple")
-        self.head = "<html>"
-        self.tail = "</html>" 
         self.trainer = None   
         self.current_exercise = None
         self.app = web.application(self.urls,globals())        
@@ -42,6 +40,9 @@ class PragbotWeb(object):
                          form.Button("Send")                         
                          )        
         self.renderer = web.template.render('training/templates/')
+        self.head = str(self.renderer.head())
+        self.tail = "</html>" 
+
         self.current_page = ""
 
     def get_trainer(self):
