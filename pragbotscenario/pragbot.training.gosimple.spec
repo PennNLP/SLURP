@@ -32,24 +32,7 @@ defuse_done, 1
 ======== SPECIFICATION ========
 
 RegionMapping: # Mapping between region names and their decomposed counterparts
-classroom = classroom
 conservatory = conservatory
-bathroom = bathroom
-cellar = cellar
-ballroom = ballroom
-office = office
-annex = annex
-hallway2 = hallway2
-hallway3 = hallway3
-study = study
-hallway1 = hallway1
-entrance = entrance
-hallway4 = hallway4
-lounge = lounge
-billiard_room = billiard_room
-computer_room = computer_room
-dining_room = dining_room
-library = library
 kitchen = kitchen
 
 Spec: # Specification in structured English

@@ -46,9 +46,9 @@ hallway1 = hallway1
 entrance = entrance
 hallway4 = hallway4
 lounge = lounge
-billiard_room = billiard_room
-computer_room = computer_room
-dining_room = dining_room
+courtyard = courtyard
+pantry = pantry
+lab = lab
 library = library
 kitchen = kitchen
 
