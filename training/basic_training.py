@@ -23,7 +23,7 @@ from semantics.tree import Tree
 
 OK = "OK"
 NOT_OK = "NOT_OK"
-
+       
 class Go(object):
     def __init__(self,exercise="go_simple"):
         self.handler = SemanticsHandler()
@@ -49,7 +49,10 @@ class Go(object):
                     }   
         self.ccs = { "and" : "and"}
         self.current_exercise = exercise
-        self.train_functions = {"go_simple" : self.go_simple, "go_moderate" : self.go_moderate, "go_advanced" : self.go_advanced}
+        self.train_functions = {"go_simple" : self.go_simple,
+                                "go_moderate" : self.go_moderate,
+                                "go_advanced" : self.go_advanced,
+                                "defuse_simple" : self.defuse_simple}
         self.train_dict = {"go_simple" : {self.prompt : "Tell Junior to go to the %s" % self.regions["office"],
                                self.default_action : "go",
                                self.correct_commands : [self.command_from_dict({'Source': '',
@@ -82,7 +85,7 @@ class Go(object):
                                                   'Agent': {'Object': {'Quantifier': {'Type': 'exact', 'Definite': True, 'Number': 1},
                                                                        'Name': None, 'Description': []}}}) for w in self.moderate_regions],
                                self.response: "Good work! Junior will go.",
-                               self.next: "go_simple"
+                               self.next: "go_advanced"
                                },    
                 "go_advanced" : {self.prompt : "Tell Junior to go to the office, the conservatory, and the cellar.",
                              self.default_action : "go",
@@ -99,8 +102,25 @@ class Go(object):
                                                    'Agent': {'Object': {'Quantifier': {'Type': 'exact', 'Definite': True, 'Number': 1},
                                                                         'Name': None, 'Description': []}}}) for w in self.advanced_regions],
                                self.response: "Good work! Junior will go.",
-                               self.next: "go_simple"
-                               }          
+                               self.next: "defuse_simple"
+                               },    
+                "defuse_simple" : {self.prompt : "Tell Junior to defuse the bomb.",
+                                   self.default_action : "go",
+                                   self.correct_commands : [self.command_from_dict({'Source': '',
+                                          'Theme': {'Object': {'Quantifier': {'Type': 'exact', 'Definite': True, 'Number': 1},
+                                                               'Name': 'bomb',
+                                                               'Description': []}},
+                                          'Condition': '',
+                                          'Patient': '',
+                                          'Location': '',
+                                          'Action': 'defuse',
+                                          'Destination': '',
+                                          'Negation': False,
+                                          'Agent': {'Object': {'Quantifier': {'Type': 'exact', 'Definite': True, 'Number': 1},
+                                                               'Name': None, 'Description': []}}})],
+                                    self.response: "Good work! Junior will defuse the bomb.",
+                                    self.next: "go_simple"     
+                                    }                            
                 }
 
     def go_exercise(self,exercise,sentence):
@@ -126,6 +146,7 @@ class Go(object):
                     diffs = [self.get_command_diff(command,w) for w in answers]
                     response = self.get_diff_response(diffs)
                     response = NOT_OK + response
+                    return response
         return response
     
     def go_simple(self,sentence=None):
@@ -138,6 +159,10 @@ class Go(object):
     
     def go_advanced(self,sentence=None):
         exercise = self.train_dict["go_advanced"]
+        return self.go_exercise(exercise, sentence)
+    
+    def defuse_simple(self,sentence=None):
+        exercise = self.train_dict["defuse_simple"]
         return self.go_exercise(exercise, sentence)
                     
     def get_diff_response(self,diffs):
@@ -202,7 +227,10 @@ class Go(object):
         else:
             source = None 
         #Themes  
-        if d["Theme"] == "":
+        if d["Theme"] != "":
+            theme_object = d["Theme"]["Object"]
+            theme = ObjectEntity.from_dict(theme_object)
+        else:
             theme = None
         #Conditions
         if d["Condition"] != "":
