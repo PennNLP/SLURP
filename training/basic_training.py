@@ -126,7 +126,9 @@ class Go(object):
     def go_exercise(self,exercise,sentence):
         if not sentence:
             sentence = self.get_input(exercise[self.prompt]+":\n")
-        commands = self.handler.get_semantic_structures(sentence)  
+        commands = self.handler.get_semantic_structures(sentence) 
+        if not commands:
+            return NOT_OK + "I was not able to undersand what you meant, please try again." 
         answers = exercise[self.correct_commands]          
         success =  all(command in answers for command in commands)
         if len(commands) < len(answers):
@@ -166,8 +168,13 @@ class Go(object):
         return self.go_exercise(exercise, sentence)
                     
     def get_diff_response(self,diffs):
-        unique_diffs = [(w,diff[w]) for diff in diffs for w in diff if not diff[w]]
-        return str(unique_diffs)
+        base = "I am afraid you entered the wrong "
+        tail = "Please try again."
+        unique_diffs = list(set([(w,diff[w]) for diff in diffs for w in diff if not diff[w]]))
+        unique_wrong_members = [w[0] for w in unique_diffs]
+        if len(unique_wrong_members) > 1:            
+            return base + ", ".join(unique_wrong_members[:-1]) + " and " + str(unique_wrong_members[-1]) 
+        return base + str(unique_wrong_members[0]) + ". " + tail 
                 
     def get_command_diff(self,this,that):
         d = {"instance": isinstance(that,Command),
@@ -193,7 +200,7 @@ class Go(object):
             
     def validate_sentence(self,sentence):
         if sentence[-1] == ".": return True
-        return False
+        return NOT_OK + "Please make sure that your command ends in a period(.)."
         
     def get_current_prompt(self):
         return self.train_dict[self.current_exercise][self.prompt]
