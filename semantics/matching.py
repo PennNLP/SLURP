@@ -35,6 +35,7 @@ class ParseMatcher(object):
     """
     DEFAULT_SLOT_POS = ['PREP','NP','VERB','LEX']
     TO_TAG = "TO"
+    COMMA_TAG = ","
     pos_map = {         'S' : ['S'],
                         'DT' : ['DT'],
                         'ADV' : ['ADV'], 
@@ -130,6 +131,7 @@ class ParseMatcher(object):
         maxd = -1
         for head in heads:            
             if 'max'+head in self.depth_map:
+                #set max depth if it exists
                 maxd = self.depth_map['max'+head]        
         #mainpos = self.th.get_main_pos_path(tree,heads,maxd,cursor)
         mainpos = self.th.get_main_pos_phrasepath(tree,heads,maxd,cursor)
@@ -172,6 +174,10 @@ class ParseMatcher(object):
             if self.th.get_pos(tree[sLeftSibling].node).startswith(self.TO_TAG):
                 #This verb is in its infinitive form, therefore try checking one level up for subject
                 sLeftBranch = sLeftBranch[:-1]
+            elif self.th.get_pos(tree[sLeftSibling].node).startswith(self.COMMA_TAG):
+                #This subject may end in a comma, check and see
+                if sLeftBranch[-1] != 0:
+                    sLeftBranch[-1] -= 1
             if len(sLeftBranch) < 1:
                 raise NoSubjectFound(left)
             for i in sLeftBranch[:-1]:
@@ -264,7 +270,8 @@ class ParseMatcher(object):
                         path = self.get_path(tree[next],slot,cursor[1:])
                     else:
                         path = self.get_path(tree[next],slot,cursor)                    
-                if path:         
+                if path:   
+                    #If we found the pos tag of the slot      
                     prevpath = subpath
                     subpath = [next] + [w for w in path]#subpath from tree, which is prototypically the VP 
                     full = base + subpath               #full path from root                          
