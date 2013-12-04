@@ -41,7 +41,7 @@ class PragbotWeb(object):
                          form.Textbox("Command:"),
                          form.Button("Send")                         
                          )        
-        self.renderer = web.template.render('templates/')
+        self.renderer = web.template.render('training/templates/')
         self.current_page = ""
 
     def get_trainer(self):
