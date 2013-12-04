@@ -166,19 +166,25 @@ class ParseMatcher(object):
         """
         sLeftBranch = self.th.nearest_left_sibling(v)
         sLeftSibling = copy.deepcopy(sLeftBranch)
-        sLeftSibling[-1] -= 1   
-        if self.th.get_pos(tree[sLeftSibling].node).startswith(self.TO_TAG):
-            #This verb is in its infinitive form, therefore try checking one level up for subject
-            sLeftBranch = sLeftBranch[:-1]
-        if len(sLeftBranch) < 1:
-            raise NoSubjectFound(left)
-        for i in sLeftBranch[:-1]:
-            stree = stree.pop(i)
+        snext = 0
+        if len(sLeftSibling) > 0:
+            sLeftSibling[-1] -= 1   
+            if self.th.get_pos(tree[sLeftSibling].node).startswith(self.TO_TAG):
+                #This verb is in its infinitive form, therefore try checking one level up for subject
+                sLeftBranch = sLeftBranch[:-1]
+            if len(sLeftBranch) < 1:
+                raise NoSubjectFound(left)
+            for i in sLeftBranch[:-1]:
+                stree = stree.pop(i)
+            else:
+                #last item of sLeftBranch is the branch to the VP, 
+                #subtract one and you get the nearest left branch            
+                sLeftBranch[-1] -= 1
+                stree = stree.pop(sLeftBranch[-1])
+            s = self.sequential_match_slots(snext,left, sLeftBranch, stree)
         else:
-            #last item of sLeftBranch is the branch to the VP, 
-            #subtract one and you get the nearest left branch            
-            sLeftBranch[-1] -= 1
-            stree = stree.pop(sLeftBranch[-1])
+            #No left sibling, return error for each slot left of the verb
+            s = [(slot,SlotNotFilledError) for slot in left]
             
 
         oRightBranch = self.th.nearest_right_sibling(v,otree)    
@@ -190,10 +196,10 @@ class ParseMatcher(object):
             
         """At this point,   otree should be the constituent VP of the main verb
                   and    stree should be the * branch to the left of the VP"""        
-        snext = 0
+        
         onext = oRightBranch[-1] + 1
         
-        s = self.sequential_match_slots(snext,left, sLeftBranch, stree)
+        
         o = self.sequential_match_slots(onext,right, oRightBranch[:-1], otree)
         return s,o
     
