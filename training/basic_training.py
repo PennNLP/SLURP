@@ -119,7 +119,32 @@ class Go(object):
                                           'Agent': {'Object': {'Quantifier': {'Type': 'exact', 'Definite': True, 'Number': 1},
                                                                'Name': None, 'Description': []}}})],
                                     self.response: "Good work! Junior will defuse the bomb.",
-                                    self.next: "go_simple"     
+                                    self.next: "conditional_simple"     
+                                    },
+                   "conditional_simple" : {self.prompt : "Tell Junior that if he sees a bomb, defuse it.",
+                                           self.canonical: "If you see a bomb, defuse it.",
+                                           self.correct_commands : [self.command_from_dict({'Source': '',
+                                                    'Theme': {'Object': {'Quantifier': {'Type': 'exact', 'Definite': True, 'Number': 1},
+                                                                         'Name': None, 'Description': []}},
+                                                    'Condition': self.command_from_dict({'Source': '',
+                                                                                         'Theme': {'Object': {'Quantifier': {'Type': 'exact', 'Definite': True, 'Number': 1},
+                                                                                                              'Name': 'bomb', 'Description': []}},
+                                                                                         'Condition': '',
+                                                                                         'Patient': '',
+                                                                                         'Location': '',
+                                                                                         'Action': 'see',
+                                                                                         'Destination': '',
+                                                                                         'Negation': False,
+                                                                                         'Agent': {'Object': {'Quantifier': {'Type': 'exact', 'Definite': True, 'Number': 1},
+                                                                                                              'Name': None, 'Description': []}}}),
+                                                    'Patient': '',
+                                                    'Location': '',
+                                                    'Action': 'defuse',
+                                                    'Destination': '',
+                                                    'Negation': False,
+                                                    'Agent': {'Object': {'Quantifier': {'Type': 'exact', 'Definite': True, 'Number': 1}, 'Name': None, 'Description': []}}})],
+                                    self.response: "Good work! If Junior sees a bomb, he will defuse the bomb.",
+                                    self.next: "go_simple"
                                     }                            
                 }
 
