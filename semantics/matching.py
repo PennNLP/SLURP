@@ -308,12 +308,11 @@ class ParseMatcher(object):
     def frames_match_frame (self, svo, tree):
         """Format svo into the format frames expects:
             {'<POS>' : tree,...}        """
-        self.th.depth_ulid_deaugment(tree)
         s, v, o = svo
         res = {}
         for i in s:
             #If the slot is an NP, we want the whole phrase
-            phrase, role, secondary, tertiay = i[0]
+            phrase, role, secondary, tertiary = i[0]
             path = i[1]
             if phrase == "NP":
                 res[role] = tree[path[:-2]]
@@ -322,7 +321,7 @@ class ParseMatcher(object):
         res['VERB'] = tree[v[:-1]]
         for i in o:
             #If the slot is an NP, we want the whole phrase
-            phrase, role, secondary, tertiay = i[0]
+            phrase, role, secondary, tertiary = i[0]
             path = i[1]
             if phrase == "NP":
                 res[role] = tree[path[:-2]]
@@ -343,7 +342,8 @@ class ParseMatcher(object):
         try:
             int(ndepth[-1])
         except ValueError:
-            sys.stderr.write("Tree does not seem to be augmented for depth, please run depth_ulid_augment ONCE and then try calling this method again.")
+            return False
+        return True
         
     def match_frame(self,frame,parse):
         """Try to match the frame to the parse"""
@@ -351,7 +351,8 @@ class ParseMatcher(object):
             fmatch = None
             if self.invalid_pos(frame):
                 return None            
-            self.check_for_augment(parse)
+            if not self.check_for_augment(parse):
+                self.th.depth_ulid_augment(parse, 0)
             verbslots = [(i,w) for i,w in enumerate(frame) if w[0] == "VERB"]            
             if len(verbslots) > 1: raise VerbFrameCountError
             verbindex, verbslot = verbslots[0]
@@ -367,27 +368,22 @@ class ParseMatcher(object):
                 if DEBUG: sys.stderr.write("Error finding object for frame. "+ str(o)+"\n")
                 return None
             if DEBUG: self.print_svo(pmatch[0],pmatch[1],pmatch[2],parse)
+            self.th.depth_ulid_deaugment(parse)
             fmatch = self.frames_match_frame(pmatch,parse)             
         except PosTooDeep, pos:
             sys.stderr.write(pos+" found but too deep given max part-of-speech depth\n")
         except VerbFrameCountError:
-            sys.stderr.write(str(frame)+" contains too many or too few verbs...error\n")
+            sys.stderr.write(str(frame)+" contains too many or too few verbs...error\n")            
         except SlotTreeCountError:
             #Not all the slots could be filled for this frame given this parse
-            return None
+            pass
         except NoObjectFound, obranch:
             sys.stderr.write("Could not find the object in this parse, for this branch: "+str(obranch))
-            return None
         except NoSubjectFound, sbranch:
             sys.stderr.write("Could not find the subject in this parse, for this branch: "+str(sbranch))
-            return None            
-#         except AttributeError, e:
-#             sys.stderr.write('Attribute error(s) trying to match frame: '+str(e))
-#             return None
         except:
             raise
-        return fmatch
-        
+        return fmatch       
 
 if __name__=="__main__":
     main()
