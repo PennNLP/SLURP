@@ -19,6 +19,7 @@ Tests verbnet frame matching via semantics.matching.
 from semantics.tree import Tree
 from semantics.matching import ParseMatcher
 from semantics.treehandler import TreeHandler
+import copy
 
 import unittest
 
@@ -36,7 +37,7 @@ class exampelPPAttachment(unittest.TestCase):
                                                        [('NP', 'Agent', '', ''), ('VERB', 'VERB', '', ''), ('NP', 'Theme', '', ''), ('PREP', 'PREP', '', ''), ('NP', 'Source', '', ''), ('PREP', 'to towards', '', ''), ('NP', 'Destination', '', '')],    
                                                        [('NP', 'Agent', '', ''), ('VERB', 'VERB', '', ''), ('NP', 'Theme', '', ''), ('PREP', 'to towards', '', ''), ('NP', 'Destination', '', ''), ('PREP', 'PREP', '', ''), ('NP', 'Source', '', '')]],
                                    "correct_frame" :   [('NP', 'Agent', '', ''), ('VERB', 'VERB', '', ''), ('NP', 'Theme', '', ''), ('PREP', 'PREP', '', ''), ('NP', 'Source', '', ''), ('PREP', 'to towards', '', ''), ('NP', 'Destination', '', '')],
-                                   "correct_entry" : {'to towards': Tree('TO.3', ['to']), 'Destination': Tree('NNS.4', ['rooms']), 'Agent': Tree('-NPNONE-.2', ['*']), 'Source': Tree('NN.4', ['kitchen']), 'Theme': Tree('NNS.3', ['meals']), 'VERB': Tree('VB.2', ['Carry'])}                                    
+                                   "correct_entry" : {'to towards': Tree('TO', ['to']), 'Destination': Tree('NP-A', [Tree('DT', ['the']), Tree('NNS', ['rooms'])]), 'Agent': Tree('NP-SBJ-A', [Tree('-NPNONE-', ['*'])]), 'Source': Tree('NP-A', [Tree('DT', ['the']), Tree('NN', ['kitchen'])]), 'Theme': Tree('NP-A', [Tree('DT', ['the']), Tree('NNS', ['meals'])]), 'VERB': Tree('VB', ['Carry'])}                                    
                                    },
                   "carry_from_to_deep_pp":{"sent" : "Carry the meals from the kitchen to the cafeteria.",
                                    "tree" :  Tree('S', [Tree('NP-SBJ-A', [Tree('-NONE-', ['*'])]), Tree('VP', [Tree('VB', ['Carry']), Tree('NP-A', [Tree('DT', ['the']), Tree('NNS', ['meals'])]), Tree('PP-CLR', [Tree('IN', ['from']), Tree('NP-A', [Tree('NP', [Tree('DT', ['the']), Tree('NN', ['kitchen'])]), Tree('PP', [Tree('TO', ['to']), Tree('NP-A', [Tree('DT', ['the']), Tree('NN', ['cafeteria'])])])])])]), Tree('.', ['.'])]),
@@ -65,10 +66,9 @@ class exampelPPAttachment(unittest.TestCase):
         tree = self.exDict["carry_from_to"]["tree"]
         possible_frames = self.exDict["carry_from_to"]["possible_frames"]
         correct_entry = self.exDict["carry_from_to"]["correct_entry"]
-        self.th.depth_ulid_augment(tree, 0)        
         matches = []
         for frame in possible_frames:
-            match = self.matcher.match_frame(frame,tree)
+            match = self.matcher.match_frame(frame,copy.deepcopy(tree))
             if match:
                 matches.append(match)
         self.assertIn(correct_entry,matches)

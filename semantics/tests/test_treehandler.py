@@ -32,8 +32,9 @@ class TestTreeHandler(unittest.TestCase):
     def setUp(self):
         self.th = TreeHandler()
         self.exDict = {"carry_from_to": {
-                                                 "sent" : "Carry the meals from the kitchen to the rooms." ,
+                                                 "sent" : "Carry the meals from the kitchen to the rooms." ,                                                 
                                                  "tree" : Tree('''(S\n  (NP-SBJ-A (-NONE- *))\n  (VP\n    (VB Carry)\n    (NP-A (DT the) (NNS meals))\n    (PP-CLR (IN from) (NP-A (DT the) (NN kitchen)))\n    (PP-CLR (TO to) (NP-A (DT the) (NNS rooms))))\n  (. .))'''),
+                                                 "solution" : {'Destination': Tree('NP-A', [Tree('DT', ['the']), Tree('NNS', ['rooms'])]), 'Agent': Tree('NP-SBJ-A', [Tree('-NPNONE-', ['*'])]), 'to towards': Tree('TO', ['to']), 'Theme': Tree('NP-A', [Tree('DT', ['the']), Tree('NNS', ['meals'])]), 'VERB': Tree('VB', ['Carry']), 'DT': Tree('DT', ['the'])}
                                                  }
 
                                }
@@ -58,15 +59,17 @@ class TestTreeHandler(unittest.TestCase):
         #Test to see that cursor works for the treehandler, only difference should be the depth of the determiner       
         matcher = ParseMatcher(0,2)        
         tree = self.exDict["carry_from_to"]["tree"]
+        solution = self.exDict["carry_from_to"]["solution"]
         matcher.th.depth_ulid_augment(tree,0)
         key = "SUBPHRASE_PASS"
         frame = self.crazyframes[key]            
         match = matcher.match_frame(frame,tree)
-        self.assertEqual(match,{'Destination': Tree('NNS.4', ['rooms']), 'Agent': Tree('-NPNONE-.2', ['*']), 'to towards': Tree('TO.3', ['to']), 'Theme': Tree('NNS.3', ['meals']), 'VERB': Tree('VB.2', ['Carry']), 'DT': Tree('DT.3', ['the'])})
+        self.assertEqual(match,solution)        
+        matcher.th.depth_ulid_augment(tree,0)
         key = "SUBPHRASE_FAIL"
         frame = self.crazyframes[key]            
         match = matcher.match_frame(frame,tree)
-        self.assertEqual(match,{'Destination': Tree('NNS.4', ['rooms']), 'Agent': Tree('-NPNONE-.2', ['*']), 'to towards': Tree('TO.3', ['to']), 'Theme': Tree('NNS.3', ['meals']), 'VERB': Tree('VB.2', ['Carry']), 'DT': Tree('DT.4', ['the'])})
+        self.assertEqual(match,solution)
         
             
 if __name__=="__main__":
