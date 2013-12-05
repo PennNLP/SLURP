@@ -376,7 +376,8 @@ class SpecGenerator(object):
         if quant == "all" or (command.negation and quant == "any"):
             # TODO: Handle more than one tag
             try:
-                tag = argument.description[0]
+                tag = argument.name
+                #tag = argument.description[0]
             except (IndexError, TypeError):
                 print >> sys.stderr, "Error: Could not get description of {}.".format(argument)
                 return default_return
