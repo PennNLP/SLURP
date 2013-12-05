@@ -101,7 +101,7 @@ def main():
                         semlog.log_structures(text,semantic_structures)
                     if semantic_structures: 
                         for s in semantic_structures:
-                            print "semantic_structure dict: ",s.__dict__()
+                            print "semantic_structure dict: ",s.to_dict()
                 else:
                     print "Connection to server closed."
                     break

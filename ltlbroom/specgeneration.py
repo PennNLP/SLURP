@@ -248,7 +248,7 @@ class SpecGenerator(object):
                 else:
                     #We already know if the command was "OK" because of results, useful response
                     #command_responses.append(command.action)
-                    command_responses.append(command.__dict__())
+                    command_responses.append(command.to_dict())
 
                 # Add in the new lines
                 command_key = _format_command(command)

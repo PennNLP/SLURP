@@ -57,11 +57,11 @@ class Entity(object):
             indent + '\tQuantifier: ' + (self.quantifier.__str__(lvl + 1) if self.quantifier else '') + '\n' + \
             indent + '\tDescription: ' + str(self.description)
             
-    def __dict__(self):
+    def to_dict(self):
         return { str(self.TYPES[self.TYPE_ID]): \
                 {
                  'Name' : self.name , \
-                 'Quantifier' : (self.quantifier.__dict__() if self.quantifier else '') , \
+                 'Quantifier' : (self.quantifier.to_dict() if self.quantifier else '') , \
                  'Description' : self.description
                 }
                 }
@@ -179,7 +179,7 @@ class Quantifier(object):
                indent + '\tType: %s\n' % str(self.type) +\
                indent + '\tNumber: %s' % str(self.number)
                
-    def __dict__(self):
+    def to_dict(self):
         return { 'Definite' : self.definite ,\
                'Type' : str(self.type) ,\
                'Number' : self.number
@@ -310,16 +310,16 @@ class Command(object):
                (indent + 'Condition: ' + self.condition.__str__(lvl + 1) + '\n' if self.condition else '') + \
                indent + 'Negation: ' + str(self.negation)
                
-    def __dict__(self):
+    def to_dict(self):
                 return{ 'Command': { \
-               'Agent' : (self.agent.__dict__() if self.agent else ''),  \
+               'Agent' : (self.agent.to_dict() if self.agent else ''),  \
                'Action' : str(self.action) ,\
-               'Theme' : (self.theme.__dict__() if self.theme else ''), \
-               'Patient' : (self.patient.__dict__() if self.patient else ''), \
-               'Location' : (self.location.__dict__() if self.location else ''), \
-               'Source' : (self.source.__dict__() if self.source else ''), \
-               'Destination' : (self.destination.__dict__() if self.destination else ''), \
-               'Condition' : (self.condition.__dict__() if self.condition else ''), \
+               'Theme' : (self.theme.to_dict() if self.theme else ''), \
+               'Patient' : (self.patient.to_dict() if self.patient else ''), \
+               'Location' : (self.location.to_dict() if self.location else ''), \
+               'Source' : (self.source.to_dict() if self.source else ''), \
+               'Destination' : (self.destination.to_dict() if self.destination else ''), \
+               'Condition' : (self.condition.to_dict() if self.condition else ''), \
                'Negation' : self.negation}}
                 
     def __eq__(self,other):

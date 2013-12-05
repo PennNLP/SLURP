@@ -27,7 +27,7 @@ class Sentence(object):
     @staticmethod
     def to_dictionary_structure(semantic_structure):
         """Semantic representations are equivalent to commands or assertions"""
-        return semantic_structure.__dict__()  
+        return semantic_structure.to_dict()  
 
 class MongoHandler(object):
     user_id_tag = "user_id"
