@@ -274,11 +274,11 @@ class ParseMatcher(object):
                     #If we found the pos tag of the slot      
                     prevpath = subpath
                     subpath = [next] + [w for w in path]#subpath from tree, which is prototypically the VP 
-                    full = base + subpath               #full path from root                          
+                    full = base + subpath               #full path from root
                     cursor = subpath                    #Here, we increment the cursor but only fill the slot if it is acceptable
                     if len(res) == 0:
                         res.append((slot,full))       
-                    elif self.pp_acceptpath(prevpath,slot,next,path,tree):   
+                    elif self.pp_acceptpath(prevpath,slot,next,path,tree): 
                         res.append((slot,full))  
                     else:
                         pass                      
@@ -308,13 +308,27 @@ class ParseMatcher(object):
     def frames_match_frame (self, svo, tree):
         """Format svo into the format frames expects:
             {'<POS>' : tree,...}        """
+        self.th.depth_ulid_deaugment(tree)
         s, v, o = svo
         res = {}
         for i in s:
-            res[i[0][1]] = self.th.get_parent(tree,i[1])
-        res['VERB'] = self.th.get_parent(tree,v)
+            #If the slot is an NP, we want the whole phrase
+            phrase, role, secondary, tertiay = i[0]
+            path = i[1]
+            if phrase == "NP":
+                res[role] = tree[path[:-2]]
+            else:
+                res[role] = tree[path[:-1]]
+        res['VERB'] = tree[v[:-1]]
         for i in o:
-            res[i[0][1]] = self.th.get_parent(tree,i[1])
+            #If the slot is an NP, we want the whole phrase
+            phrase, role, secondary, tertiay = i[0]
+            path = i[1]
+            if phrase == "NP":
+                res[role] = tree[path[:-2]]
+            else:
+                res[role] = tree[path[:-1]]
+            #res[i[0][1]] = self.th.get_parent(tree,i[1])
         return res    
     
     def invalid_pos(self,frame):
