@@ -1,4 +1,4 @@
-$def with (prompt)
+$def with (prompt=None)
 <!doctype html>
  
 <html>
@@ -9,7 +9,10 @@ $def with (prompt)
 	{
 	alert("$prompt");
 	}
-	myFunction();
+	if ("$prompt" != "")
+		{
+		myFunction();
+		}
 	</script>
 	    <blockquote>
     		Welcome to the Pragbot basic training portal. 
