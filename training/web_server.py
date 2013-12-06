@@ -41,7 +41,7 @@ class PragbotWeb(object):
                          )        
         self.renderer = web.template.render('templates/')
         self.head = str(self.renderer.command_response())
-        self.tail = "</html>" 
+        self.tail = "</body></html>" 
 
         self.current_page = ""
 
@@ -67,7 +67,8 @@ class PragbotWeb(object):
         self.app.run()
         
     def get_user_text(self):
-        return form.Form(form.Textbox("Command:"),
+        return form.Form(
+                         form.Textbox("Command"),
                          form.Button("Send"),
                          )        
     
@@ -94,7 +95,7 @@ class PragbotWeb(object):
         if not form.validates(): 
             return self.renderer.command_page(form)
         else:
-            user_input = form['Command:'].value
+            user_input = form['Command'].value
             training_response = self.trainer.run_current_exercise(user_input)
             if training_response.startswith(OK):
                 #If response is ok, set the cookie, set self.current_exercise
