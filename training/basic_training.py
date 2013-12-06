@@ -61,7 +61,7 @@ class Go(object):
                     if alternate.location:
                         response += " to the " + alternate.location.name 
         else:
-            response = "Too few commands. Try using lists or conjunctions."
+            response = " Too few commands. Try using lists or conjunctions"
         response += "."
         response = NOT_OK + response
         return response            
