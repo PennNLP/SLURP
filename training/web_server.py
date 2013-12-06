@@ -40,7 +40,7 @@ class PragbotWeb(object):
                          form.Button("Send")                         
                          )        
         self.renderer = web.template.render('templates/')
-        self.head = str(self.renderer.head())
+        self.head = str(self.renderer.command_response())
         self.tail = "</html>" 
 
         self.current_page = ""

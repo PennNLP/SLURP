@@ -21,6 +21,7 @@ from training.semantics_handler import SemanticsHandler
 from training.training_dictionaries import TrainingDictionary
 from pipelinehost import PipelineClient
 from semantics.tree import Tree
+from copy import deepcopy
 
 
 OK = "OK"
@@ -43,7 +44,28 @@ class Go(object):
                                 "defuse_simple" : self.defuse_simple,
                                 "conditional_simple" : self.conditional_simple}
 
-     
+    def respond_missing_answer(self,commands,answers,alternates):
+        """If there is a command in answers/alternates, pop answers/alternates until we run out of commands"""
+        # TODO: Answers and alternates should have some hierarchy like answer->alternate->fail       
+        if commands and commands[0] in answers:
+            for answer in answers:
+                if not answer in commands:
+                    response = "You forgot to tell Junior to " + answer.action
+                    if answer.location:
+                        response += " to the " + answer.location.name                     
+        elif commands and commands[0] in alternates:
+            for alternate in alternates:
+                if not alternate in commands:
+                    response = "You forgot to tell Junior to " + alternate.action
+                    if alternate.location:
+                        response += " to the " + alternate.location.name 
+        else:
+            response = "Too few commands. Try using lists or conjunctions."
+        response += "."
+        response = NOT_OK + response
+        return response            
+
+        
     def go_exercise(self,exercise,sentence):    
         """The canonical exercise method from the specific entries in the training dictionary.
     
@@ -60,12 +82,7 @@ class Go(object):
         alternates = exercise[self.alternate_commands]
         success =  all(command in answers or command in alternates for command in commands)
         if len(commands) < len(answers):
-            for answer in answers:
-                if not answer in commands:
-                    response = "You forgot to tell Junior to " + answer.action
-                    if answer.location:
-                        response += " to the " + answer.location.name
-            response = NOT_OK + response            
+            response = self.respond_missing_answer(commands,answers,alternates)
         elif success:
             response = exercise[self.response] 
             response = OK+response
