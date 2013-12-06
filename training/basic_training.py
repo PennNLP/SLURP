@@ -132,7 +132,7 @@ class Go(object):
         unique_diffs = list(set([(w,diff[w]) for diff in diffs for w in diff if not diff[w]]))
         unique_wrong_members = [w[0] for w in unique_diffs]
         if len(unique_wrong_members) > 1:            
-            return base + ", ".join(unique_wrong_members[:-1]) + " and " + str(unique_wrong_members[-1]) 
+            return base + ", ".join(unique_wrong_members[:-1]) + " or " + str(unique_wrong_members[-1]) 
         return base + str(unique_wrong_members[0]) + ". " + tail 
                 
     def get_command_diff(self,this,that):
