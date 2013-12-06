@@ -39,7 +39,7 @@ class PragbotWeb(object):
                          form.Textbox("Command:"),
                          form.Button("Send")                         
                          )        
-        self.renderer = web.template.render('training/templates/')
+        self.renderer = web.template.render('templates/')
         self.head = str(self.renderer.head())
         self.tail = "</html>" 
 
