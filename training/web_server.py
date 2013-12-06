@@ -41,8 +41,7 @@ class PragbotWeb(object):
                          )        
         self.renderer = web.template.render('templates/')
         self.head = str(self.renderer.command_response())
-        self.tail = "</body></html>" 
-
+        self.tail = str(self.renderer.tail())
         self.current_page = ""
 
     def get_trainer(self):
@@ -82,7 +81,8 @@ class PragbotWeb(object):
         prompt = self.trainer.get_current_prompt()
         command_prompt = self.renderer.command_prompt(prompt)        
         command_form = self.renderer.command_page(form)
-        page = self.head + str(command_prompt) + str(command_form) + self.tail
+        page = self.head + str(command_prompt) + \
+            str(command_form) + self.tail
         self.current_page = ""
         return page
         #return self.renderer.index()
@@ -102,7 +102,9 @@ class PragbotWeb(object):
                 training_response = training_response.lstrip(OK)         
                 next_exercise = self.trainer.get_next_exercise()        
                 self.current_exercise = next_exercise           
-                web.setcookie("current_exercise", next_exercise, 3600)                              
+                web.setcookie("current_exercise", next_exercise, 3600) 
+                #If the next exercise is the 1st in the loop, congratulate the user
+                self.tail = str(self.renderer.tail(next_exercise))                             
             elif training_response.startswith(NOT_OK):
                 #Leave cookie alone
                 training_response = training_response.lstrip(NOT_OK)
