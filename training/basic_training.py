@@ -42,6 +42,7 @@ class Go(object):
                                 "go_moderate" : self.go_moderate,
                                 "go_advanced" : self.go_advanced,
                                 "defuse_simple" : self.defuse_simple,
+                                "defuse_moderate" : self.defuse_moderate,
                                 "conditional_simple" : self.conditional_simple}
 
     def respond_missing_answer(self,commands,answers,alternates):
@@ -115,6 +116,10 @@ class Go(object):
     
     def defuse_simple(self,sentence=None):
         exercise = self.train_dict["defuse_simple"]
+        return self.go_exercise(exercise, sentence)
+    
+    def defuse_moderate(self,sentence=None):
+        exercise = self.train_dict["defuse_moderate"]
         return self.go_exercise(exercise, sentence)
     
     def conditional_simple(self,sentence=None):
