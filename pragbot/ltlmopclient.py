@@ -348,16 +348,18 @@ class BarebonesDialogueManager(object):
             # FIXME: Because _writeLTLFile() is so monolithic, this will
             # clobber the `.ltl` file
             # FIXME: This may only work with SLURP
-            self.compiler.proj.specText = message.strip()
+            message = message.strip()
+            self.compiler.proj.specText = message
             spec, traceback_tree, responses = self.compiler._writeLTLFile()            
             if spec is not None:
-                self.spec.append(message.strip())
+                self.spec.append(message)
                 command_dicts = self.get_command_dicts(responses)
-                talkback_responses = self.get_talkback_responses(command_dicts)
+                talkback_responses = self.get_talkback_responses(command_dicts,message)
             else:
                 talkback_responses = [w for w in responses if w.startswith(self.SPECIFIC_SPECGEN_PROBLEM)][0]
                 if len(talkback_responses) == 0:
-                    talkback_responses= [self.DEFAULT_SPECGEN_PROBLEM + self.RESPONSE_DELIM + "{}"]
+                    talkback_responses= [self.DEFAULT_SPECGEN_PROBLEM + 
+                                         self.RESPONSE_DELIM + '{"CommanderMessage":%s}'%message]
             return talkback_responses 
                  
             
@@ -367,9 +369,12 @@ class BarebonesDialogueManager(object):
         command_dicts = [w["Command"] for w in response_dicts]
         return command_dicts
     
-    def get_talkback_responses(self,command_dicts):
+    def get_talkback_responses(self,command_dicts,message):
         """Get the responses given the commands."""
-        talkback_responses = [self.respond_okay(w) + self.ltlmop.RESPONSE_DELIM + str(w) for w in command_dicts]
+        talkback_responses = [self.respond_okay(w) + 
+                              self.ltlmop.RESPONSE_DELIM + 
+                              str(dict(w,**{"CommanderMessage":message}))                               
+                              for w in command_dicts]
         return talkback_responses
         
     def _error_on_specgen(self,reponse):
