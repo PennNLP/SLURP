@@ -254,8 +254,15 @@ class PragbotClient(object):
         self.ge.jr.set_waypoints([])
 
     def send_response(self, msg):
-        """Send a chat response to the server."""
-        self.sendMessage('CHAT_MESSAGE_PREFIX<JR> ', msg)
+        """Send a chat response to the server. 
+            Split on delimiter for words and semantics.
+            Send both separately."""
+        if self.ltlmop.RESPONSE_DELIM in msg:
+            response, semantics = msg.split(self.ltlmop.RESPONSE_DELIM)
+            self.send_semantic_frame_response(semantics)
+            self.sendMessage('CHAT_MESSAGE_PREFIX<JR> ', response)            
+        else:
+            self.sendMessage('CHAT_MESSAGE_PREFIX<JR> ',msg)
         
     def send_semantic_frame_response(self,frame_dict_string):
         """Send a dictionary string of a semantic frame to the PragbotClient for logging."""

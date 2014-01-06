@@ -49,9 +49,9 @@ def find_port(base):
 
 
 class LTLMoPClient(object):
-
+    RESPONSE_DELIM = "RESPONSE_DELIM"#Split response by words and semantics
     def __init__(self, handler_port, chat_callback):
-        self.CONFIG = Config()
+        self.CONFIG = Config()        
         spec_file = self.CONFIG.get_spec_file()           
         self.handler_port = handler_port
         self.map_bitmap = None
@@ -352,18 +352,24 @@ class BarebonesDialogueManager(object):
             spec, traceback_tree, responses = self.compiler._writeLTLFile()            
             if spec is not None:
                 self.spec.append(message.strip())
-                talkback_responses = self.get_command_talkback(responses)
+                command_dicts = self.get_command_dicts(responses)
+                talkback_responses = self.get_talkback_responses(command_dicts)
             else:
                 talkback_responses = [w for w in responses if w.startswith(self.SPECIFIC_SPECGEN_PROBLEM)][0]
                 if len(talkback_responses) == 0:
-                    talkback_responses= [self.DEFAULT_SPECGEN_PROBLEM]
+                    talkback_responses= [self.DEFAULT_SPECGEN_PROBLEM + self.RESPONSE_DELIM + "{}"]
             return talkback_responses 
                  
             
-    def get_command_talkback(self,responses):
+    def get_command_dicts(self,responses):
+        """Get the command dictionaries from the SLURP responses."""
         response_dicts = [ast.literal_eval(w) for w in responses if not self._error_on_specgen(w)]
         command_dicts = [w["Command"] for w in response_dicts]
-        talkback_responses = [ self.respond_okay(w) for w in command_dicts]        
+        return command_dicts
+    
+    def get_talkback_responses(self,command_dicts):
+        """Get the responses given the commands."""
+        talkback_responses = [self.respond_okay(w) + self.ltlmop.RESPONSE_DELIM + str(w) for w in command_dicts]
         return talkback_responses
         
     def _error_on_specgen(self,reponse):
