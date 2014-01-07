@@ -359,7 +359,7 @@ class BarebonesDialogueManager(object):
                 specific_problems = [w for w in responses if w.startswith(self.SPECIFIC_SPECGEN_PROBLEM)]
                 if len(specific_problems) == 0:
                     talkback_responses= [self.DEFAULT_SPECGEN_PROBLEM + 
-                                         self.RESPONSE_DELIM + '{"CommanderMessage":%s}'%message]
+                                         self.ltlmop.RESPONSE_DELIM + '{"CommanderMessage":%s}'%message]
                 else:
                     talkback_responses = [w for w in responses if w.startswith(self.SPECIFIC_SPECGEN_PROBLEM)][0]
             return talkback_responses 
