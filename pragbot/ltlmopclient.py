@@ -356,10 +356,12 @@ class BarebonesDialogueManager(object):
                 command_dicts = self.get_command_dicts(responses)
                 talkback_responses = self.get_talkback_responses(command_dicts,message)
             else:
-                talkback_responses = [w for w in responses if w.startswith(self.SPECIFIC_SPECGEN_PROBLEM)][0]
-                if len(talkback_responses) == 0:
+                specific_problems = [w for w in responses if w.startswith(self.SPECIFIC_SPECGEN_PROBLEM)]
+                if len(specific_problems) == 0:
                     talkback_responses= [self.DEFAULT_SPECGEN_PROBLEM + 
                                          self.RESPONSE_DELIM + '{"CommanderMessage":%s}'%message]
+                else:
+                    talkback_responses = [w for w in responses if w.startswith(self.SPECIFIC_SPECGEN_PROBLEM)][0]
             return talkback_responses 
                  
             
@@ -391,7 +393,7 @@ class BarebonesDialogueManager(object):
                 for sublevel in command[toplevel]:
                     if type(command[toplevel][sublevel]) == type({}):
                         ok += ", "
-                        if "Name" in command[toplevel][sublevel]:
+                        if "Name" in command[toplevel][sublevel] and command[toplevel][sublevel]["Name"] != None:
                             if toplevel != sublevel:
                                 ok += toplevel + ", " + sublevel + ": " + \
                                 command[toplevel][sublevel]["Name"] 
