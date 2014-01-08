@@ -51,7 +51,8 @@ class ParseMatcher(object):
                                   "as" : ["IN"],
                                   "with" : ["IN"],
                                   "for" : ["IN"],
-                                  "from for on" : ["IN"]
+                                  "from for on" : ["IN"],
+                                  "by" : ["IN"]                                  
                                   },
                         'LEX' : ['there'],
                         'ADJ' : ['ADJ']                        
