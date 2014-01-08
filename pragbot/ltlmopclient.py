@@ -226,7 +226,7 @@ class BarebonesDialogueManager(object):
     
     #GOTIT responsibility was on specgen but now it is on the dialogue manager    
     GOTIT = "Got it. I can {!r}"
-    DEFAULT_SPECGEN_PROBLEM = "UNKNOWN specgen problem on command"
+    DEFAULT_SPECGEN_PROBLEM = "I'm sorry, I didn't quite understand that."
     SPECIFIC_SPECGEN_PROBLEM = "Could not understand"
     
     def __init__(self, ltlmopclient, executor, base_spec=None):
