@@ -43,7 +43,7 @@ ACTION_ALIASES = {
                   'meander': GO_ACTION,
                   'slide': GO_ACTION,
                   'nonvehicle': GO_ACTION,
-                  'escape': GO_ACTION,
+                  'enter': GO_ACTION,
                   'rummage': SEARCH_ACTION,
                   'characterize': SEE_ACTION,
                   'chase': FOLLOW_ACTION,

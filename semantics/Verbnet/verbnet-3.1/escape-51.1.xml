@@ -8,7 +8,6 @@
               <MEMBER name="depart" wn="depart%2:38:04 depart%2:38:01" grouping="depart.01"/>
               <MEMBER name="descend" wn="descend%2:38:00" grouping="descend.01"/>
               <MEMBER name="disembark" wn="" grouping=""/>
-              <MEMBER name="enter" wn="enter%2:38:00 enter%2:36:00" grouping="enter.01"/>
               <MEMBER name="escape" wn="escape%2:38:00" grouping="escape.01"/>
               <MEMBER name="exit" wn="exit%2:38:00" grouping="exit.01"/>
               <MEMBER name="flee" wn="flee%2:38:00" grouping="flee.01"/>
