@@ -239,7 +239,7 @@ class SpecGenerator(object):
                 except KeyError as err:
                     cause = err.message
                     problem = \
-                        "Could not understand {!r} due to error {}.".format(command.action, cause)
+                        "Could not understand {!r} due to error: {}".format(command.action, cause)
                     if verbose:
                         print >> sys.stderr, "Error: " + problem
                     command_responses.append(cause)
@@ -607,6 +607,10 @@ class SpecGenerator(object):
 
     def _gen_go(self, command):
         """Generate statements to go to a location once."""
+        # Check for a location
+        if not command.location:
+            raise KeyError("No location given for 'go' command.")
+
         # Avoid if it's negated
         if command.negation:
             return self._gen_avoid(command)
