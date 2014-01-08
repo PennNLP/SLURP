@@ -169,7 +169,8 @@ class SpecGenerator(object):
         parse_client = PipelineClient()
         results = []
         responses = []
-        problem = "UNKNOWN specgen problem on command"
+        # Default problem response
+        problem = MISUNDERSTAND
         custom_props = set()
         self.react_props = set()  # TODO: Make this a local
         custom_sensors = set()
