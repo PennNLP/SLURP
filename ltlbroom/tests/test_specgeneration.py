@@ -84,6 +84,26 @@ class TestSpecGenerator(unittest.TestCase):
         # Assume actual safety is last line
         self.assertEqual(syl[-1], '([]((next(s.react_bomb) -> next(s.camera))))')
 
+    def test_actuate_all(self):
+        """Test an actuation command on 'all'."""
+        self.props = ['defuse']
+        self.sensors = ['bomb']
+        text = "Defuse all bombs."
+        enl, syl = self.lines_from_gen(text)
+        self.assertEqual(enl, [])
+        # Assume actual safety is last line
+        self.assertEqual(syl[-1], '([]((next(s.react_bomb) -> next(s.defuse))))')
+
+    def test_actuate_the(self):
+        """Test an actuation command on 'the'."""
+        self.props = ['defuse']
+        self.sensors = ['bomb']
+        text = "Defuse the bomb."
+        enl, syl = self.lines_from_gen(text)
+        self.assertEqual(enl, [])
+        # Assume actual safety is last line
+        self.assertEqual(syl[-1], '([]((next(s.react_bomb) -> next(s.defuse))))')
+
     def lines_from_gen(self, text):
         """Return [env_lines, sys_lines] from a default generate call."""
         return self.get_from_gen(text, 0, 2)

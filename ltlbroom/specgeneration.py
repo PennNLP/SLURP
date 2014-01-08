@@ -27,6 +27,7 @@ from semantics.lexical_constants import (
     AVOID_ACTION, PATROL_ACTION, CARRY_ACTION, STAY_ACTION, ACTIVATE_ACTION,
     DEACTIVATE_ACTION, BE_ACTION, UNDERSTOOD_SENSES)
 from semantics.parsing import extract_commands
+from semantics.new_structures import ObjectEntity, Command
 from pipelinehost import PipelineClient
 from semantics.new_knowledge import KnowledgeBase
 from ltlbroom.ltl import (
@@ -236,7 +237,7 @@ class SpecGenerator(object):
                     print command
                 try:
                     new_sys_lines, new_env_lines, new_custom_props, new_custom_sensors = \
-                        self._apply_metapar(command)
+                        self._apply_metapar(command, verbose)
                 except KeyError as err:
                     cause = err.message
                     problem = \
@@ -344,16 +345,21 @@ class SpecGenerator(object):
         return (env_lines, sys_lines, custom_props, custom_sensors, results, responses,
                 generation_trees)
         
-    def _apply_metapar(self, command):
+    def _apply_metapar(self, command, verbose=False):
         """Generate a metapar for a command."""
-        # Patch up intransitives as activate if needed
-        # TODO: This has only been tested with defuse and may not work for other actions.
+        # Patch up actuator commands
         if (command.action not in self.GOALS and
             command.action in UNDERSTOOD_SENSES):
-            print "Changed action {} to an activate command.".format(command.action)
+            # If there's a theme, make it into a reaction
             if command.theme:
-                command.theme.name = command.action
-            command.action = "activate"
+                command.condition = Command(command.agent, command.theme, None, None, None, None, SEE_ACTION)
+
+            command.theme = ObjectEntity(command.action)
+            command.action = ACTIVATE_ACTION
+
+            if verbose:
+                print "Modified actuator command, new command:"
+                print command
 
         try:
             handler = self.GOALS[command.action]
