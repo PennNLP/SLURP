@@ -19,6 +19,7 @@ Generates a logical specification from natural language.
 
 import sys
 import re
+import traceback
 from collections import OrderedDict, defaultdict
 from copy import deepcopy
 
@@ -241,10 +242,19 @@ class SpecGenerator(object):
                 except KeyError as err:
                     cause = err.message
                     problem = \
-                        "Could not understand {!r} due to error: {}".format(command.action, cause)
+                        "Could not understand {!r} command due to error: {}".format(command.action, cause)
                     if verbose:
                         print >> sys.stderr, "Error: " + problem
                     command_responses.append(cause)
+                    success = False
+                    continue
+                except AttributeError as err:
+                    stack = traceback.format_exc()
+                    print >> sys.stderr, "Error while generating LTL:"
+                    print >> sys.stderr, stack
+                    problem = \
+                        "Could not understand {!r} command due to an unexpected error.".format(command.action)
+                    command_responses.append(problem)
                     success = False
                     continue
                 else:
@@ -597,7 +607,7 @@ class SpecGenerator(object):
 
     def _gen_begin(self, command):
         """Generate statements to begin in a location."""
-        region = command.theme.name
+        region = command.location.name
         explanation = "The robot begins in {!r}.".format(region)
         sys_lines = SpecChunk(explanation, [sys_(region)], SpecChunk.SYS, command)
         return ([sys_lines], [], [], [])
