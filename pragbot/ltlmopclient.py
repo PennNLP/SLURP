@@ -184,6 +184,7 @@ class LTLMoPClient(object):
             print "Executor exited normally."
 
     def append_log(self, message, agent=None):
+        message = str(message)
         if agent:
             print agent + " : " + message
         else:
