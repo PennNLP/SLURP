@@ -31,6 +31,7 @@ class Config(object):
         return os.path.join(self.base_spec_dir, self.base_spec)
     
 RESPONSE_ERROR = "Sorry, something went wrong when I tried to understand that."
+RESPONSE_PLANNING = "Okay, just a moment while I make a plan."
 
 
 def find_port(base):
@@ -178,6 +179,9 @@ class LTLMoPClient(object):
         # After ten seconds, just kill it
         if self.executor_process.is_alive():
             self.executor_process.terminate()
+            print "Executor did not exit in time and was executed."
+        else:
+            print "Executor exited normally."
 
     def append_log(self, message, agent=None):
         if agent:
@@ -279,10 +283,12 @@ class BarebonesDialogueManager(object):
         # pause
         self.executor.pause()
 
-        self.ltlmop.append_log("Please wait...", "System")
+        # Let the user know we're synthesizing
+        self.ltlmop.on_receive_reply(RESPONSE_PLANNING)
 
-        # trigger resynthesis
-        success = self.executor.resynthesizeFromNewSpecification(self.get_spec())
+        # Trigger resynthesis
+        spec = self.get_spec()
+        success = self.executor.resynthesizeFromNewSpecification(spec)
         if success:
             # TODO: Remove this to allow carryover of commands when resynthesizing
             self.clear()
