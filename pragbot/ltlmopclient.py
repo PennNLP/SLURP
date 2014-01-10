@@ -75,7 +75,6 @@ class LTLMoPClient(object):
         if not reloading:
             self.executor_proxy = self.get_executor(spec_file)
         else:
-            # TODO: Check whether this is the right way to do this
             self.executor_proxy.initialize(spec_file, None)
         self.dialogue_manager = self.get_dialogue_manager()
 
