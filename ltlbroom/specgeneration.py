@@ -146,7 +146,7 @@ class SpecGenerator(object):
         # Response interpreter
         self.interpreter = ResponseInterpreter()
 
-    def generate(self, text, sensors, regions, props, tag_dict, realizable_reactions=False):
+    def generate(self, text, sensors, regions, props, tag_dict, realizable_reactions=True):
         """Generate a logical specification from natural language and propositions."""
         # Clean unicode out of everything
         text = text.encode('ascii', 'ignore')
