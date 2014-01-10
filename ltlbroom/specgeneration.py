@@ -58,7 +58,7 @@ DROP = "drop"
 HOLDING = "holding"
 
 # Talkback constants
-GOTIT = "Got it. I can {!r}."
+GOTIT = "I will {!r}."
 MISUNDERSTAND = "Sorry, I didn't understand that at all."
 
 
@@ -255,9 +255,10 @@ class SpecGenerator(object):
                     success = False
                     continue
                 else:
-                    #We already know if the command was "OK" because of results, useful response
-                    #command_responses.append(command.action)
-                    command_responses.append(command.to_dict())
+                    # Success, create the response
+                    response = (command.to_dict() if self.struct_responses else
+                                respond_okay(command.action))
+                    command_responses.append(response)
 
                 # Add in the new lines
                 command_key = _format_command(command)
@@ -276,10 +277,11 @@ class SpecGenerator(object):
 
             # Add responses and successes
             results.append(success)
-            if success:
-                responses = [str(w) for w in command_responses]
+            if self.struct_responses:
+                # TODO: Implement
+                responses.append("TODO")
             else:
-                responses = [problem]
+                responses.append(" ".join(command_responses) if success else problem)
 
             # Add some space between commands
             logging.info("")

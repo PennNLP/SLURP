@@ -30,7 +30,8 @@ class Config(object):
     def get_spec_file(self):
         return os.path.join(self.base_spec_dir, self.base_spec)
     
-RESPONSE_ERROR = "Sorry, something went wrong when I tried to understand that."
+RESPONSE_ERROR = ("Sorry, something went wrong when I tried to understand that. "
+                  "Try saying it differently.")
 RESPONSE_PLANNING = "Okay, just a moment while I make a plan."
 
 
@@ -64,6 +65,9 @@ class LTLMoPClient(object):
         self.executor_proxy = self.get_executor(spec_file)
         self.dialogue_manager = self.get_dialogue_manager()
         
+        # Set the compiler to give structured responses
+        self.proj.compile_options["slurp_struct_responses"] = True
+
     def get_dialogue_manager(self):
         # Start dialogue manager
         dialogue_manager = BarebonesDialogueManager(self, self.executor_proxy)
@@ -360,57 +364,11 @@ class BarebonesDialogueManager(object):
             spec, traceback_tree, responses = self.compiler._writeLTLFile()            
             if spec is not None:
                 self.spec.append(message)
-                command_dicts = self.get_command_dicts(responses)
-                talkback_responses = self.get_talkback_responses(command_dicts,message)
-            else:
-                specific_problems = [w for w in responses if w.startswith(self.SPECIFIC_SPECGEN_PROBLEM)]
-                if len(specific_problems) == 0:
-                    talkback_responses= [self.DEFAULT_SPECGEN_PROBLEM + 
-                                         self.ltlmop.RESPONSE_DELIM + '{"CommanderMessage":%s}'%message]
-                else:
-                    talkback_responses = [w for w in responses if w.startswith(self.SPECIFIC_SPECGEN_PROBLEM)][0]
-            return talkback_responses 
-                 
-            
-    def get_command_dicts(self,responses):
-        """Get the command dictionaries from the SLURP responses."""
-        response_dicts = [ast.literal_eval(w) for w in responses if not self._error_on_specgen(w)]
-        command_dicts = [w["Command"] for w in response_dicts]
-        return command_dicts
-    
-    def get_talkback_responses(self,command_dicts,message):
-        """Get the responses given the commands."""
-        talkback_responses = [self.respond_okay(w) + 
-                              self.ltlmop.RESPONSE_DELIM + 
-                              str(dict(w,**{"CommanderMessage":message}))                               
-                              for w in command_dicts]
-        return talkback_responses
+
+            return responses
         
     def _error_on_specgen(self,reponse):
         return reponse.startswith(self.SPECIFIC_SPECGEN_PROBLEM) or reponse == self.DEFAULT_SPECGEN_PROBLEM
-    
-    def respond_okay(self,command):
-        """Respond that we will perform the action."""
-        action = command["Action"]
-        ok = self.GOTIT.format(action)
-        for toplevel in command: 
-            #toplevels are agents, actions, themes, conditions etc.
-            if type(command[toplevel]) == type({}) and toplevel != "Agent":
-                #sublevels are Objects, locations etc.
-                for sublevel in command[toplevel]:
-                    if type(command[toplevel][sublevel]) == type({}):
-                        ok += ", "
-                        if "Name" in command[toplevel][sublevel] and command[toplevel][sublevel]["Name"] != None:
-                            if toplevel != sublevel:
-                                ok += toplevel + ", " + sublevel + ": " + \
-                                command[toplevel][sublevel]["Name"] 
-                            else:
-                                ok += toplevel + ": " + \
-                                command[toplevel][sublevel]["Name"]                                
-                        else:
-                            ok += toplevel  + ": unknown Name"
-        ok += "."
-        return ok
 
     def get_spec(self):
         """ return the current specification as one big string """
