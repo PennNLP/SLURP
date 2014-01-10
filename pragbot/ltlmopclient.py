@@ -216,7 +216,10 @@ class LTLMoPClient(object):
                 self.append_log("Could not connect to NLPipeline.")
                 raise
             else:
-                self.on_receive_reply(reply)
+                if type(reply) == list:
+                    [self.on_receive_reply(w) for w in reply]
+                else:
+                    self.on_receive_reply(reply)
 
     def on_receive_reply(self, result):
         """ when the dialoguemanager has gotten back to us """
@@ -374,9 +377,8 @@ class BarebonesDialogueManager(object):
             if spec is not None:
                 self.spec.append(message)
 
-            # TODO: Process stuctured responses
-            return " ".join(self.interpreter.interpret(response) for command_responses in responses
-                            for response in command_responses)
+            return [self.interpreter.interpret(response) for command_responses in responses
+                            for response in command_responses]
 
     def _error_on_specgen(self, reponse):
         return reponse.startswith(self.SPECIFIC_SPECGEN_PROBLEM) or reponse == self.DEFAULT_SPECGEN_PROBLEM
