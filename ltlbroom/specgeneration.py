@@ -35,6 +35,9 @@ from semantics.new_knowledge import KnowledgeBase
 from ltlbroom.ltl import (
     env, and_, or_, sys_, not_, iff, next_, always, always_eventually, implies,
     space, mutex_, ALWAYS, EVENTUALLY, OR)
+from ltlbroom.talkback import (CommandResponse, ResponseInterpreter, AbortError,
+    LTLGenerationError, UnknownActionError, MissingArgumentError,
+    BadArgumentError, NoSuchLocationError)
 
 # Semantics constants
 LOCATION = "location"
@@ -56,10 +59,6 @@ SWEEP = "sweep"
 PICKUP = "pickup"
 DROP = "drop"
 HOLDING = "holding"
-
-# Talkback constants
-GOTIT = "I will {!r}."
-MISUNDERSTAND = "Sorry, I didn't understand that at all."
 
 
 class SpecChunk(object):
@@ -113,25 +112,6 @@ class SpecChunk(object):
         return self.type == SpecChunk.ENV
 
 
-class CommandResponse(object):
-    """Structure for a response to a command."""
-
-    def __init__(self, command, error=None):
-        self.command = command
-        self.error = error
-
-    def __str__(self):
-        if self.command:
-            return self.command.readable()
-        elif self.error:
-            return self.error
-        else:
-            return "Empty"
-
-    def __repr__(self):
-        return "<{}: {}>".format(self.__class__.__name__, str(self))
-
-
 class SpecGenerator(object):
     """Enables specification generation using natural language."""
 
@@ -164,6 +144,9 @@ class SpecGenerator(object):
         # Knowledge base
         self.kbase = KnowledgeBase()
 
+        # Response interpreter
+        self.interpreter = ResponseInterpreter()
+
     def generate(self, text, sensors, regions, props, tag_dict, realizable_reactions=False):
         """Generate a logical specification from natural language and propositions."""
         # Clean unicode out of everything
@@ -191,7 +174,6 @@ class SpecGenerator(object):
         parse_client = PipelineClient()
         results = []
         responses = []
-        problem = None
         custom_props = set()
         self.react_props = set()  # TODO: Make this a local
         custom_sensors = set()
@@ -255,28 +237,23 @@ class SpecGenerator(object):
                 try:
                     new_sys_lines, new_env_lines, new_custom_props, new_custom_sensors = \
                         self._apply_metapar(command)
-                except KeyError as err:
-                    cause = err.message
-                    problem = ("Could not understand {!r} command due to error: {}"
-                               .format(command.action, cause))
-                    logging.info("Error: {}".format(problem))
-                    command_responses.append(cause)
+                except LTLGenerationError as err:
+                    logging.info("Could not understand {!r} command due to error:".format(command.action))
+                    logging.info("{}, {}".format(err.__class__.__name__, err.message))
+                    command_responses.append(CommandResponse(command, err))
                     success = False
                     continue
                 except AttributeError as err:
+                    logging.error("Could not understand {!r} command due to an unexpected error while generating LTL:"
+                                   .format(command.action))
                     stack = traceback.format_exc()
-                    logging.error("Error while generating LTL:")
-                    logging.error(sys.stderr, stack)
-                    problem = ("Could not understand {!r} command due to an unexpected error."
-                               .format(command.action))
-                    command_responses.append(problem)
+                    logging.error(stack)
+                    command_responses.append(CommandResponse(None, AbortError()))
                     success = False
                     continue
                 else:
                     # Success, create the response
-                    response = (CommandResponse(command) if self.struct_responses else
-                                respond_okay(command.action))
-                    problem = None
+                    response = CommandResponse(command)
                     command_responses.append(response)
 
                 # Add in the new lines
@@ -292,14 +269,15 @@ class SpecGenerator(object):
 
             # If we've got no responses, say we didn't understand at all.
             if not command_responses:
-                if self.struct_responses:
-                    command_responses.append(CommandResponse(None))
-                else:
-                    command_responses.append(respond_nocommand())
+                command_responses.append(CommandResponse(None))
 
             # Add responses and successes
             results.append(success)
-            responses.append(command_responses)
+            if self.struct_responses:
+                responses.append(command_responses)
+            else:
+                # Interpret the response ourselves
+                responses.append(self.interpreter.interpret(response) for response in command_responses)
 
             # Add some space between commands
             logging.info("")
@@ -388,7 +366,7 @@ class SpecGenerator(object):
         try:
             handler = self.GOALS[command.action]
         except KeyError:
-            raise KeyError('Unknown action {0}.'.format(command.action))
+            raise UnknownActionError(command.action)
 
         if command.condition:
             return self._gen_conditional(command)
@@ -656,8 +634,7 @@ class SpecGenerator(object):
         # Raise an error if any of the regions are bad.
         for region in regions:
             if region not in self.regions:
-                raise KeyError("Cannot go to location {!r} "
-                               "because it is not on the map.".format(region))
+                raise NoSuchLocationError(region)
 
         sys_chunks = []
         mem_props = []
@@ -914,16 +891,6 @@ def explain_conflict(conflicting_lines, gen_tree):
     explanation = goal_problem + "\n" + other_problem
 
     return explanation, gen_tree
-
-
-def respond_nocommand():
-    """Respond saying we did not understand at all."""
-    return MISUNDERSTAND
-
-
-def respond_okay(action):
-    """Respond that we will perform the action."""
-    return GOTIT.format(action)
 
 
 def _test():

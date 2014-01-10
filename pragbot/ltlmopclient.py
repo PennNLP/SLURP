@@ -15,10 +15,12 @@ from specCompiler import SpecCompiler
 from LTLParser.LTLParser import Parser
 import execute
 
+from ltlbroom import talkback
+
+RESPONSE_PLANNING = "Okay, just a moment while I make a plan."
+
 # TODO: This class with one instance is overkill
 # pylint: disable=W0201
-
-
 class Config(object):
     executor_base_port = 11000
     ltlmop_base_port = 12000
@@ -30,10 +32,6 @@ class Config(object):
 
     def get_spec_file(self):
         return os.path.join(self.base_spec_dir, self.base_spec)
-
-RESPONSE_ERROR = ("Sorry, something went wrong when I tried to understand that. "
-                  "Try saying it differently.")
-RESPONSE_PLANNING = "Okay, just a moment while I make a plan."
 
 
 def find_port(base):
@@ -209,7 +207,7 @@ class LTLMoPClient(object):
                 reply = self.dialogue_manager.tell(user_text)
             except Parser.ParseErrors:
                 self.append_log("LTLParser encountered an error.")
-                reply = RESPONSE_ERROR
+                reply = self.dialogue_manager.interpreter.CRASH
             except IOError:
                 self.append_log("Could not connect to NLPipeline.")
                 raise
@@ -276,6 +274,10 @@ class BarebonesDialogueManager(object):
                                                    "response": ("chatbot_response", "Hi!")}
                           }
         self.paused = False
+
+        # Set up talkback
+        self.interpreter = talkback.FriendlyResponseInterpreter()
+
 
     def clear(self):
         self.spec = []
@@ -369,7 +371,8 @@ class BarebonesDialogueManager(object):
                 self.spec.append(message)
 
             # TODO: Process stuctured responses
-            return " ".join(str(response) for response in responses)
+            return " ".join(self.interpreter.interpret(response) for command_responses in responses
+                            for response in command_responses)
 
     def _error_on_specgen(self, reponse):
         return reponse.startswith(self.SPECIFIC_SPECGEN_PROBLEM) or reponse == self.DEFAULT_SPECGEN_PROBLEM
