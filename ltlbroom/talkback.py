@@ -137,6 +137,7 @@ class ResponseInterpreter(object):
 
 class FriendlyResponseInterpreter(ResponseInterpreter):
     """Human-friendly interpretation of command responses."""
+
     SORRY = "Sorry, "
     REWORD = " Try saying it differently."
     CRASH = SORRY + "something went wrong when I tried to understand that." + REWORD
@@ -146,3 +147,5 @@ class FriendlyResponseInterpreter(ResponseInterpreter):
     CONDITION = "if I see a {}"
     CATCH_ALL = "That doesn't make sense to me, but I can't explain why."
     BAD_ARGUMENT = "I understood {!r}, but didn't get the rest."
+    REGION = "the room {!r}"
+    PREP_REGION = "{} " + REGION
