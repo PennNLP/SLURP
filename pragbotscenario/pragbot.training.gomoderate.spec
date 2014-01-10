@@ -15,7 +15,7 @@ decompose: False
 use_region_bit_encoding: True
 
 CurrentConfigName:
-pragbot
+pragbotTrainingModerate
 
 Customs: # List of custom propositions
 
