@@ -44,7 +44,8 @@ class LTLMoPTestClient(object):
         self.ltlmop = ltlmopclient.LTLMoPClient(self.LISTEN_PORT, self.display_chat)
 
         # Fake location status
-        self.location = STARTING_LOCATION
+        self._location_lock = threading.Lock()
+        self._location = STARTING_LOCATION
 
     def get_user_input(self):
         """Get a line of input from the user."""
@@ -59,12 +60,12 @@ class LTLMoPTestClient(object):
     def receiveHandlerMessages(self, msg_type, msg=None):
         """Respond to a limited set of handler requests."""
         if msg_type == "Location":
-            return self.location
+            return self.get_location()
         elif msg_type == "Sensor":
             return "0,0"
         elif msg_type == "Move":
-            print "Motion: Moved to {}.".format(msg)
-            self.location = msg
+            print "Motion: Moving to {}.".format(msg)
+            self.move(msg)
         else:
             if not msg:
                 msg = "<No message>"
@@ -73,6 +74,25 @@ class LTLMoPTestClient(object):
     def display_chat(self, msg):
         """Do nothing since the log displays these messages already."""
         pass
+
+    def get_location(self):
+        """Get the current location."""
+        with self._location_lock:
+            return self._location
+
+    def set_location(self, value):
+        """Set the current location."""
+        with self._location_lock:
+            self._location = value
+
+    def move(self, location):
+        """Move the robot in a background thread after a delay."""
+        def move_delay():
+            """Move to a lexically enclosed location."""
+            self.set_location(location)
+            print "Motion: Moved to {}.".format(location)
+        mover = threading.Timer(3.0, move_delay)
+        mover.start()
 
 
 if __name__ == "__main__":
