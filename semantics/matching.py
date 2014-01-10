@@ -35,6 +35,7 @@ class ParseMatcher(object):
     """
     DEFAULT_SLOT_POS = ['PREP','NP','VERB','LEX']
     TO_TAG = "TO"
+    AGENT_KEY = "Agent"
     COMMA_TAG = ","
     pos_map = {         'S' : ['S'],
                         'DT' : ['DT'],
@@ -384,6 +385,10 @@ class ParseMatcher(object):
             sys.stderr.write("Could not find the subject in this parse, for this branch: "+str(sbranch))
         except:
             raise
+        
+        if self.AGENT_KEY not in fmatch:
+            #Do not match any frames with an agent
+            return None
         return fmatch       
 
 if __name__=="__main__":
