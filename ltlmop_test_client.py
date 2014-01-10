@@ -35,7 +35,7 @@ class LTLMoPTestClient(object):
     LISTEN_PORT = 20003
 
     def __init__(self):
-        self.xmlrpc_server = SimpleXMLRPCServer(("localhost", self.LISTEN_PORT),
+        self.xmlrpc_server = SimpleXMLRPCServer(("127.0.0.1", self.LISTEN_PORT),
                                                 logRequests=False, allow_none=True)
         self.xmlrpc_server.register_function(self.receiveHandlerMessages)
         self.xmlrpc_server_thread = threading.Thread(target=self.xmlrpc_server.serve_forever)
