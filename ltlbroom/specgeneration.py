@@ -113,6 +113,25 @@ class SpecChunk(object):
         return self.type == SpecChunk.ENV
 
 
+class CommandResponse(object):
+    """Structure for a response to a command."""
+
+    def __init__(self, command, error=None):
+        self.command = command
+        self.error = error
+
+    def __str__(self):
+        if self.command:
+            return self.command.readable()
+        elif self.error:
+            return self.error
+        else:
+            return "Empty"
+
+    def __repr__(self):
+        return "<{}: {}>".format(self.__class__.__name__, str(self))
+
+
 class SpecGenerator(object):
     """Enables specification generation using natural language."""
 
@@ -172,8 +191,7 @@ class SpecGenerator(object):
         parse_client = PipelineClient()
         results = []
         responses = []
-        # Default problem response
-        problem = MISUNDERSTAND
+        problem = None
         custom_props = set()
         self.react_props = set()  # TODO: Make this a local
         custom_sensors = set()
@@ -239,8 +257,8 @@ class SpecGenerator(object):
                         self._apply_metapar(command)
                 except KeyError as err:
                     cause = err.message
-                    problem = \
-                        "Could not understand {!r} command due to error: {}".format(command.action, cause)
+                    problem = ("Could not understand {!r} command due to error: {}"
+                               .format(command.action, cause))
                     logging.info("Error: {}".format(problem))
                     command_responses.append(cause)
                     success = False
@@ -249,15 +267,16 @@ class SpecGenerator(object):
                     stack = traceback.format_exc()
                     logging.error("Error while generating LTL:")
                     logging.error(sys.stderr, stack)
-                    problem = \
-                        "Could not understand {!r} command due to an unexpected error.".format(command.action)
+                    problem = ("Could not understand {!r} command due to an unexpected error."
+                               .format(command.action))
                     command_responses.append(problem)
                     success = False
                     continue
                 else:
                     # Success, create the response
-                    response = (command.to_dict() if self.struct_responses else
+                    response = (CommandResponse(command) if self.struct_responses else
                                 respond_okay(command.action))
+                    problem = None
                     command_responses.append(response)
 
                 # Add in the new lines
@@ -273,15 +292,14 @@ class SpecGenerator(object):
 
             # If we've got no responses, say we didn't understand at all.
             if not command_responses:
-                command_responses.append(respond_nocommand())
+                if self.struct_responses:
+                    command_responses.append(CommandResponse(None))
+                else:
+                    command_responses.append(respond_nocommand())
 
             # Add responses and successes
             results.append(success)
-            if self.struct_responses:
-                # TODO: Implement
-                responses.append("TODO")
-            else:
-                responses.append(" ".join(command_responses) if success else problem)
+            responses.append(command_responses)
 
             # Add some space between commands
             logging.info("")
@@ -452,7 +470,8 @@ class SpecGenerator(object):
             # Case 1: stimulus "If you see a bomb..."
             # Validate the condition
             if not command.condition.theme:
-                raise KeyError("No condition theme, cannot understand condition:\n{!r}".format(command.condition))
+                raise KeyError("No condition theme, cannot understand condition:\n{!r}"
+                               .format(command.condition))
             condition = command.condition.theme.name
             if condition not in self.sensors:
                 raise KeyError(
@@ -469,13 +488,15 @@ class SpecGenerator(object):
             # TODO: Add support for assertions not about "you". Ex: If there is a hostage...
             # Validate the condition
             if not command.condition.location:
-                raise KeyError("No condition location, cannot understand condition:\n{}".format(command.condition))
+                raise KeyError("No condition location, cannot understand condition:\n{}"
+                               .format(command.condition))
             condition = command.condition.location.name
             condition_frag = sys_(condition)
             explanation = "When in {!r},".format(condition)
         else:
             # Not sure what to do
-            raise KeyError("General problem generating conditional, cannot understand condition:\n{}".format(command.condition))
+            raise KeyError("General problem generating conditional, cannot understand condition:\n{}"
+                           .format(command.condition))
 
         # Validate the action
         action = command.action

@@ -209,8 +209,6 @@ class LTLMoPClient(object):
             except IOError:
                 self.append_log("Could not connect to NLPipeline.")
                 raise
-            if type(reply) == list:
-                for w in reply: self.on_receive_reply(w)
             else:
                 self.on_receive_reply(reply)
 
@@ -365,7 +363,8 @@ class BarebonesDialogueManager(object):
             if spec is not None:
                 self.spec.append(message)
 
-            return responses
+            # TODO: Process stuctured responses
+            return " ".join(str(response) for response in responses)
         
     def _error_on_specgen(self,reponse):
         return reponse.startswith(self.SPECIFIC_SPECGEN_PROBLEM) or reponse == self.DEFAULT_SPECGEN_PROBLEM
