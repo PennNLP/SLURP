@@ -3,7 +3,7 @@ Generates a logical specification from natural language.
 
 """
 
-# Copyright (C) 2011-2013 Constantine Lignos
+# Copyright (C) 2011-2014 Constantine Lignos
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@ import re
 import traceback
 from collections import OrderedDict, defaultdict
 from copy import deepcopy
+import logging
 
 from semantics.lexical_constants import (
     SEARCH_ACTION, GO_ACTION, FOLLOW_ACTION, SEE_ACTION, BEGIN_ACTION,
@@ -115,7 +116,9 @@ class SpecChunk(object):
 class SpecGenerator(object):
     """Enables specification generation using natural language."""
 
-    def __init__(self):
+    def __init__(self, struct_responses):
+        self.struct_responses = struct_responses
+
         # Handlers
         self.GOALS = {PATROL_ACTION: self._gen_patrol, GO_ACTION: self._gen_go,
                       AVOID_ACTION: self._gen_avoid, SEARCH_ACTION: self._gen_search,
@@ -142,8 +145,7 @@ class SpecGenerator(object):
         # Knowledge base
         self.kbase = KnowledgeBase()
 
-    def generate(self, text, sensors, regions, props, tag_dict, realizable_reactions=True,
-                 verbose=True):
+    def generate(self, text, sensors, regions, props, tag_dict, realizable_reactions=False):
         """Generate a logical specification from natural language and propositions."""
         # Clean unicode out of everything
         text = text.encode('ascii', 'ignore')
@@ -154,14 +156,13 @@ class SpecGenerator(object):
                          [value.encode('ascii', 'ignore') for value in values]
                          for key, values in tag_dict.items()}
 
-        if verbose:
-            print "NL->LTL Generation called on:"
-            print "Sensors:", self.sensors
-            print "Props:", self.props
-            print "Regions:", self.regions
-            print "Tag dict:", self.tag_dict
-            print "Text:", repr(text)
-            print
+        logging.info("NL->LTL Generation called on:")
+        logging.info("Sensors: {}".format(self.sensors))
+        logging.info("Props: {}".format(self.props))
+        logging.info("Regions: {}".format(self.regions))
+        logging.info("Tag dict: {}".format(self.tag_dict))
+        logging.info("Text {!r}".format(text))
+        logging.info("")
 
         # Make lists for POS conversions, including the metapar keywords
         force_nouns = list(self.regions) + list(self.sensors)
@@ -181,7 +182,7 @@ class SpecGenerator(object):
         # If there are any actuators, the robot must stay there while performing them
         if self.props:
             actuator_stay = [always(implies(and_([not_(sys_(prop)), next_(sys_(prop))]), STAY_THERE))
-                            for prop in self.props]
+                             for prop in self.props]
             safety_chunks = [SpecChunk("Robot cannot move while actuating.", actuator_stay,
                                        SpecChunk.SYS, None)]
             # Add the actuator mutex
@@ -207,23 +208,21 @@ class SpecGenerator(object):
             generated_lines = OrderedDict()
             generation_trees[line] = generated_lines
 
-            if verbose:
-                print "Sending to remote parser:", repr(line)
+            logging.info("Sending to remote parser: {!r}".format(line))
             parse = parse_client.parse(line, force_nouns, force_verbs=force_verbs)
-            if verbose:
-                print "Response from parser:", repr(parse)
+            logging.info("Response from parser: {}".format(parse))
             frames, new_commands, kb_response = \
                 extract_commands(parse, self.kbase, verbose=False)
 
             # Print information about matching
-            if verbose and frames:
-                print "Matching frames:"
+            if frames:
+                logging.info("Matching frames:")
                 for frame in frames:
-                    print frame.pprint()
-                    print
-                print
-            elif verbose:
-                print "No frames matched."
+                    logging.info(frame.pprint())
+                    logging.info("")
+                logging.info("")
+            else:
+                logging.info("No frames matched.")
 
             # TODO: For now second pass through KBis disabled
             # frames, new_commands, kb_response = process_parse_tree(parse, line, self.kbase,
@@ -233,25 +232,23 @@ class SpecGenerator(object):
             success = bool(new_commands) or bool(kb_response)
             command_responses = [kb_response] if kb_response else []
             for command in new_commands:
-                if verbose:
-                    print "Processing command:"
-                    print command
+                logging.info("Processing command:")
+                logging.info(command)
                 try:
                     new_sys_lines, new_env_lines, new_custom_props, new_custom_sensors = \
-                        self._apply_metapar(command, verbose)
+                        self._apply_metapar(command)
                 except KeyError as err:
                     cause = err.message
                     problem = \
                         "Could not understand {!r} command due to error: {}".format(command.action, cause)
-                    if verbose:
-                        print >> sys.stderr, "Error: " + problem
+                    logging.info("Error: {}".format(problem))
                     command_responses.append(cause)
                     success = False
                     continue
                 except AttributeError as err:
                     stack = traceback.format_exc()
-                    print >> sys.stderr, "Error while generating LTL:"
-                    print >> sys.stderr, stack
+                    logging.error("Error while generating LTL:")
+                    logging.error(sys.stderr, stack)
                     problem = \
                         "Could not understand {!r} command due to an unexpected error.".format(command.action)
                     command_responses.append(problem)
@@ -283,17 +280,15 @@ class SpecGenerator(object):
                 responses = [str(w) for w in command_responses]
             else:
                 responses = [problem]
-                
-            # Add some space between commands
-            if verbose:
-                print
 
-        if verbose:
-            print "Generation trees:"
-            for line, output in generation_trees.items():
-                print line
-                print output
-            print
+            # Add some space between commands
+            logging.info("")
+
+        logging.info("Generation trees:")
+        for line, output in generation_trees.items():
+            logging.info(line)
+            logging.info(output)
+        logging.info("")
 
         # We need to modify non-reaction goals to be or'd with the reactions
         if realizable_reactions and self.react_props:
@@ -342,34 +337,33 @@ class SpecGenerator(object):
         custom_props = list(custom_props)
         custom_sensors = list(custom_sensors)
 
-        if verbose:
-            print "Spec generation complete."
-            print "Results:", results
-            print "Responses:", responses
-            print "Environment lines:", env_lines
-            print "System lines:", sys_lines
-            print "Custom props:", custom_props
-            print "Custom sensors:", custom_sensors
-            print "Generation trees:", generation_trees
+        logging.info("Spec generation complete.")
+        logging.info("Results: {}".format(results))
+        logging.info("Responses: {}".format(responses))
+        logging.info("Environment lines: {}".format(env_lines))
+        logging.info("System lines: {}".format(sys_lines))
+        logging.info("Custom props: {}".format(custom_props))
+        logging.info("Custom sensors: {}".format(custom_sensors))
+        logging.info("Generation trees: {}".format(generation_trees))
 
         return (env_lines, sys_lines, custom_props, custom_sensors, results, responses,
                 generation_trees)
-        
-    def _apply_metapar(self, command, verbose=False):
+
+    def _apply_metapar(self, command):
         """Generate a metapar for a command."""
         # Patch up actuator commands
         if (command.action not in self.GOALS and
             command.action in UNDERSTOOD_SENSES):
             # If there's a theme, make it into a reaction
             if command.theme:
-                command.condition = Command(command.agent, command.theme, None, None, None, None, SEE_ACTION)
+                command.condition = Command(command.agent, command.theme, None, None, None, None,
+                                            SEE_ACTION)
 
             command.theme = ObjectEntity(command.action)
             command.action = ACTIVATE_ACTION
 
-            if verbose:
-                print "Modified actuator command, new command:"
-                print command
+            logging.info("Modified actuator command, new command:")
+            logging.info(command)
 
         try:
             handler = self.GOALS[command.action]
@@ -396,13 +390,13 @@ class SpecGenerator(object):
                 tag = argument.name
                 #tag = argument.description[0]
             except (IndexError, TypeError):
-                print >> sys.stderr, "Error: Could not get description of {}.".format(argument)
+                logging.warning("Could not get description of {}.".format(argument))
                 return default_return
 
             try:
                 members = sorted(self.tag_dict[tag])
             except KeyError:
-                print "Error: Could not get members of tag {!r}.".format(argument.description)
+                logging.warning("Could not get members of tag {!r}.".format(argument.description))
                 return default_return
 
             # Unroll into copies of the command.
@@ -546,7 +540,7 @@ class SpecGenerator(object):
             reaction_frag = handler(command)
             react = always(implies(next_(reaction_prop), reaction_frag))
             stay_there = always(implies(or_([reaction_prop, next_(reaction_prop)]),
-                                       self._frag_stay()))
+                                        self._frag_stay()))
             sys_statements.extend([stay_there, react])
 
         sys_chunk = SpecChunk(explanation, sys_statements, SpecChunk.SYS, command)
@@ -829,7 +823,7 @@ def goal_to_chunk(goal_idx, spec_chunks):
     if len(chunks) == 1:
         return chunks[0]
     elif len(chunks) > 1:
-        print >> sys.stderr, "Error: Found multiple chunks for goal {}.".format(goal_idx)
+        logging.error("Error: Found multiple chunks for goal {}.".format(goal_idx))
     # Zero length case returns None without printing an error
     return None
 
@@ -911,13 +905,14 @@ def respond_okay(action):
 
 def _test():
     """Test spec generation."""
+    logging.getLogger().setLevel(logging.DEBUG)
+    specgen = SpecGenerator(False)
     # pylint: disable=W0612
-    specgen = SpecGenerator()
     env_lines, sys_lines, custom_props, custom_sensors, results, responses, gen_tree = \
         specgen.generate('\n'.join(sys.argv[1:]), ("bomb", "hostage", "badguy", "monkey"),
                          ("r1", "r2", "r3", "r4", "office", "classroom1", "classroom2"),
                          ("defuse", "pickup", "drop", "banana", "camera"),
-                         {'odd': ['r1', 'r3']}, verbose=True)
+                         {'odd': ['r1', 'r3']})
     for line in env_lines + sys_lines:
         print line
 

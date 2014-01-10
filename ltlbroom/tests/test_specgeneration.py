@@ -23,7 +23,7 @@ class TestSpecGenerator(unittest.TestCase):
     """Test spec generation."""
 
     def setUp(self):
-        self.specgen = SpecGenerator()
+        self.specgen = SpecGenerator(False)
         self.sensors = []
         self.regions = ['hallway']
         self.props = []
@@ -115,7 +115,7 @@ class TestSpecGenerator(unittest.TestCase):
     def get_from_gen(self, text, start, end=None):
         """Return the start-th or start:end element(s) of the return from generate."""
         result = self.specgen.generate(text, self.sensors, self.regions,
-          self.props, self.tag_dict, verbose=False)
+          self.props, self.tag_dict)
         if end:
             return result[start:end]
         else:
