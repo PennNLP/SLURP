@@ -36,8 +36,7 @@ from ltlbroom.ltl import (
     env, and_, or_, sys_, not_, iff, next_, always, always_eventually, implies,
     space, mutex_, ALWAYS, EVENTUALLY, OR)
 from ltlbroom.talkback import (CommandResponse, ResponseInterpreter, AbortError,
-    LTLGenerationError, UnknownActionError, MissingArgumentError,
-    BadArgumentError, NoSuchLocationError)
+    LTLGenerationError, UnknownActionError, BadArgumentError, NoSuchLocationError)
 
 # Semantics constants
 LOCATION = "location"
@@ -238,8 +237,8 @@ class SpecGenerator(object):
                     new_sys_lines, new_env_lines, new_custom_props, new_custom_sensors = \
                         self._apply_metapar(command)
                 except LTLGenerationError as err:
-                    logging.info("Could not understand {!r} command due to error:".format(command.action))
-                    logging.info("{}, {}".format(err.__class__.__name__, err.message))
+                    logging.info("Could not understand {!r} command due to error: {}"
+                                 .format(command.action, "{}, {}".format(err.__class__.__name__, err.message)))
                     command_responses.append(CommandResponse(command, err))
                     success = False
                     continue
@@ -277,7 +276,7 @@ class SpecGenerator(object):
                 responses.append(command_responses)
             else:
                 # Interpret the response ourselves
-                responses.append(self.interpreter.interpret(response) for response in command_responses)
+                responses.append([self.interpreter.interpret(response) for response in command_responses])
 
             # Add some space between commands
             logging.info("")
@@ -448,11 +447,11 @@ class SpecGenerator(object):
             # Case 1: stimulus "If you see a bomb..."
             # Validate the condition
             if not command.condition.theme:
-                raise KeyError("No condition theme, cannot understand condition:\n{!r}"
+                raise BadArgumentError("No condition theme, cannot understand condition:\n{!r}"
                                .format(command.condition))
             condition = command.condition.theme.name
             if condition not in self.sensors:
-                raise KeyError(
+                raise BadArgumentError(
                     "No sensor to detect condition {!r}".format(command.condition.theme.name))
             condition_frag = env(condition)
             explanation = "To react to {!r},".format(condition)
@@ -466,20 +465,20 @@ class SpecGenerator(object):
             # TODO: Add support for assertions not about "you". Ex: If there is a hostage...
             # Validate the condition
             if not command.condition.location:
-                raise KeyError("No condition location, cannot understand condition:\n{}"
+                raise BadArgumentError("No condition location, cannot understand condition:\n{}"
                                .format(command.condition))
             condition = command.condition.location.name
             condition_frag = sys_(condition)
             explanation = "When in {!r},".format(condition)
         else:
             # Not sure what to do
-            raise KeyError("General problem generating conditional, cannot understand condition:\n{}"
+            raise BadArgumentError("General problem generating conditional, cannot understand condition:\n{}"
                            .format(command.condition))
 
         # Validate the action
         action = command.action
         if action not in self.REACTIONS:
-            raise KeyError("Unknown reaction {!r}".format(action))
+            raise BadArgumentError("Unknown reaction {!r}".format(action))
 
         # Create the right type of reaction
         new_props = []
@@ -498,7 +497,7 @@ class SpecGenerator(object):
         if action in (GO_ACTION, AVOID_ACTION):
             # Go is unusual because the outcome is not immediately satisfiable
             if not command.location:
-                raise KeyError("No location in go reaction")
+                raise BadArgumentError("No location in go reaction")
             destination = command.location.name
 
             # Negation is easy, so we take a shortcut
@@ -528,7 +527,7 @@ class SpecGenerator(object):
             explanation += " stay there."
         else:
             if command.theme.name not in self.props:
-                raise KeyError("Unknown actuator {!r}".format(command.theme.name))
+                raise BadArgumentError("Unknown actuator {!r}".format(command.theme.name))
             # Otherwise we are always creating reaction safety
             sys_statements.append(always(iff(next_(condition_frag), next_(reaction_prop))))
             template = " {} {!r}." if not command.negation else " do not {} {!r}."
@@ -560,9 +559,13 @@ class SpecGenerator(object):
     def _gen_carry(self, command):
         """Generate statements for carrying items from one region to another."""
         if not all((command.theme, command.source, command.destination)):
-            raise KeyError("Missing item, source, or destination for carry.")
+            raise BadArgumentError("Missing item, source, or destination for carry.")
 
         item = command.theme.name
+        # Check that the item is valid
+        if item not in self.sensors:
+            raise BadArgumentError("No sensor to detect item {!r}".format(item))
+
         source = command.source.name
         dest_arg = command.destination
         destinations = [dest.name for dest in self._expand_argument(dest_arg, command)]
@@ -621,7 +624,7 @@ class SpecGenerator(object):
         """Generate statements to go to a location once."""
         # Check for a location
         if not command.location:
-            raise KeyError("No location given for 'go' command.")
+            raise BadArgumentError("No location given for 'go' command.")
 
         # Avoid if it's negated
         if command.negation:
@@ -630,7 +633,7 @@ class SpecGenerator(object):
         try:
             regions = [location.name for location in self._expand_argument(command.location, command)]
         except AttributeError:
-            raise KeyError("Could not understand location for 'go' command.")
+            raise BadArgumentError("Could not understand location for 'go' command.")
         # Raise an error if any of the regions are bad.
         for region in regions:
             if region not in self.regions:
@@ -696,7 +699,7 @@ class SpecGenerator(object):
         try:
             actuator = command.theme.name
         except AttributeError:
-            raise KeyError("Missing actuator for activate/deactivate.")
+            raise BadArgumentError("Missing actuator for activate/deactivate.")
 
         # If negation isn't set, allow the command to set it
         negated = negated or command.negation

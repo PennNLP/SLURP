@@ -15,6 +15,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from semantics.lexical_constants import (GO_ACTION, PATROL_ACTION, ACTIVATE_ACTION)
+
+
 class AbortError(Exception):
     """LTL generation crashed while interpreting the command."""
     pass
@@ -30,19 +33,15 @@ class UnknownActionError(LTLGenerationError):
     pass
 
 
-class MissingArgumentError(LTLGenerationError):
-    """Action is missing a needed argument."""
-    pass
-
-
 class BadArgumentError(LTLGenerationError):
     """Action has a bad argument."""
     pass
 
 
-class NoSuchLocationError(BadArgumentError):
+class NoSuchLocationError(LTLGenerationError):
     """Location does not exist."""
     pass
+
 
 class CommandResponse(object):
     """Structure for a response to a command."""
@@ -68,10 +67,15 @@ class ResponseInterpreter(object):
 
     CRASH = "Parsing failure when processing input."
     GOTIT = "I will {!r}."
+    GOTIT_LONG = "I will {} {}."
     MISUNDERSTAND = "No verbs matched."
     CANNOT = "Robot cannot {!r}."
     CATCH_ALL = "Cannot explain error."
     NO_LOCATION = "No region {!r}."
+    REGION = "region {!r}"
+    PREP_REGION = "{} " + REGION
+    CONDITION = "if {!r}"
+    BAD_ARGUMENT = "Bad arguments for {!r}."
 
     def interpret(self, response):
         """Return a natural language explanation of a specgen response."""
@@ -81,8 +85,10 @@ class ResponseInterpreter(object):
             else:
                 if isinstance(response.error, UnknownActionError):
                     return self.cannot(response)
-                if isinstance(response.error, NoSuchLocationError):
-                    return self.cannot(response)
+                elif isinstance(response.error, NoSuchLocationError):
+                    return self.bad_location(response)
+                elif isinstance(response.error, BadArgumentError):
+                    return self.bad_argument(response)
                 else:
                     return self.CATCH_ALL
         elif response.error:
@@ -95,7 +101,26 @@ class ResponseInterpreter(object):
 
     def command(self, response):
         """Interpret a command."""
-        return self.GOTIT.format(response.command.action)
+        command = response.command
+        action = command.action
+        if action == GO_ACTION:
+            return self.GOTIT_LONG.format(action,
+                                          self.PREP_REGION.format("to", command.location.name))
+        elif action == PATROL_ACTION:
+            return self.GOTIT_LONG.format(action, self.REGION.format(command.location.name))
+        elif action == ACTIVATE_ACTION:
+            if command.condition:
+                return self.GOTIT_LONG.format(repr(command.theme.name),
+                                              self.CONDITION.format(command.condition.theme.name))
+            elif command.location:
+                return self.GOTIT_LONG.format(repr(command.theme.name),
+                                              self.PREP_REGION.format("in", command.location.name))
+            else:
+                # Fall through
+                pass
+
+        # TODO: Cover other actions
+        return self.GOTIT.format(action)
 
     def cannot(self, response):
         """Explain that the robot cannot carry out that action."""
@@ -105,12 +130,19 @@ class ResponseInterpreter(object):
         """Explain that the location is not on the map."""
         return self.NO_LOCATION.format(response.error.message)
 
+    def bad_argument(self, response):
+        """Explain that an action has a bad argument."""
+        return self.BAD_ARGUMENT.format(response.command.action)
+
 
 class FriendlyResponseInterpreter(ResponseInterpreter):
     """Human-friendly interpretation of command responses."""
-    REWORD =  " Try saying it differently."
-    CRASH = "Sorry, something went wrong when I tried to understand that." + REWORD
-    MISUNDERSTAND = "Sorry, I didn't understand what you said." + REWORD
-    UNDERSTOOD = "I understood that, "
-    CANNOT = UNDERSTOOD + "but I don't know how to {}."
-    NO_LOCATION = "Sorry, but I don't know where {!r} is."
+    SORRY = "Sorry, "
+    REWORD = " Try saying it differently."
+    CRASH = SORRY + "something went wrong when I tried to understand that." + REWORD
+    MISUNDERSTAND = SORRY + "I didn't understand what you said." + REWORD
+    CANNOT = SORRY + "but I don't know how to {}."
+    NO_LOCATION = SORRY + "but I don't know where {!r} is."
+    CONDITION = "if I see a {}"
+    CATCH_ALL = "That doesn't make sense to me, but I can't explain why."
+    BAD_ARGUMENT = "I understood {!r}, but didn't get the rest."
