@@ -54,19 +54,30 @@ class LTLMoPClient(object):
 
     def __init__(self, handler_port, chat_callback):
         self.CONFIG = Config()
-        spec_file = self.CONFIG.get_spec_file()
         self.handler_port = handler_port
         self.map_bitmap = None
         self.robot_pos = None
         self.fiducial_positions = {}
+        self.chat_callback = chat_callback
+        # To be set by load_project
+        self.proj = None
+        self.executor_proxy = None
+        self.dialogue_manager = None
+        self.load_project(False)
+
+    def load_project(self, reloading):
+        """Load a project from CONFIG.spec_file, reusing the proxy if reloading."""
+        spec_file = self.CONFIG.get_spec_file()
         self.proj = project.Project()
         self.proj.loadProject(spec_file)
-        self.chat_callback = chat_callback
-        self.executor_proxy = self.get_executor(spec_file)
-        self.dialogue_manager = self.get_dialogue_manager()
-
         # Set the compiler to give structured responses
         self.proj.compile_options["slurp_struct_responses"] = True
+        if not reloading:
+            self.executor_proxy = self.get_executor(spec_file)
+        else:
+            # TODO: Check whether this is the right way to do this
+            self.executor_proxy.initialize(spec_file, None)
+        self.dialogue_manager = self.get_dialogue_manager()
 
     def get_dialogue_manager(self):
         # Start dialogue manager
@@ -138,13 +149,7 @@ class LTLMoPClient(object):
     def set_project(self, specfile):
         """Set the project of this client via a new specfile"""
         self.CONFIG.base_spec = specfile
-        new_spec_file = self.CONFIG.get_spec_file()
-        self.proj = project.Project()
-        self.proj.loadProject(new_spec_file)
-        self.executor_proxy.initialize(new_spec_file, None)
-
-        # Start dialogue manager
-        self.dialogue_manager = self.get_dialogue_manager()
+        self.load_project(True)
 
     def handleEvent(self, event_type, event_data):
         """Processes messages from the controller, and updates the GUI accordingly"""
