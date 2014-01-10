@@ -1,9 +1,8 @@
 #!/usr/bin/env python
+"""Provide an interface to LTLMoP execution."""
 
 import os
 import sys
-import ast
-import getpass
 import socket
 import multiprocessing
 import threading
@@ -18,18 +17,20 @@ import execute
 
 # TODO: This class with one instance is overkill
 # pylint: disable=W0201
+
+
 class Config(object):
     executor_base_port = 11000
     ltlmop_base_port = 12000
     max_port_tries = 100
-    
-    def __init__(self):        
+
+    def __init__(self):
         self.base_spec_dir = "pragbotscenario"
-        self.base_spec = "pragbot.spec"        
-        
+        self.base_spec = "pragbot.spec"
+
     def get_spec_file(self):
         return os.path.join(self.base_spec_dir, self.base_spec)
-    
+
 RESPONSE_ERROR = ("Sorry, something went wrong when I tried to understand that. "
                   "Try saying it differently.")
 RESPONSE_PLANNING = "Okay, just a moment while I make a plan."
@@ -51,20 +52,21 @@ def find_port(base):
 
 
 class LTLMoPClient(object):
-    RESPONSE_DELIM = "RESPONSE_DELIM"#Split response by words and semantics
+    RESPONSE_DELIM = "RESPONSE_DELIM"  # Split response by words and semantics
+
     def __init__(self, handler_port, chat_callback):
-        self.CONFIG = Config()        
-        spec_file = self.CONFIG.get_spec_file()           
+        self.CONFIG = Config()
+        spec_file = self.CONFIG.get_spec_file()
         self.handler_port = handler_port
         self.map_bitmap = None
         self.robot_pos = None
         self.fiducial_positions = {}
-        self.proj = project.Project()        
+        self.proj = project.Project()
         self.proj.loadProject(spec_file)
         self.chat_callback = chat_callback
         self.executor_proxy = self.get_executor(spec_file)
         self.dialogue_manager = self.get_dialogue_manager()
-        
+
         # Set the compiler to give structured responses
         self.proj.compile_options["slurp_struct_responses"] = True
 
@@ -83,10 +85,10 @@ class LTLMoPClient(object):
 
         # Tell the user we are ready
         self.append_log("Hello.", "System")
-        
+
         return dialogue_manager
-        
-    def get_executor(self,spec_file):        
+
+    def get_executor(self, spec_file):
         # Start execution context
         print "Starting executor..."
         self.executor_ready_flag = threading.Event()
@@ -102,14 +104,16 @@ class LTLMoPClient(object):
         # Start our own xml-rpc server to receive events from execute
         self.server_port = find_port(self.CONFIG.ltlmop_base_port)
         print "Using port {} for LTLMoP client".format(self.server_port)
-        self.xmlrpc_server = SimpleXMLRPCServer(("127.0.0.1", self.server_port),
-                                                logRequests=False, allow_none=True)
+        self.xmlrpc_server = SimpleXMLRPCServer(
+            ("127.0.0.1", self.server_port),
+            logRequests=False, allow_none=True)
 
         # Register functions with the XML-RPC server
         self.xmlrpc_server.register_function(self.handleEvent)
 
         # Kick off the XML-RPC server thread
-        self.xmlrpc_server_thread = threading.Thread(target=self.xmlrpc_server.serve_forever)
+        self.xmlrpc_server_thread = threading.Thread(
+            target=self.xmlrpc_server.serve_forever)
         self.xmlrpc_server_thread.daemon = True
         self.xmlrpc_server_thread.start()
         print "LTLMoPClient listening for XML-RPC calls on \
@@ -132,14 +136,14 @@ class LTLMoPClient(object):
                 break
         print
         return executor_proxy
-            
-    def set_project(self,specfile):
+
+    def set_project(self, specfile):
         """Set the project of this client via a new specfile"""
         self.CONFIG.base_spec = specfile
         new_spec_file = self.CONFIG.get_spec_file()
-        self.proj = project.Project()        
+        self.proj = project.Project()
         self.proj.loadProject(new_spec_file)
-        self.executor_proxy.initialize(new_spec_file,None)
+        self.executor_proxy.initialize(new_spec_file, None)
 
         # Start dialogue manager
         self.dialogue_manager = self.get_dialogue_manager()
@@ -230,12 +234,12 @@ class LTLMoPClient(object):
 
 
 class BarebonesDialogueManager(object):
-    
-    #GOTIT responsibility was on specgen but now it is on the dialogue manager    
+
+    # GOTIT responsibility was on specgen but now it is on the dialogue manager
     GOTIT = "Got it. I can {!r}"
     DEFAULT_SPECGEN_PROBLEM = "I'm sorry, I didn't quite understand that."
     SPECIFIC_SPECGEN_PROBLEM = "Could not understand"
-    
+
     def __init__(self, ltlmopclient, executor, base_spec=None):
         """ take reference to execution context and gui_window
             optionally initialize with some base spec text """
@@ -250,26 +254,27 @@ class BarebonesDialogueManager(object):
 
         self.spec = []
 
-        # Initiate a specCompiler to hang around and give us immediate parser feedback
+        # Initiate a specCompiler to hang around and give us immediate parser
+        # feedback
         self.compiler = SpecCompiler()
         self.compiler.proj = self.ltlmop.proj
-        
-        self.chat_dict = {"clear_actions" : { "prompts": ["clear"],
-                                               "response": ("clear_command","")},
-                            "activate_actions" : {"prompts": ["go","activate","execute"],
-                                                  "response": ("activate_command","")},
-                            "pause_actions" : {"prompts" : ["wait","stop"],
-                                               "response" : ("no_act","Stopping until you tell me to start " + \
-                                               "or give me new commands.")},
-                            "status_requests" : {"prompts": ["status"],
-                                                 "response": ("status_request","")},                                                         
-                            "resume_actions" : {"prompts": ["start","begin"],
-                                                 "response": ("resume_act","Picking up where I left off.")},  
-                            "speclist_requests" : {"prompts": ["list"],
-                                                   "response": ("speclist_request","")},
-                            "non_actionable_chats" : {"prompts": ["hello","hi","how's it going?"],
-                                                      "response": ("chatbot_response","Hi!")}
-                          } 
+
+        self.chat_dict = {"clear_actions": {"prompts": ["clear"],
+                                            "response": ("clear_command", "")},
+                          "activate_actions": {"prompts": ["go", "activate", "execute"],
+                                               "response": ("activate_command", "")},
+                          "pause_actions": {"prompts": ["wait", "stop"],
+                                            "response": ("no_act", "Stopping until you tell me to start " +
+                                                         "or give me new commands.")},
+                          "status_requests": {"prompts": ["status"],
+                                              "response": ("status_request", "")},
+                          "resume_actions": {"prompts": ["start", "begin"],
+                                             "response": ("resume_act", "Picking up where I left off.")},
+                          "speclist_requests": {"prompts": ["list"],
+                                                "response": ("speclist_request", "")},
+                          "non_actionable_chats": {"prompts": ["hello", "hi", "how's it going?"],
+                                                   "response": ("chatbot_response", "Hi!")}
+                          }
         self.paused = False
 
     def clear(self):
@@ -278,7 +283,7 @@ class BarebonesDialogueManager(object):
 
     def execute(self):
         # TODO: don't resynthesize if the specification hasn't changed?
-        #       i.e. distinguish between resuming from pause, versus a new command
+        # i.e. distinguish between resuming from pause, versus a new command
 
         if not self.spec:
             return "You haven't given me any orders I understand."
@@ -293,7 +298,8 @@ class BarebonesDialogueManager(object):
         spec = self.get_spec()
         success = self.executor.resynthesizeFromNewSpecification(spec)
         if success:
-            # TODO: Remove this to allow carryover of commands when resynthesizing
+            # TODO: Remove this to allow carryover of commands when
+            # resynthesizing
             self.clear()
             # resume
             self.executor.resume()
@@ -302,20 +308,19 @@ class BarebonesDialogueManager(object):
             self.clear()
             return ("Sorry, I can't come up with a plan that will carry out all your orders. "
                     "Try giving fewer commands at a time.")
-            
-    def handle_chats(self,message):
+
+    def handle_chats(self, message):
         """Return the response code and text if appropriate"""
         msg = message.lower().strip().strip('.')
         for entry in self.chat_dict:
-            if msg in self.chat_dict[entry]["prompts"]:                
-                return self.chat_dict[entry]["response"]            
-        return "other",""
-    
+            if msg in self.chat_dict[entry]["prompts"]:
+                return self.chat_dict[entry]["response"]
+        return "other", ""
 
     def tell(self, message):
         """ take in a message from the user, return a response.
             WARNING: this is effectively running in non-main thread"""
-            
+
         response_code, chat = self.handle_chats(message)
         if response_code == "clear_command":
             self.clear()
@@ -359,17 +364,16 @@ class BarebonesDialogueManager(object):
             # FIXME: This may only work with SLURP
             message = message.strip()
             self.compiler.proj.specText = message
-            spec, traceback_tree, responses = self.compiler._writeLTLFile()            
+            spec, traceback_tree, responses = self.compiler._writeLTLFile()
             if spec is not None:
                 self.spec.append(message)
 
             # TODO: Process stuctured responses
             return " ".join(str(response) for response in responses)
-        
-    def _error_on_specgen(self,reponse):
+
+    def _error_on_specgen(self, reponse):
         return reponse.startswith(self.SPECIFIC_SPECGEN_PROBLEM) or reponse == self.DEFAULT_SPECGEN_PROBLEM
 
     def get_spec(self):
         """ return the current specification as one big string """
         return "\n".join(self.base_spec + self.spec)
-
