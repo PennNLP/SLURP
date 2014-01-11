@@ -33,15 +33,17 @@ class ParseMatcher(object):
     strictMatching is a numeric value that sets the acceptable depth distance from the main VP
     strictPPMatching is a numeric value that sets the acceptable depth distance from the NP head
     """
-    DEFAULT_SLOT_POS = ['PREP','NP','VERB','LEX']
     TO_TAG = "TO"
     AGENT_KEY = "Agent"
+    DEFAULT_ROLE = "DEFAULT_ROLE"
     COMMA_TAG = ","
     pos_map = {         'S' : ['S'],
                         'DT' : ['DT'],
                         'ADV' : ['ADV'], 
                         'VERB' : ['VB','VBP','VPNONE'],
-                        'NP' : ['NPNONE','NNS','NN','NNP','NNPS','PRP'],
+                        'NP' : {"Agent" : ['NPNONE','NNS','NN','NNP','NNPS','PRP'],
+                                "Theme" : ['NNS','NN','NNP','NNPS','PRP'],
+                                DEFAULT_ROLE : ['NNS','NN','NNP','NNPS','PRP']},
                         'PREP' : {"to towards" : ["TO","IN"],
                                   "against into onto" : ["IN"],
                                   "to into" : ["IN","TO"],
@@ -53,7 +55,8 @@ class ParseMatcher(object):
                                   "with" : ["IN"],
                                   "for" : ["IN"],
                                   "from for on" : ["IN"],
-                                  "by" : ["IN"]                                  
+                                  "by" : ["IN"],
+                                  DEFAULT_ROLE : ["IN"]                                
                                   },
                         'LEX' : ['there'],
                         'ADJ' : ['ADJ']                        
@@ -120,16 +123,19 @@ class ParseMatcher(object):
         """Return the path to the head of the slot"""        
         pos, role, secondary, tertiary = slot      
         if not pos in self.pos_map:
-            sys.stderr.write("WARNING: Verbframe slot pos ["+str(pos)+"] unknown.")
+            # Verbframe slot pos is unknown
             return None
         heads = self.pos_map[pos]
-        roles = None
+        lexical_roles = None#For preps: to, towards, against etc...
         if type(heads) == type({}):
             if not role in heads:
-                sys.stderr.write("WARNING: Verbframe slot role ["+str(role)+"] unknown.")
-                return None
-            heads = heads[role]
-            if not role in self.DEFAULT_SLOT_POS: roles = role.split(" ")
+                #Verbframe slot role for this pos is unknown
+                heads = heads[self.DEFAULT_ROLE]
+            else:
+                heads = heads[role]
+                if role.islower():
+                    #lowercase role => we want the lexical_role to match the leaf
+                    lexical_roles = role.split(" ")
         maxd = -1
         for head in heads:            
             if 'max'+head in self.depth_map:
@@ -141,17 +147,16 @@ class ParseMatcher(object):
         if mainpos:
             if not self.check_rules(slot,mainpos): return None
             leaf = self.th.get_leaf(tree,[w[1] for w in mainpos])
-            if roles and leaf.lower() in roles:
+            if lexical_roles and leaf.lower() in lexical_roles:
                 return [w[1] for w in mainpos]
-            elif roles:
+            elif lexical_roles:
+                #We defined lexical_roles and the leaf was not one of them.
                 return None
             return [w[1] for w in mainpos]
         else:
             return None
-        if DEBUG : print 'path to mainpos for slot(',slot,') ',mainpos
-        
-        return mainpos
-     
+        if DEBUG : print 'path to mainpos for slot(',slot,') ',mainpos        
+        return mainpos     
     
         
     def match_subject_object(self,left,right,v,tree):
@@ -386,9 +391,11 @@ class ParseMatcher(object):
         except:
             raise
         
+        #Custom rules for frames
         if self.AGENT_KEY not in fmatch:
             #Do not match any frames with an agent
             return None
+                
         return fmatch       
 
 if __name__=="__main__":
