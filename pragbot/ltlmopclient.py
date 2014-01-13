@@ -216,7 +216,8 @@ class LTLMoPClient(object):
                 raise
             else:
                 if type(reply) == list:
-                    [self.on_receive_reply(w) for w in reply]
+                    for w in reply:
+                        self.on_receive_reply(w)
                 else:
                     self.on_receive_reply(reply)
 
