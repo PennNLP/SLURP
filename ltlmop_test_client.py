@@ -72,8 +72,8 @@ class LTLMoPTestClient(object):
             print "{}: {}".format(msg_type, msg)
 
     def display_chat(self, msg):
-        """Do nothing since the log displays these messages already."""
-        pass
+        """Show a chat message. These are somewhat redundant as log displays these messages already."""
+        print "Chat: {}".format(msg)
 
     def get_location(self):
         """Get the current location."""
