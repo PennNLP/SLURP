@@ -50,7 +50,6 @@ def find_port(base):
 
 
 class LTLMoPClient(object):
-    RESPONSE_DELIM = "RESPONSE_DELIM"  # Split response by words and semantics
 
     def __init__(self, handler_port, chat_callback):
         self.CONFIG = Config()
