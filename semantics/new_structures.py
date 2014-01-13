@@ -21,6 +21,7 @@ from semantics.util import text2int, is_pronoun
 
 # Special field names for hiding additional data in commands
 ADDITIONAL_DATA_QUANTIFIER = "quantifer"
+ADDITIONAL_DATA_REACTION = "reaction"
 
 
 class Entity(object):

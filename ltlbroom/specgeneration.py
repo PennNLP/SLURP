@@ -29,7 +29,8 @@ from semantics.lexical_constants import (
     AVOID_ACTION, PATROL_ACTION, CARRY_ACTION, STAY_ACTION, ACTIVATE_ACTION,
     DEACTIVATE_ACTION, BE_ACTION, UNDERSTOOD_SENSES)
 from semantics.parsing import extract_commands
-from semantics.new_structures import ObjectEntity, Command, ADDITIONAL_DATA_QUANTIFIER
+from semantics.new_structures import (
+    ObjectEntity, Command, ADDITIONAL_DATA_QUANTIFIER, ADDITIONAL_DATA_REACTION)
 from pipelinehost import PipelineClient
 from semantics.new_knowledge import KnowledgeBase
 from ltlbroom.ltl import (
@@ -485,6 +486,9 @@ class SpecGenerator(object):
                 relief = always_eventually(not_(condition_frag))
                 relief_chunk = SpecChunk(relief_explanation, [relief], SpecChunk.ENV, command)
                 env_chunks.append(relief_chunk)
+
+            # Sneak a flag into the command to mark it as a reaction
+            command.additional_data[ADDITIONAL_DATA_REACTION] = True
         elif command_condition.action == BE_ACTION:
             # Case 2: assertion "If you are in the cafeteria..."
             # TODO: Add support for assertions not about "you". Ex: If there is a hostage...

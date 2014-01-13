@@ -16,6 +16,7 @@ from LTLParser.LTLParser import Parser
 import execute
 
 from ltlbroom import talkback
+from semantics.new_structures import ADDITIONAL_DATA_REACTION
 
 RESPONSE_PLANNING = "Okay, just a moment while I make a plan."
 
@@ -227,23 +228,8 @@ class LTLMoPClient(object):
             self.chat_callback(result)
             self.append_log(result, "System")
 
-    def on_clear_commands(self, event):
-        self.dialogue_manager.clear()
-        event.Skip()
-
-    def on_execute(self, event):
-        self.dialogue_manager.execute()
-        event.Skip()
-
-# end of class LTLMoPClient
-
 
 class BarebonesDialogueManager(object):
-
-    # GOTIT responsibility was on specgen but now it is on the dialogue manager
-    GOTIT = "Got it. I can {!r}"
-    DEFAULT_SPECGEN_PROBLEM = "I'm sorry, I didn't quite understand that."
-    SPECIFIC_SPECGEN_PROBLEM = "Could not understand"
 
     def __init__(self, ltlmopclient, executor, base_spec=None):
         """ take reference to execution context and gui_window
@@ -258,6 +244,8 @@ class BarebonesDialogueManager(object):
             self.base_spec = base_spec.split("\n")
 
         self.spec = []
+        # Input that carries over from spec to spec
+        self.carryover = []
 
         # Initiate a specCompiler to hang around and give us immediate parser
         # feedback
@@ -265,7 +253,8 @@ class BarebonesDialogueManager(object):
         self.compiler.proj = self.ltlmop.proj
 
         self.chat_dict = {"clear_actions": {"prompts": ["clear"],
-                                            "response": ("clear_command", "")},
+                                            "response": ("clear_command",
+                                                         "Okay, I've cleared all the commands you've given me.")},
                           "activate_actions": {"prompts": ["go", "activate", "execute"],
                                                "response": ("activate_command", "")},
                           "pause_actions": {"prompts": ["wait", "stop"],
@@ -285,16 +274,20 @@ class BarebonesDialogueManager(object):
         # Set up talkback
         self.interpreter = talkback.FriendlyResponseInterpreter()
 
-
-    def clear(self):
+    def clear_spec(self):
+        """Clear the specification but leave any carryover."""
         self.spec = []
         self.ltlmop.append_log("Cleared the specification.", "System")
 
-    def execute(self):
-        # TODO: don't resynthesize if the specification hasn't changed?
-        # i.e. distinguish between resuming from pause, versus a new command
+    def clear_all(self):
+        """Clear the specification and any carryover."""
+        self.spec = []
+        self.carryover = []
+        self.ltlmop.append_log("Cleared the specification and carryover.", "System")
 
-        if not self.spec:
+    def execute(self):
+        """Synthesize a new spec and begin execution."""
+        if not self.spec and not self.carryover:
             return "You haven't given me any orders I understand."
 
         # pause
@@ -306,15 +299,12 @@ class BarebonesDialogueManager(object):
         # Trigger resynthesis
         spec = self.get_spec()
         success = self.executor.resynthesizeFromNewSpecification(spec)
+        self.clear_spec()
         if success:
-            # TODO: Remove this to allow carryover of commands when
-            # resynthesizing
-            self.clear()
-            # resume
+            # Resume
             self.executor.resume()
             return "Got it. I'm carrying out your orders."
         else:
-            self.clear()
             return ("Sorry, I can't come up with a plan that will carry out all your orders. "
                     "Try giving fewer commands at a time.")
 
@@ -332,8 +322,8 @@ class BarebonesDialogueManager(object):
 
         response_code, chat = self.handle_chats(message)
         if response_code == "clear_command":
-            self.clear()
-            return
+            self.clear_all()
+            return chat
         elif response_code == "activate_command":
             if not self.paused:
                 return self.execute()
@@ -365,7 +355,7 @@ class BarebonesDialogueManager(object):
         elif response_code == "chatbot_response":
             return chat
         elif response_code == "speclist_request":
-            return "\n".join(self.spec)
+            return "\n".join(self.spec + self.carryover)
         elif response_code == "other":
             # Ask parser if this individual line is OK
             # FIXME: Because _writeLTLFile() is so monolithic, this will
@@ -375,14 +365,19 @@ class BarebonesDialogueManager(object):
             self.compiler.proj.specText = message
             spec, traceback_tree, responses = self.compiler._writeLTLFile()
             if spec is not None:
-                self.spec.append(message)
+                # Check whether this is a carryover command
+                carryover = any(ADDITIONAL_DATA_REACTION in response.command.additional_data
+                                for command_responses in responses
+                                for response in command_responses)
+                if carryover:
+                    self.carryover.append(message)
+                    self.ltlmop.append_log("Identified carryover command: {!r}".format(message))
+                else:
+                    self.spec.append(message)
 
             return [self.interpreter.interpret(response) for command_responses in responses
                             for response in command_responses]
 
-    def _error_on_specgen(self, reponse):
-        return reponse.startswith(self.SPECIFIC_SPECGEN_PROBLEM) or reponse == self.DEFAULT_SPECGEN_PROBLEM
-
     def get_spec(self):
         """ return the current specification as one big string """
-        return "\n".join(self.base_spec + self.spec)
+        return "\n".join(self.base_spec + self.spec + self.carryover)
