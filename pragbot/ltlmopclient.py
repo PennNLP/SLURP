@@ -71,8 +71,6 @@ class LTLMoPClient(object):
         self.proj.loadProject(spec_file)
         # Set the compiler to give structured responses
         self.proj.compile_options["slurp_struct_responses"] = True
-        # Set the compiler to restrict actions to available actuators
-        self.proj.compile_options["slurp_restrict_actions"] = True
         if not reloading:
             self.executor_proxy = self.get_executor(spec_file)
         else:

@@ -13,6 +13,7 @@ parser: slurp
 fastslow: False
 decompose: False
 use_region_bit_encoding: True
+slurp_restrict_actions: True
 
 CurrentConfigName:
 pragbotTrainingSimple
