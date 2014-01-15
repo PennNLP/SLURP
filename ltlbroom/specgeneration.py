@@ -114,8 +114,9 @@ class SpecChunk(object):
 class SpecGenerator(object):
     """Enables specification generation using natural language."""
 
-    def __init__(self, struct_responses):
+    def __init__(self, struct_responses, restrict_actions=False):
         self.struct_responses = struct_responses
+        self.restrict_actions = restrict_actions
 
         # Handlers
         self.GOALS = {PATROL_ACTION: self._gen_patrol, GO_ACTION: self._gen_go,
@@ -164,6 +165,18 @@ class SpecGenerator(object):
         logging.info("Tag dict: {}".format(self.tag_dict))
         logging.info("Text {!r}".format(text))
         logging.info("")
+
+        # Disable actions based on actuators available
+        if self.restrict_actions:
+            if SWEEP not in self.props:
+                # Disable search
+                self.GOALS[SEARCH_ACTION] = self.GOALS[GO_ACTION]
+                logging.info("Disabling search because {!r} actuator is not available.".format(SWEEP))
+            if PICKUP not in self.props or DROP not in self.props:
+                # Disable carry if we haven't already
+                if CARRY_ACTION in self.GOALS:
+                    del self.GOALS[CARRY_ACTION]
+                logging.info("Disabling carry because {!r} actuator is not available.".format(PICKUP))
 
         # Make lists for POS conversions, including the metapar keywords
         force_nouns = list(self.regions) + list(self.sensors)
