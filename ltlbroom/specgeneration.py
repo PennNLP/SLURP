@@ -559,7 +559,7 @@ class SpecGenerator(object):
 
     def _gen_stay(self, command):
         """Generate statements to stay exactly where you are."""
-        sys_lines = SpecChunk("Stay in the same place.", [always_eventually(self._frag_stay())],
+        sys_lines = SpecChunk("Stay in the same place.", [always(self._frag_stay())],
                               SpecChunk.SYS, command)
         return ([sys_lines], [], [], [])
 
