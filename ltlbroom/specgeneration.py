@@ -360,8 +360,10 @@ class SpecGenerator(object):
 
     def _apply_metapar(self, command):
         """Generate a metapar for a command."""
-        # Patch up actuator commands
+        # Patch up actuator commands. SEE_ACTION is blocked because we
+        # don't want this to affect "If you see a X..."
         if (command.action not in self.GOALS and
+            command.action != SEE_ACTION and
             command.action in UNDERSTOOD_SENSES):
             # If there's a theme, make it into a reaction
             if command.theme:
