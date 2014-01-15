@@ -39,11 +39,12 @@ class ParseMatcher(object):
     COMMA_TAG = ","
     pos_map = {         'S' : ['S'],
                         'DT' : ['DT'],
-                        'ADV' : ['ADV'], 
+                        'ADV' : ['ADV','ADVP','RB'], 
+                        'VP' :{"gerund":["VBG"]},
                         'VERB' : ['VB','VBP','VPNONE'],
                         'NP' : {"Agent" : ['NPNONE','NNS','NN','NNP','NNPS','PRP'],
                                 "Theme" : ['NNS','NN','NNP','NNPS','PRP'],
-                                DEFAULT_ROLE : ['NNS','NN','NNP','NNPS','PRP']},
+                                DEFAULT_ROLE : ['NPNONE','NNS','NN','NNP','NNPS','PRP']},
                         'PREP' : {"to towards" : ["TO","IN"],
                                   "against into onto" : ["IN"],
                                   "to into" : ["IN","TO"],
@@ -376,7 +377,12 @@ class ParseMatcher(object):
                 return None
             if DEBUG: self.print_svo(pmatch[0],pmatch[1],pmatch[2],parse)
             self.th.depth_ulid_deaugment(parse)
-            fmatch = self.frames_match_frame(pmatch,parse)             
+            fmatch = self.frames_match_frame(pmatch,parse)
+               
+            #Custom rules for frames
+            if fmatch and self.AGENT_KEY not in fmatch:
+                #Do not match any frames with an agent
+                return None          
         except PosTooDeep, pos:
             sys.stderr.write(pos+" found but too deep given max part-of-speech depth\n")
         except VerbFrameCountError:
@@ -389,12 +395,10 @@ class ParseMatcher(object):
         except NoSubjectFound, sbranch:
             sys.stderr.write("Could not find the subject in this parse, for this branch: "+str(sbranch))
         except:
-            raise
-        
-        #Custom rules for frames
-        if self.AGENT_KEY not in fmatch:
-            #Do not match any frames with an agent
+            sys.stderr.write("Uncaught error in verbframe matching: "+str(frame)+str(parse))
             return None
+        
+
                 
         return fmatch       
 

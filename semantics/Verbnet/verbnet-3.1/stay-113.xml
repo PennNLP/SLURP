@@ -33,5 +33,31 @@
 	  </PRED>
 	</SEMANTICS>
       </FRAME>
+      <FRAME>
+	<DESCRIPTION descriptionNumber="0.1" primary="NP V ADVP" secondary="basic adverbial" xtag="0.1"/>
+	<EXAMPLES>
+	  <EXAMPLE>Stay there.</EXAMPLE>
+	</EXAMPLES>
+	<SYNTAX>
+		<NP value="Agent">
+           <SYNRESTRS/>
+		</NP>
+	  <VERB/>
+	  <ADV/>
+	</SYNTAX>
+	<SEMANTICS>
+	  <PRED value="stay">
+	    <ARGS>
+	      <ARG type="Event" value="during(E)"/>
+	      <ARG type="ThemRole" value="Theme"/>
+	    </ARGS>
+	  </PRED>
+	                <PRED value="Adv">
+                    <ARGS>
+                        <ARG type="VerbSpecific" value="Prop"/>
+                    </ARGS>
+                </PRED>
+	</SEMANTICS>
+      </FRAME>
     </FRAMES>
 </VNCLASS>
