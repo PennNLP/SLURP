@@ -23,7 +23,6 @@ GO_ACTION = "go"
 GET_ACTION = "retrieve"
 FOLLOW_ACTION = "follow"
 SEE_ACTION = "see"
-TELL_ACTION = "tell"
 BEGIN_ACTION = "begin"
 ACTIVATE_ACTION = "activate"
 DEACTIVATE_ACTION = "deactivate"
@@ -53,7 +52,6 @@ ACTION_ALIASES = {
                   GET_ACTION: GET_ACTION,
                   FOLLOW_ACTION: FOLLOW_ACTION,
                   SEE_ACTION: SEE_ACTION,
-                  TELL_ACTION: TELL_ACTION,
                   BEGIN_ACTION: BEGIN_ACTION,
                   ACTIVATE_ACTION: ACTIVATE_ACTION,
                   DEACTIVATE_ACTION: DEACTIVATE_ACTION,
