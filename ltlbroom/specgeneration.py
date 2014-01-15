@@ -164,7 +164,7 @@ class SpecGenerator(object):
         logging.info("Props: {}".format(self.props))
         logging.info("Regions: {}".format(self.regions))
         logging.info("Tag dict: {}".format(self.tag_dict))
-        logging.info("Text {!r}".format(text))
+        logging.info("Text: {!r}".format(text))
         logging.info("")
 
         # Disable actions based on actuators available
@@ -295,12 +295,6 @@ class SpecGenerator(object):
             # Add some space between commands
             logging.info("")
 
-        logging.info("Generation trees:")
-        for line, output in generation_trees.items():
-            logging.info(line)
-            logging.info(output)
-        logging.info("")
-
         # We need to modify non-reaction goals to be or'd with the reactions
         if realizable_reactions and self.react_props:
             # Dedupe and make an or over all the reaction properties
@@ -355,7 +349,11 @@ class SpecGenerator(object):
         logging.info("System lines: {}".format(sys_lines))
         logging.info("Custom props: {}".format(custom_props))
         logging.info("Custom sensors: {}".format(custom_sensors))
-        logging.info("Generation trees: {}".format(generation_trees))
+        logging.info("Generation trees:")
+        for line, output in generation_trees.items():
+            logging.info("Text: {!r}".format(line))
+            logging.info("Tree: {}".format(output))
+        logging.info("")
 
         return (env_lines, sys_lines, custom_props, custom_sensors, results, responses,
                 generation_trees)
