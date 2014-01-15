@@ -35,8 +35,9 @@ from semantics.new_knowledge import KnowledgeBase
 from ltlbroom.ltl import (
     env, and_, or_, sys_, not_, iff, next_, always, always_eventually, implies,
     space, mutex_, ALWAYS, EVENTUALLY, OR)
-from ltlbroom.talkback import (CommandResponse, ResponseInterpreter, AbortError,
-    LTLGenerationError, UnknownActionError, BadArgumentError, NoSuchLocationError)
+from ltlbroom.talkback import (
+    CommandResponse, ResponseInterpreter, AbortError, LTLGenerationError, UnknownActionError,
+    BadArgumentError, NoSuchLocationError, BadConditionalError)
 
 # Semantics constants
 LOCATION = "location"
@@ -464,8 +465,7 @@ class SpecGenerator(object):
                                .format(command.condition))
             condition = command.condition.theme.name
             if condition not in self.sensors:
-                raise BadArgumentError(
-                    "No sensor to detect condition {!r}".format(command.condition.theme.name))
+                raise BadConditionalError(command.condition.theme.name)
             condition_frag = env(condition)
             explanation = "To react to {!r},".format(condition)
             if assume_eventual_relief:

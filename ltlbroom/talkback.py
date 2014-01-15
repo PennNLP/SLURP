@@ -38,6 +38,11 @@ class BadArgumentError(LTLGenerationError):
     pass
 
 
+class BadConditionalError(LTLGenerationError):
+    """Condition cannot be understood."""
+    pass
+
+
 class NoSuchLocationError(LTLGenerationError):
     """Location does not exist."""
     pass
@@ -76,23 +81,27 @@ class ResponseInterpreter(object):
     PREP_REGION = "{} " + REGION
     CONDITION = "if {!r}"
     BAD_ARGUMENT = "Bad arguments for {!r}."
+    BAD_CONDITION = "Bad condition for {!r}."
 
     def interpret(self, response):
         """Return a natural language explanation of a specgen response."""
+        error = response.error
         if response.command:
-            if not response.error:
+            if not error:
                 return self.command(response)
             else:
-                if isinstance(response.error, UnknownActionError):
+                if isinstance(error, UnknownActionError):
                     return self.cannot(response)
-                elif isinstance(response.error, NoSuchLocationError):
+                elif isinstance(error, NoSuchLocationError):
                     return self.bad_location(response)
-                elif isinstance(response.error, BadArgumentError):
+                elif isinstance(error, BadArgumentError):
                     return self.bad_argument(response)
+                elif isinstance(error, BadConditionalError):
+                    return self.bad_condition(response)
                 else:
                     return self.CATCH_ALL
-        elif response.error:
-            if isinstance(response.error, AbortError):
+        elif error:
+            if isinstance(error, AbortError):
                 return self.CRASH
             else:
                 return self.MISUNDERSTAND
@@ -134,6 +143,10 @@ class ResponseInterpreter(object):
         """Explain that an action has a bad argument."""
         return self.BAD_ARGUMENT.format(response.command.action)
 
+    def bad_condition(self, response):
+        """Explain that an action has a bad condition."""
+        return self.BAD_CONDITION.format(response.error.message)
+
 
 class FriendlyResponseInterpreter(ResponseInterpreter):
     """Human-friendly interpretation of command responses."""
@@ -147,5 +160,6 @@ class FriendlyResponseInterpreter(ResponseInterpreter):
     CONDITION = "if I see a {}"
     CATCH_ALL = "That doesn't make sense to me, but I can't explain why."
     BAD_ARGUMENT = "I understood {!r}, but didn't get the rest."
+    BAD_CONDITION = SORRY + "I don't understand what you mean by {!r}."
     REGION = "the room {!r}"
     PREP_REGION = "{} " + REGION
