@@ -256,9 +256,10 @@ class SpecGenerator(object):
                     command_responses.append(CommandResponse(command, err))
                     success = False
                     continue
-                except AttributeError as err:
-                    logging.error("Could not understand {!r} command due to an unexpected error while generating LTL:"
-                                   .format(command.action))
+                except Exception as err:
+                    logging.error(
+                        "Could not understand {!r} command due to an unexpected error while generating LTL:"
+                        .format(command.action))
                     stack = traceback.format_exc()
                     logging.error(stack)
                     command_responses.append(CommandResponse(None, AbortError()))
@@ -462,7 +463,7 @@ class SpecGenerator(object):
             # Validate the condition
             if not command.condition.theme:
                 raise BadArgumentError("No condition theme, cannot understand condition:\n{!r}"
-                               .format(command.condition))
+                                       .format(command.condition))
             condition = command.condition.theme.name
             if condition not in self.sensors:
                 raise BadConditionalError(command.condition.theme.name)
@@ -479,14 +480,14 @@ class SpecGenerator(object):
             # Validate the condition
             if not command.condition.location:
                 raise BadArgumentError("No condition location, cannot understand condition:\n{}"
-                               .format(command.condition))
+                                       .format(command.condition))
             condition = command.condition.location.name
             condition_frag = sys_(condition)
             explanation = "When in {!r},".format(condition)
         else:
             # Not sure what to do
             raise BadArgumentError("General problem generating conditional, cannot understand condition:\n{}"
-                           .format(command.condition))
+                                   .format(command.condition))
 
         # Validate the action
         action = command.action
