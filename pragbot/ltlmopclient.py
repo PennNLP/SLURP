@@ -254,12 +254,12 @@ class BarebonesDialogueManager(object):
 
         self.chat_dict = {"clear_actions": {"prompts": ["clear"],
                                             "response": ("clear_command",
-                                                         "Okay, I've cleared all the commands you've given me.")},
+                                                         "Okay, I've cleared all the orders you've given me.")},
                           "activate_actions": {"prompts": ["go", "activate", "execute"],
                                                "response": ("activate_command", "")},
                           "pause_actions": {"prompts": ["wait", "stop"],
                                             "response": ("no_act", "Stopping until you tell me to start " +
-                                                         "or give me new commands.")},
+                                                         "or give me new orders.")},
                           "status_requests": {"prompts": ["status"],
                                               "response": ("status_request", "")},
                           "resume_actions": {"prompts": ["start", "begin"],
