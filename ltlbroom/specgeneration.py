@@ -520,10 +520,13 @@ class SpecGenerator(object):
         # Generate the response
         sys_statements = []
         if action in (GO_ACTION, AVOID_ACTION):
+            # TODO: This cannot handle quantifiers
             # Go is unusual because the outcome is not immediately satisfiable
             if not command.location:
                 raise BadArgumentError("No location in go reaction")
             destination = command.location.name
+            if destination not in self.regions:
+                raise NoSuchLocationError(destination)
 
             # Negation is easy, so we take a shortcut
             if ((action == GO_ACTION and command.negation) or
