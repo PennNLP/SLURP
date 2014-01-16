@@ -29,7 +29,7 @@ from semantics.lexical_constants import (
     AVOID_ACTION, PATROL_ACTION, CARRY_ACTION, STAY_ACTION, ACTIVATE_ACTION,
     DEACTIVATE_ACTION, BE_ACTION, UNDERSTOOD_SENSES)
 from semantics.parsing import extract_commands
-from semantics.new_structures import ObjectEntity, Command
+from semantics.new_structures import ObjectEntity, Command, ADDITIONAL_DATA_QUANTIFIER
 from pipelinehost import PipelineClient
 from semantics.new_knowledge import KnowledgeBase
 from ltlbroom.ltl import (
@@ -389,38 +389,43 @@ class SpecGenerator(object):
             return handler(command)
 
     def _expand_argument(self, argument, command):
-        """Return a list of the arguments created by expanding the argument if its quantified."""
+        """Return a list of the arguments created by expanding the argument if it is quantified."""
         # What to return if quantification fails
         default_return = [argument]
         try:
             quant = argument.quantifier.type
         except AttributeError:
             return default_return
-        if quant == "all" or (command.negation and quant == "any"):
+
+        if quant == "exact":
             # TODO: Handle more than one tag
             try:
-                tag = argument.name
-                #tag = argument.description[0]
+                tag = argument.description[0]
             except (IndexError, TypeError):
                 logging.warning("Could not get description of {}.".format(argument))
                 return default_return
-
-            try:
-                members = sorted(self.tag_dict[tag])
-            except KeyError:
-                logging.warning("Could not get members of tag {!r}.".format(argument.description))
-                return default_return
-
-            # Unroll into copies of the command.
-            new_args = [deepcopy(argument) for _ in range(len(members))]
-            for new_arg, member in zip(new_args, members):
-                new_arg.quantifier.type = "exact"
-                new_arg.quantifier.number = 1
-                new_arg.name = member
-
-            return new_args
+        elif quant == "all" or (command.negation and quant == "any"):
+            tag = "all"
         else:
             return default_return
+
+        try:
+            members = sorted(self.tag_dict[tag])
+        except KeyError:
+            logging.warning("Could not get members of tag {!r}.".format(tag))
+            return default_return
+
+        # Unroll into copies of the command.
+        new_args = [deepcopy(argument) for _ in range(len(members))]
+        for new_arg, member in zip(new_args, members):
+            new_arg.quantifier.type = "exact"
+            new_arg.quantifier.number = 1
+            new_arg.name = member
+
+        # Sneak the expanded argument into the command
+        command.additional_data[ADDITIONAL_DATA_QUANTIFIER] = members
+
+        return new_args
 
     # The return signature of the statement generators is:
     # ([system lines], [env lines], [custom propositions], [custom sensors])

@@ -16,6 +16,7 @@
 
 
 from semantics.lexical_constants import (GO_ACTION, PATROL_ACTION, ACTIVATE_ACTION)
+from semantics.new_structures import ADDITIONAL_DATA_QUANTIFIER
 
 
 class AbortError(Exception):
@@ -77,7 +78,7 @@ class ResponseInterpreter(object):
     CANNOT = "Robot cannot {!r}."
     CATCH_ALL = "Cannot explain error."
     NO_LOCATION = "No region {!r}."
-    REGION = "region {!r}"
+    REGION = "region{} {}"
     PREP_REGION = "{} " + REGION
     CONDITION = "If {!r}"
     BAD_ARGUMENT = "Bad arguments for {!r}."
@@ -113,21 +114,26 @@ class ResponseInterpreter(object):
         command = response.command
         action = command.action
 
+        # Expand location if needed
+        location, multiple = (_expand_locations(command, command.location.name)
+                              if command.location else (None, False))
+        location_plural = "s" if multiple else ""
+
         prefix = None
         postfix = None
         if command.condition:
             prefix = self.CONDITION.format(command.condition.theme.name)
-        elif action == ACTIVATE_ACTION and command.location:
+        elif action == ACTIVATE_ACTION and location:
             # Condition is a location, but command is not to go there
             # TODO: Commands other than activate may have the same behavior
-            postfix = self.PREP_REGION.format("in", command.location.name)
+            postfix = self.PREP_REGION.format("in", location_plural, location)
 
         result = None
         if action == GO_ACTION:
-            result = self.GOTIT_LONG.format(action,
-                                            self.PREP_REGION.format("to", command.location.name))
+            result = self.GOTIT_LONG.format(
+                action, self.PREP_REGION.format("to", location_plural, location))
         elif action == PATROL_ACTION:
-            result = self.GOTIT_LONG.format(action, self.REGION.format(command.location.name))
+            result = self.GOTIT_LONG.format(action, self.REGION.format(location_plural, location))
         elif action == ACTIVATE_ACTION:
             result = self.GOTIT.format(command.theme.name)
 
@@ -174,8 +180,18 @@ class FriendlyResponseInterpreter(ResponseInterpreter):
     CATCH_ALL = "That doesn't make sense to me, but I can't explain why."
     BAD_ARGUMENT = "I understood {!r}, but didn't get the rest."
     BAD_CONDITION = SORRY + "I don't understand what you mean by {!r}."
-    REGION = "the room {!r}"
+    REGION = "the room{} {}"
     PREP_REGION = "{} " + REGION
+
+
+def _expand_locations(command, location):
+    """Return the expansion of a command and if it expanded to multiple items."""
+    try:
+        locations = command.additional_data[ADDITIONAL_DATA_QUANTIFIER]
+    except KeyError:
+        return (repr(location), False)
+    else:
+        return (_and_join(locations), len(locations) > 1)
 
 
 def _lowercase_first(astr):
@@ -187,3 +203,12 @@ def _lowercase_first(astr):
             return astr[0].lower() + astr[1:]
         else:
             return astr
+
+
+def _and_join(items):
+    """Join items with and using the serial comma."""
+    if len(items) < 3:
+        return " and ".join(repr(item) for item in items)
+    else:
+        return (", ".join(repr(item) for item in items[:-1]) +
+                ", and " + repr(items[-1]))

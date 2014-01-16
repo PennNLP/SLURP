@@ -16,9 +16,12 @@
 
 import unittest
 
-from semantics.new_structures import Command, ObjectEntity
-from semantics.lexical_constants import *
-from ltlbroom.talkback import *
+from semantics.new_structures import Command, ObjectEntity, ADDITIONAL_DATA_QUANTIFIER
+from semantics.lexical_constants import (
+    GO_ACTION, DEFUSE_ACTION, PATROL_ACTION, SEE_ACTION, ACTIVATE_ACTION)
+from ltlbroom.talkback import (
+    ResponseInterpreter, CommandResponse, _and_join, AbortError, UnknownActionError,
+    NoSuchLocationError)
 
 
 class TestTalkback(unittest.TestCase):
@@ -63,7 +66,7 @@ class TestTalkback(unittest.TestCase):
         self.assertEqual(
             self.interpreter.interpret(response),
             ResponseInterpreter.GOTIT_LONG.format(
-                GO_ACTION, ResponseInterpreter.PREP_REGION.format("to", location.name)) + '.')
+                GO_ACTION, ResponseInterpreter.PREP_REGION.format("to", "", repr(location.name))) + '.')
 
     def test_patrol(self):
         """Test talkback for a patrol command."""
@@ -73,7 +76,7 @@ class TestTalkback(unittest.TestCase):
         self.assertEqual(
             self.interpreter.interpret(response),
             ResponseInterpreter.GOTIT_LONG.format(
-                PATROL_ACTION, ResponseInterpreter.REGION.format(location.name)) + '.')
+                PATROL_ACTION, ResponseInterpreter.REGION.format("", repr(location.name))) + '.')
 
     def test_defuse(self):
         """Test talkback for a defuse command."""
@@ -93,7 +96,35 @@ class TestTalkback(unittest.TestCase):
         self.assertEqual(
             self.interpreter.interpret(response),
             ResponseInterpreter.GOTIT_LONG.format(
-                repr(DEFUSE_ACTION), ResponseInterpreter.PREP_REGION.format("in", location.name)) + '.')
+                repr(DEFUSE_ACTION),
+                ResponseInterpreter.PREP_REGION.format("in", "", repr(location.name))) + '.')
+
+    def test_and_1(self):
+        """Test joining with and for a single item."""
+        items = ["foo"]
+        self.assertEqual(_and_join(items), "'foo'")
+
+    def test_and_2(self):
+        """Test joining with and for a two items."""
+        items = ["foo", "bar"]
+        self.assertEqual(_and_join(items), "'foo' and 'bar'")
+
+    def test_and_3(self):
+        """Test joining with and for three items."""
+        items = ["foo", "bar", "baz"]
+        self.assertEqual(_and_join(items), "'foo', 'bar', and 'baz'")
+
+    def test_quantification(self):
+        """Test talkback for a quantified command."""
+        location = ObjectEntity("rooms")
+        response = CommandResponse(Command(None, None, None, location, None, None, GO_ACTION),
+                                   None)
+        rooms = ['r1', 'r2', 'r3']
+        response.command.additional_data[ADDITIONAL_DATA_QUANTIFIER] = rooms
+        self.assertEqual(
+            self.interpreter.interpret(response),
+            ResponseInterpreter.GOTIT_LONG.format(
+                GO_ACTION, ResponseInterpreter.PREP_REGION.format("to", "s", _and_join(rooms))) + '.')
 
 
 if __name__ == '__main__':
