@@ -45,7 +45,7 @@ class TestTalkback(unittest.TestCase):
         response = CommandResponse(Command(None, None, None, None, None, None, unknown),
                                    UnknownActionError())
         self.assertEqual(self.interpreter.interpret(response),
-            ResponseInterpreter.CANNOT.format(unknown))
+                         ResponseInterpreter.CANNOT.format(unknown))
 
     def test_bad_region(self):
         """Test talkback for a command with a bad region."""
@@ -53,25 +53,27 @@ class TestTalkback(unittest.TestCase):
         response = CommandResponse(Command(None, None, None, location, None, None, GO_ACTION),
                                    NoSuchLocationError(location.name))
         self.assertEqual(self.interpreter.interpret(response),
-            ResponseInterpreter.NO_LOCATION.format(location.name))
+                         ResponseInterpreter.NO_LOCATION.format(location.name))
 
     def test_go(self):
         """Test talkback for a go command."""
-        location = ObjectEntity("aslkjal")
+        location = ObjectEntity("hallway")
         response = CommandResponse(Command(None, None, None, location, None, None, GO_ACTION),
                                    None)
-        self.assertEqual(self.interpreter.interpret(response),
-            ResponseInterpreter.GOTIT_LONG.format(GO_ACTION,
-                ResponseInterpreter.PREP_REGION.format("to", location.name)))
+        self.assertEqual(
+            self.interpreter.interpret(response),
+            ResponseInterpreter.GOTIT_LONG.format(
+                GO_ACTION, ResponseInterpreter.PREP_REGION.format("to", location.name)) + '.')
 
     def test_patrol(self):
         """Test talkback for a patrol command."""
-        location = ObjectEntity("aslkjal")
+        location = ObjectEntity("hallway")
         response = CommandResponse(Command(None, None, None, location, None, None, PATROL_ACTION),
                                    None)
-        self.assertEqual(self.interpreter.interpret(response),
-            ResponseInterpreter.GOTIT_LONG.format(PATROL_ACTION,
-                ResponseInterpreter.REGION.format(location.name)))
+        self.assertEqual(
+            self.interpreter.interpret(response),
+            ResponseInterpreter.GOTIT_LONG.format(
+                PATROL_ACTION, ResponseInterpreter.REGION.format(location.name)) + '.')
 
     def test_defuse(self):
         """Test talkback for a defuse command."""
@@ -80,19 +82,18 @@ class TestTalkback(unittest.TestCase):
                           Command(None, ObjectEntity(bomb), None, None, None, None, SEE_ACTION))
         response = CommandResponse(command, None)
         self.assertEqual(self.interpreter.interpret(response),
-            ResponseInterpreter.GOTIT_LONG.format(repr(DEFUSE_ACTION),
-                ResponseInterpreter.CONDITION.format(bomb)))
+                         ResponseInterpreter.CONDITION.format(bomb) + ", " +
+                         ResponseInterpreter.GOTIT.format(DEFUSE_ACTION) + '.')
 
     def test_location(self):
         """Test talkback for a location command."""
-        location = ObjectEntity("aslkjal")
+        location = ObjectEntity("hallway")
         command = Command(None, ObjectEntity(DEFUSE_ACTION), None, location, None, None, ACTIVATE_ACTION)
         response = CommandResponse(command, None)
-        self.assertEqual(self.interpreter.interpret(response),
-            ResponseInterpreter.GOTIT_LONG.format(repr(DEFUSE_ACTION),
-                ResponseInterpreter.PREP_REGION.format("in", location.name)))
-
-
+        self.assertEqual(
+            self.interpreter.interpret(response),
+            ResponseInterpreter.GOTIT_LONG.format(
+                repr(DEFUSE_ACTION), ResponseInterpreter.PREP_REGION.format("in", location.name)) + '.')
 
 
 if __name__ == '__main__':
