@@ -311,16 +311,16 @@ class Command(object):
                indent + 'Negation: ' + str(self.negation)
                
     def to_dict(self):
-                return{ 'Command': { \
-               'Agent' : (self.agent.to_dict() if self.agent else ''),  \
-               'Action' : str(self.action) ,\
-               'Theme' : (self.theme.to_dict() if self.theme else ''), \
-               'Patient' : (self.patient.to_dict() if self.patient else ''), \
-               'Location' : (self.location.to_dict() if self.location else ''), \
-               'Source' : (self.source.to_dict() if self.source else ''), \
-               'Destination' : (self.destination.to_dict() if self.destination else ''), \
-               'Condition' : (self.condition.to_dict() if self.condition else ''), \
-               'Negation' : self.negation}}
+        return{ 'Command': { \
+       'Agent' : (self.agent.to_dict() if self.agent else ''),  \
+       'Action' : str(self.action) ,\
+       'Theme' : (self.theme.to_dict() if self.theme else ''), \
+       'Patient' : (self.patient.to_dict() if self.patient else ''), \
+       'Location' : (self.location.to_dict() if self.location else ''), \
+       'Source' : (self.source.to_dict() if self.source else ''), \
+       'Destination' : (self.destination.to_dict() if self.destination else ''), \
+       'Condition' : (self.condition.to_dict() if self.condition else ''), \
+       'Negation' : self.negation}}
                 
     def __eq__(self,other):
         # TODO: consolidate this, useful for debugging for now
