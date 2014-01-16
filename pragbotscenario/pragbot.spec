@@ -35,7 +35,7 @@ defuse_done, 1
 RegionMapping: # Mapping between region names and their decomposed counterparts
 classroom = classroom
 conservatory = conservatory
-bathroom = bathroom
+bedroom = bedroom
 cellar = cellar
 ballroom = ballroom
 office = office

@@ -52,7 +52,7 @@ Regions: # Stored as JSON string
         ]
     }, 
     {
-        "name": "bathroom", 
+        "name": "bedroom", 
         "color": [
             0, 
             255, 
@@ -396,7 +396,7 @@ Regions: # Stored as JSON string
 Transitions: # Region 1 Name, Region 2 Name, Bidirectional transition faces (face1_x1, face1_y1, face1_x2, face1_y2, face2_x1, ...)
 office	hallway4	1.0	2.0	3.0	4.0
 classroom	hallway4	1.0	2.0	3.0	4.0
-bathroom	hallway2	1.0	2.0	3.0	4.0
+bedroom	hallway2	1.0	2.0	3.0	4.0
 kitchen	hallway1	1.0	2.0	3.0	4.0
 conservatory	hallway1	1.0	2.0	3.0	4.0
 lab	hallway3	1.0	2.0	3.0	4.0
