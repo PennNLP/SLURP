@@ -15,7 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from semantics.lexical_constants import (GO_ACTION, PATROL_ACTION, ACTIVATE_ACTION)
+from semantics.lexical_constants import (
+    GO_ACTION, PATROL_ACTION, ACTIVATE_ACTION, AVOID_ACTION)
 from semantics.new_structures import ADDITIONAL_DATA_QUANTIFIER
 
 
@@ -71,9 +72,10 @@ class CommandResponse(object):
 class ResponseInterpreter(object):
     """Interpret command responses into natural language."""
 
+    NOT = "not"
     CRASH = "Parsing failure when processing input."
-    GOTIT = "I will {!r}"
-    GOTIT_LONG = "I will {} {}"
+    GOTIT = "I will{} {!r}"
+    GOTIT_LONG = "I will{} {} {}"
     MISUNDERSTAND = "No verbs matched."
     CANNOT = "Robot cannot {!r}."
     CATCH_ALL = "Cannot explain error."
@@ -118,6 +120,7 @@ class ResponseInterpreter(object):
         location, multiple = (_expand_locations(command, command.location.name)
                               if command.location else (None, False))
         location_plural = "s" if multiple else ""
+        neg = " " + self.NOT if command.negation else ""
 
         prefix = None
         postfix = None
@@ -131,15 +134,16 @@ class ResponseInterpreter(object):
         result = None
         if action == GO_ACTION:
             result = self.GOTIT_LONG.format(
-                action, self.PREP_REGION.format("to", location_plural, location))
-        elif action == PATROL_ACTION:
-            result = self.GOTIT_LONG.format(action, self.REGION.format(location_plural, location))
+                neg, action, self.PREP_REGION.format("to", location_plural, location))
+        elif action == PATROL_ACTION or action == AVOID_ACTION:
+            result = self.GOTIT_LONG.format(neg, action,
+                                            self.REGION.format(location_plural, location))
         elif action == ACTIVATE_ACTION:
-            result = self.GOTIT.format(command.theme.name)
+            result = self.GOTIT.format(neg, command.theme.name)
 
         # Catch unhandled cases
         if not result:
-            result = self.GOTIT.format(action)
+            result = self.GOTIT.format(neg, action)
 
         if prefix:
             result = "{}, {}".format(prefix, _lowercase_first(result))
