@@ -417,7 +417,7 @@ class SpecGenerator(object):
             return default_return
 
         try:
-            members = sorted(self.tag_dict[tag])
+            members = self.tag_dict[tag]
         except KeyError:
             logging.info("Could not find members for tag {!r}.".format(tag))
             return default_return
