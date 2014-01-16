@@ -397,7 +397,7 @@ class SpecGenerator(object):
         except AttributeError:
             return default_return
 
-        if quant == "exact":
+        if quant == "exact" and argument.description:
             # TODO: Handle more than one tag
             try:
                 tag = argument.description[0]
@@ -412,7 +412,7 @@ class SpecGenerator(object):
         try:
             members = sorted(self.tag_dict[tag])
         except KeyError:
-            logging.warning("Could not get members of tag {!r}.".format(tag))
+            logging.info("Could not find members for tag {!r}.".format(tag))
             return default_return
 
         # Unroll into copies of the command.
