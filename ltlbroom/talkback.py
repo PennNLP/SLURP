@@ -45,6 +45,11 @@ class BadConditionalError(LTLGenerationError):
     pass
 
 
+class BadSeeError(LTLGenerationError):
+    """Condition cannot be understood."""
+    pass
+
+
 class NoSuchLocationError(LTLGenerationError):
     """Location does not exist."""
     pass
@@ -85,6 +90,7 @@ class ResponseInterpreter(object):
     CONDITION = "If {!r}"
     BAD_ARGUMENT = "Bad arguments for {!r}."
     BAD_CONDITION = "Bad condition for {!r}."
+    BAD_SEE = "Cannot understand what to do when seeing that."
 
     def interpret(self, response):
         """Return a natural language explanation of a specgen response."""
@@ -101,6 +107,8 @@ class ResponseInterpreter(object):
                     return self.bad_argument(response)
                 elif isinstance(error, BadConditionalError):
                     return self.bad_condition(response)
+                elif isinstance(error, BadSeeError):
+                    return self.BAD_SEE
                 else:
                     return self.CATCH_ALL
         elif error:
@@ -186,6 +194,7 @@ class FriendlyResponseInterpreter(ResponseInterpreter):
     BAD_CONDITION = SORRY + "I don't understand what you mean by {!r}."
     REGION = "the room{} {}"
     PREP_REGION = "{} " + REGION
+    BAD_SEE = SORRY + "I don't understand what you want me to do when I see that."
 
 
 def _expand_locations(command, location):

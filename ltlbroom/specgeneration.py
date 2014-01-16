@@ -37,7 +37,7 @@ from ltlbroom.ltl import (
     space, mutex_, ALWAYS, EVENTUALLY, OR)
 from ltlbroom.talkback import (
     CommandResponse, ResponseInterpreter, AbortError, LTLGenerationError, UnknownActionError,
-    BadArgumentError, NoSuchLocationError, BadConditionalError)
+    BadArgumentError, NoSuchLocationError, BadConditionalError, BadSeeError)
 
 # Semantics constants
 LOCATION = "location"
@@ -380,7 +380,13 @@ class SpecGenerator(object):
         try:
             handler = self.GOALS[command.action]
         except KeyError:
-            raise UnknownActionError(command.action)
+            # Because it's too confusing to say that the robot can't
+            # see, give a more verbose response for problems with
+            # see.
+            if command.action != SEE_ACTION:
+                raise UnknownActionError(command.action)
+            else:
+                raise BadSeeError()
 
         if command.condition:
             return self._gen_conditional(command)
