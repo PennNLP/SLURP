@@ -331,7 +331,12 @@ class Command(object):
     def __eq__(self,other):
         # TODO: consolidate this, useful for debugging for now
         z = isinstance(other,Command)
-        a = self.agent == other.agent             
+        if not other:
+            return False
+        if self.agent and other.agent:
+            a = self.agent == other.agent
+        else:
+            return False           
         b = self.action == other.action
         c = self.theme == other.theme
         d = self.patient == other.patient
