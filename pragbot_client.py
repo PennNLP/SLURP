@@ -39,6 +39,8 @@ HANDLER_BASE_PORT = 13000
 RESPONSE_CRASH = ("Sorry, my language understanding system isn't working. "
                   "I'm afraid we can't perform our mission.")
 
+PIPELINE_RETRIES = 50
+
 
 class PragbotClient(object):
     """Provide a SLURP client for the Pragbot server."""
@@ -199,10 +201,11 @@ class PragbotClient(object):
                 self.ltlmop.get_pragbot_input(line)
             except IOError:
                 # Error connecting to NLPipeline
-                self.ltlmop.on_receive_reply(RESPONSE_CRASH)
-                logging.error("Pipelinehost cannot be reached, shutting down.")
-                self.stop = True
-                self.shutdown()
+                if not self.retry_pipeline_host(line):
+                    self.ltlmop.on_receive_reply(RESPONSE_CRASH)
+                    logging.error("Pipelinehost cannot be reached, shutting down.")
+                    self.stop = True
+                    self.shutdown()
             except Exception as err:
                 logging.exception("Error when processing user input.")
                 self.ltlmop.on_receive_reply(RESPONSE_CRASH)
@@ -257,6 +260,20 @@ class PragbotClient(object):
         """Send a chat response to the server."""
         self.sendMessage('CHAT_MESSAGE_PREFIX<JR> ',msg)
         
+    def retry_pipeline_host(self,line):
+        count = 0
+        while count <= PIPELINE_RETRIES:
+            try:
+                logging.error("Pipelinehost busy, retrying.")
+                count+=1
+                self.ltlmop.get_pragbot_input(line)                
+            except IOError:
+                # Error connecting to NLPipeline
+                pass
+            else:
+                return True
+        return False
+     
     def run(self):
         """Process requests from the server."""
         buff = ""
