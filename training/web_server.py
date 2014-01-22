@@ -20,18 +20,23 @@ from web import form
 import sys
 import logging
 from training.basic_training import Go
+from semantics.semantics_logger import SemanticsLogger
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("[web]")
-    
+#logging.basicConfig(level=logging.INFO)
+#logger = logging.getLogger("[web]")
+logger = None    
+
 OK = "OK"
 NOT_OK = "NOT_OK"
-web.config.session_parameters.update(cookie_name="current_exercise", cookie_domain="localhost",cookie_value="go_simple") 
+UUID = "UUID"
+web.config.session_parameters.update(cookie_name="current_exercise", cookie_domain="localhost",cookie_value="login")
+web.config.session_parameters.update(cookie_name="current_uuid", cookie_domain="localhost",cookie_value="default_user") 
+
 class PragbotWeb(object):
     def __init__(self):
         self.urls = self._default_urls()
-        web.config.session_parameters.update(cookie_name="current_exercise", cookie_domain="localhost")                
-        #cookie = web.cookies(current_exercise="go_simple")
+        web.config.session_parameters.update(cookie_name="current_exercise", cookie_domain="localhost")   
+        web.config.session_parameters.update(cookie_name="current_uuid", cookie_domain="localhost")                     
         self.trainer = None   
         self.current_exercise = None
         self.app = web.application(self.urls,globals())        
@@ -53,6 +58,7 @@ class PragbotWeb(object):
             self.trainer = Go(self.current_exercise)
             return        
         current_exercise = web.cookies().get("current_exercise")
+        self.current_uuid = web.cookies().get("current_uuid")
         #Get the cookie, set the trainer
         if current_exercise:
             if self.trainer:
@@ -88,6 +94,7 @@ class PragbotWeb(object):
         #return self.renderer.index()
     
     def POST(self): 
+        global logger
         form = self.get_user_text() 
         if not self.trainer:
             self.get_trainer()
@@ -97,14 +104,30 @@ class PragbotWeb(object):
         else:
             user_input = form['Command'].value
             training_response = self.trainer.run_current_exercise(user_input)
-            if training_response.startswith(OK):
+            if logger:
+                logger.log_semantics_training_input(self.current_uuid,training_response,
+                                                    self.trainer.current_exercise,user_input)
+            if training_response.startswith(UUID):
+                self.current_uuid = user_input
+                logger = SemanticsLogger(user_input)
+                logger.log_semantics_training_input(self.current_uuid,
+                                                    training_response,
+                                                    self.trainer.current_exercise,user_input)
+                training_response = training_response.lstrip(UUID)                
+                web.setcookie("current_uuid", user_input, 3600) 
+                next_exercise = self.trainer.get_next_exercise()        
+                self.current_exercise = next_exercise 
+                web.setcookie("current_exercise", next_exercise, 3600) 
+                #If the next exercise is the 1st in the loop, congratulate the user
+                self.tail = str(self.renderer.tail(next_exercise))                
+            elif training_response.startswith(OK):
                 #If response is ok, set the cookie, set self.current_exercise
                 training_response = training_response.lstrip(OK)         
                 next_exercise = self.trainer.get_next_exercise()        
-                self.current_exercise = next_exercise           
+                self.current_exercise = next_exercise 
                 web.setcookie("current_exercise", next_exercise, 3600) 
                 #If the next exercise is the 1st in the loop, congratulate the user
-                self.tail = str(self.renderer.tail(next_exercise))                             
+                self.tail = str(self.renderer.tail(next_exercise))                                             
             elif training_response.startswith(NOT_OK):
                 #Leave cookie alone
                 training_response = training_response.lstrip(NOT_OK)

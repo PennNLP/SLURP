@@ -46,7 +46,9 @@ class TrainingDictionary(object):
                         "cellar" : "cellar"
                     }   
         self.ccs = { "and" : "and"}
-        self.train_dict = {"go_simple" : {self.prompt : "Tell Junior to go to the %s" % self.regions["office"],
+        self.train_dict = { "login" : {self.prompt : "Please enter your uuid.",
+                                       self.next : "go_simple"},                           
+                "go_simple" : {self.prompt : "Tell Junior to go to the %s" % self.regions["office"],
                                self.default_action : "go",
                                self.canonical_commands : [self.command_from_dict({'Source': '',
                                                   'Theme': '',
@@ -256,7 +258,7 @@ class TrainingDictionary(object):
                                                     'Agent': {'Object': {'Quantifier': {'Type': 'exact', 'Definite': True, 'Number': 1}, 
                                                                          'Name': None, 'Description': []}}})],
                                     self.response: "Good work! If Junior sees a bomb, he will defuse the bomb.",
-                                    self.next: "go_simple"
+                                    self.next: "login"
                                     }                            
                 }
         

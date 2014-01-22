@@ -26,9 +26,10 @@ from copy import deepcopy
 
 OK = "OK"
 NOT_OK = "NOT_OK"
+UUID = "UUID"
        
 class Go(object):
-    def __init__(self,exercise="go_simple"):
+    def __init__(self,exercise="login"):
         self.handler = SemanticsHandler()
         td = TrainingDictionary()
         self.train_dict = td.train_dict
@@ -38,7 +39,8 @@ class Go(object):
         self.response = td.response
         self.next = td.next
         self.current_exercise = exercise
-        self.train_functions = {"go_simple" : self.go_simple,
+        self.train_functions = {"login" : self.login,
+                                "go_simple" : self.go_simple,
                                 "go_moderate" : self.go_moderate,
                                 "go_advanced" : self.go_advanced,
                                 "defuse_simple" : self.defuse_simple,
@@ -101,6 +103,13 @@ class Go(object):
                     response = NOT_OK + response
                     return response
         return response
+    
+    def login_uuid(self,uuid):
+        return UUID +" Unique User ID: %s accepted!"%uuid
+    
+    def login(self,uuid=None):
+        exercise = self.train_dict["login"]
+        return self.login_uuid(uuid)
     
     def go_simple(self,sentence=None):
         exercise = self.train_dict["go_simple"]

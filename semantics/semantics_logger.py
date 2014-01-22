@@ -16,6 +16,7 @@
 
 from semantics.new_structures import Command
 from semantics.mongo_handler import MongoHandler, Sentence
+import datetime
 
 class SemanticsLogger(object):
     ALL_SENTS_COMMAND = "/allsents"
@@ -23,7 +24,6 @@ class SemanticsLogger(object):
     COMMANDS_BY_SENT = "/getcommands"
     SET_USER_ID_COMMAND = "/setuserid"
     SET_USER_NAME_COMMAND = "/setusername"
-
     
     def __init__(self,user_name="default_user",user_id=1):
         self.current_user_name = user_name
@@ -72,6 +72,6 @@ class SemanticsLogger(object):
         """Log the semantic structures for the sentence"""
         for semantic_structure in semantic_structures:
             self.mdb.log_sentence_and_structure(sentence,semantic_structure)
-        
-        
-        
+
+    def log_semantics_training_input(self,uuid,response,exercise,user_input):
+        self.mdb.log_exercise_and_input(uuid,datetime.datetime.now(),response,exercise,user_input)

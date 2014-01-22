@@ -34,6 +34,10 @@ class MongoHandler(object):
     user_name_tag = "user_name"        
     sentence_tag = "sentence"
     datetime_tag = "datetime"
+    exercise_tag = "exercise"
+    response_tag = "response"
+    user_input_tag = "user_input"
+    datetime_tag = "datetime"
     command_tag = "Command"
     default_db_loc = 'mongodb://localhost:27017'
     default_user_id = 1
@@ -41,8 +45,7 @@ class MongoHandler(object):
     def __init__(self,user_name,user_id,password="default_password"):
         client = MongoClient(self.default_db_loc)        
         self.db = client.slurp_db
-        self.db.authenticate(user_name,password)
-        self.collection = self.db.sentence_semantics_collection
+        self.collection = self.db.semantics_training_input
         self.user_id = user_id
         self.user_name = user_name
         
@@ -61,6 +64,13 @@ class MongoHandler(object):
             self.collection.insert({self.user_id_tag : self.user_id, self.user_name_tag : self.user_name, \
                                     self.sentence_tag : sentence, key : d_structure[key], self.datetime_tag: datetime.datetime.utcnow()})
         print d_structure
+        
+    def log_exercise_and_input(self,uuid,datetime,response,exercise,user_input):
+        self.collection.insert({self.user_id_tag : uuid,
+                                self.datetime_tag : datetime,
+                                self.exercise_tag : exercise,
+                                self.response_tag : response,
+                                self.user_input_tag : user_input})
         
     def get_all_sents_by_user(self,user_id=None,user_name=None):
         if user_id and user_name:
