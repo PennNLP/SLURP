@@ -211,7 +211,7 @@ class TrainingDictionary(object):
                                             'Agent': {'Object': {'Quantifier': {'Type': 'exact', 'Definite': True, 'Number': 1}, 
                                                                  'Name': None, 'Description': []}}})],
                                     self.response: "Good work! Junior will go to the conservatory and defuse the bomb.",
-                                    self.next: "conditional_simple"     
+                                    self.next: "login"     
                                     },                           
                    "conditional_simple" : {self.prompt : "Tell Junior that if he sees a bomb, defuse it.",
                                            self.canonical_sentence: "If you see a bomb, defuse the bomb.",
