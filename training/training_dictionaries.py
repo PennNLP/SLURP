@@ -16,6 +16,7 @@ A basic training dictionary and interpretation.
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from semantics.new_structures import Command, ObjectEntity, Location
+from semantics.lexical_constants import ACTION_ALIASES
 
 class TrainingDictionary(object):
     def __init__(self):
@@ -307,5 +308,10 @@ class TrainingDictionary(object):
             else:
                 condition = None   
         else:
-            condition = None     
-        return Command(agent,theme,patient,location,source,destination,d["Action"],condition,d["Negation"])
+            condition = None
+
+        action = d["Action"]
+        if action in ACTION_ALIASES:
+            action = ACTION_ALIASES[action]
+
+        return Command(agent,theme,patient,location,source,destination,action,condition,d["Negation"])
