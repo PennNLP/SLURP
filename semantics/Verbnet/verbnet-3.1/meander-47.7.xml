@@ -43,6 +43,7 @@
         <MEMBER name="veer" wn="" grouping=""/>
         <MEMBER name="zigzag" wn="" grouping=""/>
         <MEMBER name="converge" wn="converge%2:42:00" grouping="converge.01"/>
+        <MEMBER name="move" wn="" grouping=""/>
     </MEMBERS>
     <THEMROLES>
         <THEMROLE type="Location">
