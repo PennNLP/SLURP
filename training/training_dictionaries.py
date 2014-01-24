@@ -48,7 +48,7 @@ class TrainingDictionary(object):
         self.ccs = { "and" : "and"}
         self.train_dict = { "login" : {self.prompt : "Please enter your uuid.",
                                        self.next : "go_simple"},                           
-                "go_simple" : {self.prompt : "Tell Junior to go to the %s" % self.regions["office"],
+                "go_simple" : {self.prompt : "Junior should be in the office. Give him a command that will make him go there.",
                                self.default_action : "go",
                                self.canonical_commands : [self.command_from_dict({'Source': '',
                                                   'Theme': '',
@@ -77,7 +77,7 @@ class TrainingDictionary(object):
                                self.response: "Good work! Junior will go.",
                                self.next : "go_moderate"
                                },
-                "go_moderate" : {self.prompt : "Tell Junior to go to the office and the conservatory.",
+                "go_moderate" : {self.prompt : "Junior needs to go to the conservatory and the office. Give him a one-sentence command that will make him go to both places.",
                                self.default_action : "go",
                                self.canonical_commands : [self.command_from_dict({'Source': '',
                                                   'Theme': '',
@@ -106,7 +106,7 @@ class TrainingDictionary(object):
                                self.response: "Good work! Junior will go.",
                                self.next: "go_advanced"
                                },    
-                "go_advanced" : {self.prompt : "Tell Junior to go to the office, the conservatory, and the cellar. When using a list, make sure to put a comma before the 'and'.",
+                "go_advanced" : {self.prompt : "Tell Junior to go to the office, the conservatory, and the cellar. Give him a one-sentence command that will make him go to all three places. Remember, Junior is a stickler for punctuation! When using a list, make sure to put a comma before the 'and'.",
                              self.default_action : "go",
                                 self.canonical_commands : [self.command_from_dict({'Source': '',
                                                   'Theme': '',
@@ -135,7 +135,7 @@ class TrainingDictionary(object):
                                self.response: "Good work! Junior will go.",
                                self.next: "defuse_simple"
                                },    
-                "defuse_simple" : {self.prompt : "Tell Junior to defuse the bomb.",
+                "defuse_simple" : {self.prompt : "Junior needs to defuse a bomb. Tell him to do so.",
                                    self.default_action : "go",
                                    self.canonical_commands : [self.command_from_dict({'Source': '',
                                           'Theme': {'Object': {'Quantifier': {'Type': 'exact', 'Definite': True, 'Number': 1},
@@ -164,7 +164,7 @@ class TrainingDictionary(object):
                                     self.response: "Good work! Junior will defuse the bomb.",
                                     self.next: "defuse_moderate"     
                                     },
-                "defuse_moderate" : {self.prompt : "Tell Junior to go to the conservatory and defuse the bomb.",
+                "defuse_moderate" : {self.prompt : "You can tell Junior to do two different things in one sentence. Junior needs to go to the conservatory and defuse a bomb. Tell him to do both in one sentence.",
                                    self.default_action : "go",
                                    self.canonical_commands : [ self.command_from_dict({'Source': '', 
                                             'Theme': '', 
