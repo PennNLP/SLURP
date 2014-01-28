@@ -300,7 +300,7 @@ class BarebonesDialogueManager(object):
         spec = self.get_spec()
         success = self.executor.resynthesizeFromNewSpecification(spec)
         self.clear_spec()
-        if success:
+        if success:            
             # Resume
             self.executor.resume()
             return "Got it. I'm carrying out your orders."
@@ -325,25 +325,24 @@ class BarebonesDialogueManager(object):
             self.clear_all()
             return chat
         elif response_code == "activate_command":
-            if not self.paused:
-                return self.execute()
-            self.paused = False
-            self.executor.resume()
-            return "Picking up where I left off."
+            #if activate, always resynthesize
+            return self.execute()
         elif response_code == "no_act":
-            if not self.paused and self.executor.isRunning():
+            if self.executor.isRunning():
                 self.paused = True
                 self.executor.pause()
                 return chat
             elif not self.paused:
-                return "I wasn't doing anything so I cannot stop or pause."
-            return "Already paused execution."
+                return "I wasn't doing anything so I cannot stop."
+            else:
+                return "I am already stopped."
         elif response_code == "resume_act":
             if self.paused:
                 self.paused = False
                 self.executor.resume()
                 return chat
-            return self.execute()
+            else:
+                return "Sorry, I can only start if you stop me, try 'go'."
         elif response_code == "status_request":
             if not self.executor.isRunning():
                 return chat
