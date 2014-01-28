@@ -73,6 +73,7 @@ class PragbotClient(object):
         self.shutting_down = False
         self.defusing = False
         self.sensor_states ={} 
+        self.last_location = "entrance"
 
         # Connect to the pragbot server first
         try:
@@ -152,9 +153,10 @@ class PragbotClient(object):
             for room in self.ge.rooms.itervalues():
                 if self.ge.jr.cell.location in room:
                     if message == "coordinates":
-                        return self.ge.jr.cell.location
+                        self.last_location = self.ge.jr.cell.location
+                        return self.ge.jr.cell.location                    
                     return room.name
-            return self.LOCATION_UNKNOWN        
+            return self.last_location       
         elif event_type == self.EVENT_SENSOR:
             if message == self.BOMB_SENSOR:
                 #the bomb sensor checks the "bombs" state                    
