@@ -40,6 +40,7 @@ RESPONSE_CRASH = ("Sorry, my language understanding system isn't working. "
                   "I'm afraid we can't perform our mission.")
 
 PIPELINE_RETRIES = 50
+RETRY_PIPELINE_WAIT_TIME = .1
 
 
 class PragbotClient(object):
@@ -264,6 +265,7 @@ class PragbotClient(object):
         count = 0
         while count <= PIPELINE_RETRIES:
             try:
+                time.sleep(RETRY_PIPELINE_WAIT_TIME)
                 logging.error("Pipelinehost busy, retrying.")
                 count+=1
                 self.ltlmop.get_pragbot_input(line)                
