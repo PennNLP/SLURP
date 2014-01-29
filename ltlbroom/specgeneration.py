@@ -179,6 +179,12 @@ class SpecGenerator(object):
                 if CARRY_ACTION in self.GOALS:
                     del self.GOALS[CARRY_ACTION]
                 logging.info("Disabling carry because {!r} actuator is not available.".format(PICKUP))
+            # TODO: Follow is disabled unconditionally here because we
+            # have no reasonable way of detecting whether it is
+            # supported
+            if FOLLOW_ACTION in self.GOALS:
+                del self.GOALS[FOLLOW_ACTION]
+            logging.info("Disabling {} because we cannot detect whether it is available.".format(FOLLOW_ACTION))
 
         # Make lists for POS conversions, including the metapar keywords
         force_nouns = list(self.regions) + list(self.sensors)
@@ -363,9 +369,12 @@ class SpecGenerator(object):
     def _apply_metapar(self, command):
         """Generate a metapar for a command."""
         # Patch up actuator commands. SEE_ACTION is blocked because we
-        # don't want this to affect "If you see a X..."
+        # don't want this to affect "If you see a X...". FOLLOW_ACTION
+        # is blocked because otherwise when it is disabled we will try
+        # to make a condtional out of it.
         if (command.action not in self.GOALS and
             command.action != SEE_ACTION and
+            command.action != FOLLOW_ACTION and
             command.action in UNDERSTOOD_SENSES):
             # If there's a theme, make it into a reaction
             if command.theme:
